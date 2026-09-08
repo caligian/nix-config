@@ -11,7 +11,7 @@ require('lib.pkgs').setup()
 require('lib.project').setup()
 
 require('config.autocmds')
-require('config.keymaps')
 require('config.commands')
+require('config.keymaps')
 
 vim.cmd 'color nightfox'

@@ -60,7 +60,6 @@ pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped {
     catppuccin-nvim
     nvim-lsp-file-operations
     nvim-web-devicons
-    align
     tagbar
     undotree
     base16-vim

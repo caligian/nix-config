@@ -11,17 +11,7 @@ vim.g.maplocalleader = "<M-space>"
 vim.g.workspaces = {}
 vim.g.workspaces_by_buffer = {}
 
-vim.api.nvim_create_user_command('ProjectAdd', function(args)
-  local dir = args.args
-  dir = string.gsub(dir, '^%s+', '')
-  dir = string.gsub(dir, '%s+$', '')
-  if fs.is_dir(dir) then
-  end
-end, {
-  nargs = 1,
-
-})
-
+--- Misc stuff
 map('n', '<A-x>', ':Telescope commands<CR>', { desc = 'Telescope commands' })
 map('i', '<C-a>', '<Home>', opts)
 map('i', '<C-e>', '<End>', opts)
@@ -48,6 +38,28 @@ map('n', '<leader>/', ':Telescope grep_string<CR>', { desc = 'Grep current works
 map('n', '<leader>?', ':Telescope live_grep<CR>', { desc = 'Live grep workspace' })
 map('n', '<leader>\'', ':Telescope marks<CR>', { desc = "Telescope marks" })
 map('n', '<leader><leader>', ":Telescope resume<CR>", { desc = "Resume picker" })
+
+--- Window management
+map('n', '<leader>ws', '<C-w><C-s>', { desc = 'Split window horizontally' })
+map('n', '<leader>wv', '<C-w><C-v>', { desc = 'Split window verticallyy' })
+map('n', '<leader>wo', '<C-w><C-o>', { desc = 'Hide other windows' })
+map('n', '<leader>ws', '<C-w><C-s>', { desc = 'Split window horizontally' })
+map('n', '<leader>wj', '<C-w><C-j>', { desc = 'Go to window below' })
+map('n', '<leader>wk', '<C-w><C-k>', { desc = 'Go to window above' })
+map('n', '<leader>wh', '<C-w><C-h>', { desc = 'Go to window on left' })
+map('n', '<leader>wl', '<C-w><C-l>', { desc = 'Go to window on right' })
+map('n', '<leader>wt', '<C-w>T', { desc = 'Break out window into new tab' })
+
+--- Tab management
+map('n', '<leader>tt', ':tabnew<CR>', { desc = 'Open a new tab' })
+map('n', '<leader>tn', ':tabnext<CR>', { desc = 'Go to next tab' })
+map('n', '<leader>tp', ':tabprev<CR>', { desc = 'Go to previous tab' })
+map('n', '<leader>tk', ':tabclose<CR>', { desc = 'Close current tab' })
+map('n', '<leader>1', '1gt', { desc = 'Go to tab 1' })
+map('n', '<leader>2', '2gt', { desc = 'Go to tab 2' })
+map('n', '<leader>3', '3gt', { desc = 'Go to tab 3' })
+map('n', '<leader>4', '4gt', { desc = 'Go to tab 4' })
+map('n', '<leader>5', '5gt', { desc = 'Go to tab 5' })
 
 -- Project management
 map('n', '<leader>pp', ':Telescope project<CR>', { desc = 'Select project' })
@@ -98,7 +110,7 @@ map('n', '<leader>fS', ':SudaWrite %<CR>', { desc = 'Sudo write file' })
 map('n', '<leader>fR', ':SudaRead ', { desc = 'Sudo read file' })
 map('n', '<leader>bb', ':Telescope buffers<CR>', { desc = 'Telescope buffers' })
 map('n', '<leader>fg', ':Telescope git_files<CR>', { desc = 'git ls-files' })
-map('n', '<leader>fr', ':Telescope oldfiles<CR>', { desc = 'Recent files' })
+map('n', '<leader>fr', ':Telescope frecency<CR>', { desc = 'Recent files' })
 map(
   'n', '<leader>fd',
   function()
@@ -127,3 +139,11 @@ map(
   end,
   { desc = 'Telescope project directory' }
 )
+
+--- Git operations
+map('n', '<leader>gg', ':botright Git<CR>', { desc = 'Git browser' })
+map('n', '<leader>gb', ':botright Git branch <bar> resize -5<CR>', { desc = 'Git branches' })
+map('n', '<leader>gl', ':botright Git log <bar> resize -5<CR>', { desc = 'Show git log' })
+map('n', '<leader>g?', ':botright Git status<CR>', { desc = 'Git status' })
+map('n', '<leader>gs', ':Git stage %<CR>', { desc = 'Stage current buffer' })
+map('n', '<leader>gf', ':Telescope git_files<CR>', { desc = 'List tracked files' })
