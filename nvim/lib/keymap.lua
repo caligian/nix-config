@@ -1,4 +1,4 @@
-local state = user_config.state.keymap
+local state = package.user.state.keymap
 local fs = require 'lua-utils.fs'
 local copy = vim.deepcopy
 local dict = require 'lua-utils.dict'
@@ -33,6 +33,7 @@ local utils = {}
 ---@param rhs string|function
 ---@param opts? string|keymap.opts
 function utils.map(mode, lhs, rhs, opts)
+  local args = copy { mode, lhs, rhs, opts }
   opts = opts or {}
   opts = is.string(opts) and { desc = opts } or opts
   mode = mode or 'n'
@@ -65,7 +66,7 @@ function utils.map(mode, lhs, rhs, opts)
     })
   end
 
-  state[#state + 1] = { mode, lhs, rhs, opts }
+  state[#state + 1] = args
 end
 
 function utils.define(opts, specs)

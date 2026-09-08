@@ -1,7 +1,7 @@
 local types = require 'lua-utils.type'
 local is = types.is
 local copy = vim.deepcopy
-local state = user_config.state.autocmd
+local state = package.user.state.autocmd
 local enable = vim.api.nvim_create_autocmd
 local options = require 'lib.options'
 
@@ -73,6 +73,7 @@ autocmd.valid_opts = {
 ---@param opts? autocmd.opts
 ---@return integer
 function autocmd.new(event, callback, opts)
+  local args = copy { event, callback, opts }
   opts = type(opts) == 'string' and { desc = opts } or opts
   opts = options.new(opts)
   local should_pcall = opts.pcall
@@ -90,7 +91,7 @@ function autocmd.new(event, callback, opts)
   end
 
   local id = enable(event, opts)
-  state[id] = { event, opts }
+  state[id] = args
   return id
 end
 

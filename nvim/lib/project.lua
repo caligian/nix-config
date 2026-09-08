@@ -2,55 +2,52 @@ require 'lua-utils.string'
 
 local bufnr = vim.fn.bufnr
 local fs = require 'lua-utils.fs'
-local types = require 'lua-utils.type'
+-- local types = require 'lua-utils.type'
 local autocmd = require 'lib.autocmd'
 local command = require 'lib.command'
 local bufname = vim.api.nvim_buf_get_name
-user_config = user_config or {}
-user_config.state = user_config.state or {}
-
----@class state.workspace
----@field dir {[string]: boolean}
----@field buffer {[number]: string}
----@field check_depth integer
-user_config.state.workspace = user_config.state.workspace or {
-  dir = {},
-  buffer = {},
-  check_depth = 4,
-  setup_done = false,
-}
-
+local state = package.user.state.workspace
 local project = {}
 
----@param path string
----@param ... number
-function project.add(path, ...)
-  user_config.state.workspace.dir[path] = true
-  for _, buf in ipairs({ ... }) do user_config.state.workspace.buffer[buf] = path end
+local function get_check_depth()
+  return package.user.config.workspace.check_depth
 end
 
----@param dir string
----@param buf integer
----@return boolean
-function project.has_buffer(dir, buf)
-  if user_config.state.workspace.dir[dir] then
-    return user_config.state.workspace.buffer[buf] == dir
-  else
-    return false
+local function get_default()
+  return package.user.config.workspace.default or function(buf)
+    local path = bufname(buf)
+    local dir = fs.dirname(path)
+
+    if dir ~= '..' and dir ~= '.' then
+      return
+    else
+      return dir
+    end
   end
 end
 
 ---@param path string
----@return boolean
-function project.is_dir(path)
-  return fs.is_dir(path) and fs.is_file(fs.join(path, '.PROJECT'))
+---@param ... integer buffers
+---@return table
+function project.track(path, ...)
+  state[path] = state[path] or {}
+  for _, buf in ipairs({ ... }) do state[path][buf] = path end
+  return state[path]
 end
 
----@param path string|integer
----@param cd? boolean
+---@class project.find.opts
+---@field cd? boolean
+---@field default? fun(path: string): string
+---@field check_depth? integer (default: 4)
+
+---@param path  string
+---@param opts? boolean
 ---@return string?
-function project.find(path, cd)
-  local limit = user_config.state.workspace.check_depth
+function project.find(path, opts)
+  opts = opts or {}
+  local limit = opts.check_depth or get_check_depth()
+  local default = opts.default or get_default()
+  local cd = opts.cd
   local function find(dir, depth)
     if not dir then
       return
@@ -63,113 +60,166 @@ function project.find(path, cd)
     end
   end
 
-  path = type(path) == 'number' and bufname(path) or path
-  if path == '' then
-    return
+  local dir = find(path, 0)
+  if dir == nil then
+    if default then
+      dir = default()
+    else
+      return
+    end
   end
 
-  local dir = find(path, 0)
-  if dir then
-    if cd then vim.fn.chdir(dir) end
-    return dir
+  if cd then
+    vim.fn.chdir(dir)
   end
+
+  return dir
 end
 
-function project.list()
+---@param buf? integer
+---@param opts? project.find.opts
+---@return string?
+function project.find_by_buffer(buf, opts)
+  return project.find(bufname(buf or vim.fn.bufnr()), opts)
+end
+
+---@param dir string
+---@param buf integer
+---@return boolean
+function project.has_buffer(dir, buf)
+  return state[dir] and state[dir][buf] ~= nil
+end
+
+local function matches(ws, patterns)
+  for _, pattern in ipairs(patterns) do
+    if string.match(ws, pattern) then
+      return true
+    end
+  end
+  return false
+end
+
+---@param ... string pattern to match against project directories to get buffers
+---@return {[1]: integer, [2]: string}[]
+function project.list_buffers(...)
+  local pats = { ... }
+  if #pats == 0 then
+    pats[1] = '.+'
+  end
+
+  local workspaces = dict.keys(state)
+  workspaces = list.filter(workspaces, function(ws)
+    return matches(ws, pats)
+  end)
+  local buffers = {}
+
+  for i = 1, #workspaces do
+    local ws = workspaces[i]
+    local bufs = state[ws]
+    for _bufnr, _ in pairs(bufs) do buffers[_bufnr] = ws end
+  end
+
+  local result = {}
+  for _bufnr, ws in pairs(buffers) do
+    result[#result + 1] = { _bufnr, ws }
+  end
+
+  return result
+end
+
+---@param path string
+---@return boolean
+function project.is_dir(path)
+  return fs.is_dir(path) and fs.is_file(fs.join(path, '.PROJECT'))
+end
+
+function project.list(...)
   local res = {}
-  for dir, _ in pairs(user_config.state.workspace.dir) do res[#res + 1] = dir end
+  local patterns = { ... }
+
+  list.each(dict.keys(state), function(dir)
+    if matches(dir, patterns) then
+      res[#res + 1] = dir
+    end
+  end)
+
   return res
 end
 
-function project.get_check_depth()
-  return user_config.state.workspace.check_depth
-end
+---@class project.refresh.opts
+---@field check_depth? integer
+---@field default? fun(buf: integer): string?
 
----@param depth integer
-function project.set_check_depth(depth)
-  user_config.state.workspace.check_depth = depth
-end
+---@param opts? project.refresh.opts
+function project.refresh(opts)
+  local buffers = {}
+  local rm = {}
+  opts = opts or {}
+  local check_depth = opts.check_depth or get_check_depth()
+  local default = opts.default or get_default()
 
-function project.refresh()
-  local workspaces = user_config.state.workspace.dir or {}
-  local workspaces_by_buffer = user_config.state.workspace.buffer or {}
-
-  for workspace, _ in pairs(workspaces) do
-    ::next::
-    if project.is_dir(workspace) then
-      goto next
-    end
-
-    local remove = {}
-    for buf, ws in pairs(workspaces_by_buffer) do
-      if ws == workspace then
-        remove[#remove + 1] = buf
+  for proj, bufs in pairs(state) do
+    local invalid = not project.is_dir(proj)
+    for buf, _ in pairs(bufs) do
+      if bufnr(buf) ~= -1 then
+        buffers[buf] = { ok = invalid, dir = proj }
+      else
+        bufs[buf] = nil
       end
     end
 
-    for _, buf in ipairs(remove) do
-      workspaces_by_buffer[buf] = nil
+    if invalid then
+      rm[#rm + 1] = proj
     end
   end
 
-  local remove = {}
-  for buf, _ in pairs(workspaces_by_buffer) do
-    if vim.fn.bufnr(buf) == -1 then
-      remove[#remove + 1] = buf
+  for buf, status in pairs(buffers) do
+    if not status.ok then
+      local proj = project.find_by_buffer(buf, {
+        check_depth = check_depth,
+        default = default
+      })
+      if proj then
+        state[proj] = state[proj] or {}
+        state[proj][buf] = proj
+      end
     end
   end
 
-  for _, buf in ipairs(remove) do
-    workspaces_by_buffer[buf] = nil
+  for i = 1, #rm do
+    state[rm[i]] = nil
   end
 end
 
-function project.setup()
-  if user_config.state.workspace.setup_done then
-    return
-  else
-    user_config.state.workspace.setup_done = true
-  end
+---@param dir string
+function project.cd(dir)
+  vim.cmd.cd(dir)
+end
 
-  autocmd.new('BufEnter', function(buf, args)
-    local filename = args.match
-    local ft = vim.bo.filetype
-    local ok = (fs.is_file(filename) or ft ~= '' or string.sub(filename, 1, 1) == '/')
+local function trim(s)
+  s = string.gsub(s, "^~", os.getenv "HOME")
+  s = string.trim(s)
+  s = string.gsub(s, "/+$", "")
+  return s
+end
 
-    if not ok then
+function project.setup_commands()
+  command.new('ProjectInit', function(args, _)
+    local dir = trim(args)
+    if not fs.is_dir(dir) then
+      printf('Invalid directory %s provided', dir)
       return
+    else
+      project.new(dir, true)
     end
-
-    local proj = project.find(buf)
-    local cd = function(dir) vim.cmd('cd ' .. dir) end
-
-    if proj then
-      cd(proj)
-      return
-    end
-
-    ok, proj = pcall(fs.dirname, filename)
-    if not ok then
-      return
-    end
-
-    cd(proj)
   end, {
-    desc = 'cd into project directory',
-    pattern = '*.*'
+    desc = 'cd into existing/newly made project directory',
+    nargs = 1,
+    complete = 'dir'
   })
 
-  autocmd.new('BufReadPost', function(_)
-    project.refresh()
-  end, {
-    desc = 'Fix project directories',
-    pattern = '*.*'
-  })
-
-  command.new('ProjectAddDir', function(args, _)
-    args = string.gsub(args, "^~", os.getenv "HOME")
-    args = string.trim(args)
-    args = string.gsub(args, "/+$", "")
+  command.new('ProjectAdd', function(args, _)
+    args = trim(args)
 
     if not fs.is_dir(args) then
       printf("%s is not a directory", args)
@@ -218,6 +268,58 @@ function project.setup()
     desc = 'Fix project directories',
     nargs = 0,
   })
+end
+
+function project.setup_autocmds()
+  autocmd.new('BufEnter', function(buf, _)
+    local proj = project.find_by_buffer(buf)
+    if not proj then
+      return
+    end
+
+    project.track(proj, buf)
+    project.cd(proj)
+  end, {
+    desc = 'cd into project directory',
+    pattern = '*.*'
+  })
+
+  autocmd.new('BufReadPost', function(_, _)
+    project.refresh()
+  end, {
+    desc = 'Refresh projects',
+    pattern = '*.*'
+  })
+end
+
+---@param dirname string
+---@param cd? boolean
+---@return boolean
+function project.new(dirname, cd)
+  if not fs.is_dir(dirname) then
+    local ok, msg = pcall(vim.system, { 'mkdir', '-p', dirname })
+    if not ok then
+      error(msg)
+    end
+  end
+
+  local marker = fs.join(dirname, '.PROJECT')
+  local ok, msg = pcall(vim.system, { 'touch', marker })
+
+  if not ok then
+    error(msg)
+  end
+
+  if cd then
+    vim.fn.chdir(dirname)
+  end
+
+  return true
+end
+
+function project.setup()
+  project.setup_autocmds()
+  project.setup_commands()
 end
 
 return project
