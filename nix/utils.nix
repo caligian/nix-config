@@ -1,212 +1,367 @@
 # ~/.user/nix/myUtils.nix
-{ 
-  pkgs ? import <nixpkgs> {},
+{
+  pkgs ? import <nixpkgs> { },
   lib ? pkgs.lib,
-  home
+  home,
 }:
 
 let
-  inherit (builtins) 
-    attrNames attrValues foldl' map filter 
-    concatStringsSep elem length head tail genList
-    readDir pathExists isPath isString isAttrs isInt isFloat isBool isNull
-    toString fromJSON toJSON readFile writeFile trace throw splitString hasAttr getAttr elemAt 
+  inherit (builtins)
+    removeAttrs
+    attrNames
+    attrValues
+    foldl'
+    concatStringsSep
+    elem
+    length
+    head
+    tail
+    genList
+    readDir
+    pathExists
+    isPath
+    isString
+    isAttrs
+    isInt
+    isFloat
+    isBool
+    isNull
+    toString
+    fromJSON
+    toJSON
+    readFile
+    writeFile
+    trace
+    throw
+    splitString
+    hasAttr
+    getAttr
+    elemAt
     replaceStrings
-    listToAttrs baseNameOf dirOf concatLists toFile getEnv;
-  
+    listToAttrs
+    baseNameOf
+    dirOf
+    concatLists
+    toFile
+    ;
+
   inherit (lib)
-    flatten unique mergeAttrs recursiveUpdate
-    mapAttrs filterAttrs optional optionals
-    hasPrefix hasSuffix removePrefix removeSuffix
-    toLower toUpper escapeShellArg isList isDerivation
-    makeLibraryPath;
+    flatten
+    unique
+    mergeAttrs
+    recursiveUpdate
+    mapAttrs
+    filterAttrs
+    # optional
+    # optionals
+    removePrefix
+    removeSuffix
+    toLower
+    toUpper
+    # escapeShellArg
+    isList
+    isDerivation
+    makeLibraryPath
+    ;
 
   inherit (pkgs)
-    writeText writeShellScript runCommand
-    fetchurl fetchTarball fetchFromGitHub fetchgit;
-  
-  utils = rec {
-    mkLibraryPath = makeLibraryPath;
-    getEnv = name: builtins.getEnv name;
-    attrs = {
-      keys = attrNames;
-      values = attrValues;
-      merge = mergeAttrs;
-      update = recursiveUpdate;
-      filter = filterAttrs;
-      map = mapAttrs;
-      has = attr: key: hasAttr attr key;
-      get = attr: key: getAttr attr key;
-    };
-    list = {
-      map = map;
-      filter = filter;
-      reduce = foldl';
-      len = length;
-      first = head;
-      rest = tail;
-      contains = elem;
-      range = genList;
-      flatten = flatten;
-      unique = unique;
-      head = head;
-      tail = tail;
-      concat = concatLists;
-      join = concatStringsSep;
-      nth = elemAt;
-    };
-    str = {
-      split = splitString;
-      lower = toLower;
-      upper = toUpper;
-      hasPrefix = hasPrefix;
-      hasSuffix = hasSuffix;
-      rmPrefix = removePrefix;
-      rmSuffix = removeSuffix;
-      replace = replaceStrings;
-    };
-    as = {
-      str = toString;
-      attrs = listToAttrs;
-    };
-    file = {
-      write = toFile;
-      writeText = writeText;
-      read = readFile;
-    };
-    path = {
-      exists = pathExists;
-      basename = baseNameOf;
-      dirname = dirOf;
-      ls = path: attrNames (readDir path);
-      libraryPath = makeLibraryPath;
-      isFile = path:
-        let 
-          dir = readDir (dirOf path);
-          base = baseNameOf path; 
-        in 
-          dir ? base && dir.${base} == "regular";
-      isDir = path:
-        let 
-          dir = readDir (dirOf path);
-          base = baseNameOf path;
-        in 
-          dir ? base && dir.${base} == "directory";
-    };
-    is = {
-      int = isInt;
-      float = isFloat;
-      string = isString;
-      attrs = isAttrs;
-      null = isNull;
-      bool = isBool;
-      path = isPath;
-      derivation = isDerivation;
-    };
-    json = {
-      read = path: fromJSON (readFile path);
-      write = data: path: writeFile path (toJSON data);
-      load = fromJSON;
-      dump = toJSON;
-    };
-    shell = {
-      writeScript = writeShellScript;
-      run = runCommand;
-    };
-    fetch = {
-      url = fetchurl;
-      tar = fetchTarball;
-      tarball = fetchTarball;
-      github = url: rev: specs: 
+    writeText
+    # writeShellScript
+    # runCommand
+    fetchurl
+    fetchTarball
+    fetchFromGitHub
+    fetchgit
+    ;
+  dictUtils = {
+    keys = attrNames;
+    values = attrValues;
+    merge = mergeAttrs;
+    update = recursiveUpdate;
+    filter = dict: fn: filterAttrs fn dict;
+    map = dict: fn: mapAttrs fn dict;
+    has = attrs: key: hasAttr key attrs;
+    get = attrs: key: getAttr key attrs;
+  };
+  toList =
+    x: force:
+    let
+      force = if isNull force then false else true;
+    in
+    if force || !(isList x) then [ x ] else x;
+  listUtils = {
+    apply = xs: fn: builtins.map fn xs;
+    keep = xs: fn: builtins.filter fn xs;
+    reduce =
+      xs: acc: fn:
+      foldl' fn acc xs;
+    len = length;
+    car = head;
+    cdr = tail;
+    contains = elem;
+    range = genList;
+    flatten = flatten;
+    unique = unique;
+    head = head;
+    tail = tail;
+    concat = concatLists;
+    join = concatStringsSep;
+    nth = elemAt;
+    toDict = listToAttrs;
+  };
+  strUtils = rec {
+    strmatch =
+      str: patterns:
+      if (length patterns) == 0 then
+        null
+      else
         let
-            required = splitString "/" url; 
-            requiredLen = length required;
-            owner = elemAt required (requiredLen - 2);
-            repoFull = elemAt required (requiredLen - 1);
-            repo = replaceStrings [".git"] [""] repoFull;
-            mainArgs = { owner = owner; repo = repo; rev = rev; };
-            args = mainArgs // (removeAttrs specs ["rev"]);
+          pattern = elemAt patterns 0;
+          rest = tail patterns;
+          res = builtins.match pattern str;
+        in
+        if isNull res then strmatch str rest else res;
+    strdetect = str: patterns: !(isNull (strmatch str patterns));
+    split = str: sep: splitString sep str;
+    lower = str: toLower str;
+    upper = str: toUpper str;
+    hasPrefix = str: prefix: lib.hasPrefix prefix str;
+    hasSuffix = str: suffix: lib.hasSuffix suffix str;
+    rmPrefix = str: prefix: removePrefix prefix str;
+    rmSuffix = str: suffix: removeSuffix suffix str;
+    replace =
+      str: from: to:
+      replaceStrings [ from ] [ to ] str;
+    gsub =
+      str: from: to:
+      replaceStrings [ from ] [ to ] str;
+    match = str: patterns: strmatch str patterns;
+    detect = str: patterns: strdetect str patterns;
+  };
+  toUtils = {
+    str = toString;
+    dict = listToAttrs;
+  };
+  isUtils = {
+    int = isInt;
+    float = isFloat;
+    string = isString;
+    attrs = isAttrs;
+    dict = isAttrs;
+    null = isNull;
+    bool = isBool;
+    path = isPath;
+    derivation = isDerivation;
+  };
+  pathType =
+    p:
+    let
+      dir = dirOf p;
+      base = baseNameOf p;
+      entries = if pathExists dir then readDir dir else { };
+    in
+    if hasAttr base entries then entries.${base} else null;
+  pathUtils = {
+    exists = pathExists;
+    basename = baseNameOf;
+    dirname = dirOf;
+    ls = p: if pathExists p then map (file: p + "/" + file) (attrNames (readDir p)) else null;
+    libraryPath = makeLibraryPath;
+    type = pathType;
+    isFile = p: pathType p == "regular";
+    isDir = p: pathType p == "directory";
+    dir = userDirs;
+  };
+  fetchUtils = {
+    url = fetchurl;
+    tar = fetchTarball;
+    tarball = fetchTarball;
+    github =
+      url: rev: specs:
+      let
+        required = splitString "/" url;
+        requiredLen = length required;
+        owner = elemAt required (requiredLen - 2);
+        repoFull = elemAt required (requiredLen - 1);
+        repo = replaceStrings [ ".git" ] [ "" ] repoFull;
+        mainArgs = {
+          owner = owner;
+          repo = repo;
+          rev = rev;
+        };
+        args = mainArgs // (removeAttrs specs [ "rev" ]);
 
-        in
-          fetchFromGitHub args;
-      git = url: rev: specs: 
-        let 
-          allSpecs = {url = url; rev = rev; } // specs;
-        in
-          fetchgit allSpecs;
+      in
+      fetchFromGitHub args;
+    git =
+      url: rev: specs:
+      let
+        allSpecs = {
+          url = url;
+          rev = rev;
+        }
+        // specs;
+      in
+      fetchgit allSpecs;
+  };
+  userRootDir = "${home}/.user";
+  homeLibDir = "${home}/lib";
+  userDirs = {
+    root = userRootDir;
+    nix = "${userRootDir}/nix";
+    nixPkgs = "${userRootDir}/nix/pkgs";
+    scripts = "${userRootDir}/scripts";
+    shell = "${userRootDir}/shell";
+    lib = "${userRootDir}/lib";
+    config = "${userRootDir}/config";
+    lock = "${userRootDir}/lock";
+    apiKeys = "${userRootDir}/api-keys";
+    nvim = "${userRootDir}/nvim";
+    kitty = "${userRootDir}/kitty";
+    home = {
+      lib = {
+        root = homeLibDir;
+        perl = "${homeLibDir}/perl";
+        python = "${homeLibDir}/python";
+        luajit = "${homeLibDir}/luajit";
+      };
+      games = "${home}/Games";
+      repos = "${home}/Repos";
+      music = "${home}/Music";
+      downloads = "${home}/Downloads";
+      projects = "${home}/Projects";
+      work = "${home}/Work";
+      scripts = "${home}/Scripts";
+      personal = "${home}/Personal";
+      pictures = "${home}/Pictures";
+      config = "${home}/.config";
+      local = "${home}/.local";
+      localState = "${home}/.local/state";
+      localBin = "${home}/.local/bin";
+      bin = "${home}/bin";
     };
+  };
+  mkNixPath = name: "${userDirs.nix}/${name}.nix";
+  mkScriptPath = name: "${userDirs.scripts}/${name}.nix";
+  mkShellPath = name: "${userDirs.shell}/${name}.sh";
+  mkPath = p: "${userRootDir}/${p}";
+  lockMkPath = name: "${userDirs.lock}/${name}";
+  lockUtils = {
+    mkPath = lockMkPath;
+    exists = name: pathExists (lockMkPath name);
+    read =
+      name:
+      let
+        p = lockMkPath name;
+      in
+      if pathUtils.isFile p then readFile p else null;
+  };
+  mkAPIKeyPath = name: "${userDirs.apiKeys}/${name}.txt";
+  apiKeyUtils = {
+    mkPath = mkAPIKeyPath;
+    exists = name: pathUtils.isFile (mkAPIKeyPath name);
+    read =
+      name:
+      let
+        p = mkAPIKeyPath name;
+      in
+      if pathUtils.isFile p then readFile p else null;
+  };
+  userUtils = {
+    rootDir = userRootDir;
+    mkNixPath = mkNixPath;
+    mkScriptPath = mkScriptPath;
+    mkShellPath = mkShellPath;
+    mkPath = mkPath;
+    readShellFile =
+      name:
+      let
+        p = mkShellPath name;
+      in
+      if pathExists p then readFile p else null;
+    readScriptFile =
+      name:
+      let
+        p = mkScriptPath name;
+      in
+      if pathExists p then readFile p else null;
+    dir = userDirs;
+    lock = lockUtils;
+    apiKeys = apiKeyUtils;
+  };
+  fileUtils = {
+    write = toFile;
+    writeText = writeText;
+    read = readFile;
+  };
+  jsonUtils = {
+    read = p: fromJSON (readFile p);
+    write = data: p: writeFile p (toJSON data);
+    load = fromJSON;
+    dump = toJSON;
+  };
+  utils = {
+    git = fetchUtils.git;
+    github = fetchUtils.github;
+    ls = pathUtils.ls;
+    dirname = pathUtils.dirname;
+    basename = pathUtils.basename;
+    isFile = pathUtils.isFile;
+    isDir = pathUtils.isDir;
+    isPath = pathUtils.exists;
+    filetype = pathUtils.type;
+    mkLibraryPath = makeLibraryPath;
+    car = listUtils.car;
+    cdr = listUtils.cdr;
+    reduce = listUtils.reduce;
+    len = listUtils.length;
+    nth = listUtils.nth;
+    join = listUtils.join;
+    keep = listUtils.keep;
+    apply = listUtils.apply;
+    unique = listUtils.unique;
+    concat = listUtils.concat;
+    toList = toList;
+    toDict = listUtils.toDict;
+    keys = dictUtils.keys;
+    values = dictUtils.values;
+    merge = dictUtils.merge;
+    update = dictUtils.update;
+    has = dictUtils.has;
+    get = dictUtils.get;
+    dict = dictUtils;
+    list = listUtils;
+    str = strUtils;
+    to = toUtils;
+    file = fileUtils;
+    path = pathUtils;
+    is = isUtils;
+    json = jsonUtils;
+    fetch = fetchUtils;
     log = msg: value: trace "${msg}: ${toString value}" value;
     inspect = value: trace (toJSON value) value;
     die = throw;
-    type = x:
-      if isNull x then "null"
-      else if isList x then "list"
-      else if isBool x then "bool"
-      else if isInt x then "int"
-      else if isFloat x then "float"
-      else if isString x then "string"
-      else if isPath x then "path"
-      else if isAttrs x then "attrs"
-      else "unknown";
-    user = {
-      dir = "${home}/.user";
-      nixDir = "${user.dir}/nix";
-      scriptsDir = "${user.dir}/scripts";
-      mkNixPath = name: "${user.nixDir}/${name}.nix";
-      mkPath = name: "${user.dir}/${name}";
-      exists = name: pathExists (user.mkPath name);
-      import = name: args: import (user.mkNixPath name) args;
-      lock = {
-        mkPath = name: "${home}/.user/lock/${name}";
-        exists = name: pathExists (user.lock.mkPath name);
-      };
-    };
-    nvim = rec {
-      mkPlugin = name: repo: specs: 
-        let
-          urlSplit = splitString "/" repo;
-          username = elemAt urlSplit 0;
-          repoUrl = elemAt urlSplit 1;
-          getValue = key: default:
-            if hasAttr specs key then
-              let 
-                value = getAttr specs key;
-              in 
-                if value != null then value
-                else default
-            else
-              default;
-          hash = getValue "rev" "";
-          dependencies = getValue "deps" [];
-        in
-          pkgs.vimUtils.buildVimPlugin {
-            pname = name;
-            dependencies = dependencies;
-            version = hash;
-            src = fetchFromGitHub {
-              owner = username;
-              repo = repoUrl;
-              rev = hash;
-            };
-          };
-      mkPlugins = specs: (
-        # Example use:
-        ## mkPlugins [
-        ##   ["telescope" "nvim-telescope/telescope.nvim" { rev = "..."; sha256 = "..."; deps = [<vimPlugin> ...]}]
-        ##   [...]
-        ## ]
-        let 
-          process = spec: 
-            let
-              name = elemAt spec 0;
-              repo = elemAt spec 1;
-              recipe = elemAt spec 2;
-            in 
-              mkPlugin name repo recipe;
-        in 
-          map process specs
-      );
-    };
+    user = userUtils;
+    type =
+      x:
+      if isNull x then
+        "null"
+      else if isList x then
+        "list"
+      else if isBool x then
+        "bool"
+      else if isInt x then
+        "int"
+      else if isFloat x then
+        "float"
+      else if isString x then
+        "string"
+      else if isPath x then
+        "path"
+      else if isAttrs x then
+        "attrs"
+      else
+        "unknown";
   };
 in
-  utils
+utils

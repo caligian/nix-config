@@ -25,7 +25,7 @@ require('blink.cmp').setup {
     menu = { auto_show = false },
   },
   sources = {
-    default = { 'lsp', 'path', 'snippets', 'buffer', 'ripgrep' },
+    default = { 'lsp', 'path', 'snippets', 'buffer', },
     providers = {
       ripgrep = {
         module = "blink-ripgrep",

@@ -6,7 +6,6 @@ local as = types.as
 local utils = {}
 local M = { __index = rawget }
 
-
 local function check_pattern(str, patterns)
   patterns = as.list(patterns)
   for i = 1, #patterns do

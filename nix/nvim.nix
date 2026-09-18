@@ -6,8 +6,8 @@ let
   nvimDir = "${home}/.user/nvim";
   initVimFile = "${nvimDir}/configuration.vim";
   luaPath = "${nvimDir}/?.lua;${nvimDir}/?/?.lua;${nvimDir}/?/init.lua";
-  options = "{ tabstop = 4, shiftwidth = 4, softtabstop = 4, expandtab = true, autoindent = true, autochdir = false, background = 'dark', cursorline = false, wildmenu = true, wildmode = 'longest:full,full', number = true, relativenumber = true, termguicolors = true, clipboard = 'unnamedplus', }";
-  globals = "{ netrw_keepdir = 0, background_sync = false, matchparen_disable_insert = 1, loaded_matchparen = 0; tagbar_ctags_bin = '${pkgs.ctags}' }";
+  options = "{ tabstop = 4, shiftwidth = 4, softtabstop = 4, expandtab = true, autoindent = true, autochdir = false, background = 'dark', cursorline = false, wildmenu = true, wildmode = 'longest:full,full', number = true, relativenumber = true, termguicolors = true, clipboard = 'unnamedplus', autoindent = true, }";
+  globals = "{ tagbar_ctags_bin = '${pkgs.ctags}' }";
 in
 pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped {
   plugins = with pkgs.vimPlugins; [

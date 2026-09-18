@@ -1,4 +1,3 @@
-local kbd = vim.keymap.set
 local home = os.getenv("HOME")
 
 vim.diagnostic.config({
@@ -26,9 +25,6 @@ require('neo-tree').setup({
     auto_close = false,
   }
 })
-
-kbd("n", "<C-t>", "<cmd>Outline<CR>", { desc = "Toggle Outline" })
-kbd('n', '<C-p>', ':Neotree<CR>', { desc = 'Neotree' })
 
 -- Add default configurations
 local function enable(name, config)
@@ -65,7 +61,7 @@ enable('lua_lsp', {
       hint = { enable = true, semicolon = 'Disable' },
       runtime = { version = 'LuaJIT' },
       diagnostics = {
-        globals = { "vim", "apply", "as_list", "assertf", "assert_type", "assert_unless", "assert_when", "bless", "callable", "defined", "dump", "equals", "errorf", "identity", "inspect", "invert", "is_falsy", "is_truthy", "L", "literal", "partial", "paste", "paste0", "pp", "printf", "readlines", "rpartial", "slurp", "spit", "sprintf", "thread", "undefined", "unless", "unless_falsy", "unless_nil", "unless_truthy", "unpack", "when", "when_falsy", "when_nil", "when_truthy", "writelines", "system", "systemlist", "user_config", "user_state", "basename", "dirname", "buffer", "autocmd", "keymap", "buffer_group", "nvim", "augroup", "filetype", 'class', 'metatable', },
+        globals = { "vim", },
         disable = {
           "duplicate-doc-field",
           "duplicate-doc-alias",
@@ -110,11 +106,3 @@ enable('nil', {
   filetypes = { 'nix' },
   root_markers = { 'flake.nix', '.git', '.PROJECT' },
 })
-
---[[
-Missing deps
-require("nvim-file-operations").setup()
-require("outline").setup {
-  symbols = { icon_fetcher = function(kind, _, _) return string.format('[%s]', kind) end, }
-}
---]]

@@ -1,11 +1,11 @@
-require 'lua-utils.string'
-
-local bufnr = vim.fn.bufnr
+local str = require 'lua-utils.string'
+local getbufnr = vim.fn.bufnr
 local fs = require 'lua-utils.fs'
--- local types = require 'lua-utils.type'
+local types = require 'lua-utils.type'
+local is = types.is
 local autocmd = require 'lib.autocmd'
 local command = require 'lib.command'
-local bufname = vim.api.nvim_buf_get_name
+local getbufname = vim.api.nvim_buf_get_name
 local state = package.user.state.workspace
 local project = {}
 
@@ -13,12 +13,28 @@ local function get_check_depth()
   return package.user.config.workspace.check_depth
 end
 
-local function get_default()
-  return package.user.config.workspace.default or function(buf)
-    local path = bufname(buf)
-    local dir = fs.dirname(path)
+local function neotree(dir)
+  vim.cmd('Neotree bottom ' .. dir)
+end
 
-    if dir ~= '..' and dir ~= '.' then
+local function trim(s)
+  s = string.gsub(s, "^~", os.getenv "HOME")
+  s = string.trim(s)
+  s = string.gsub(s, "/+$", "")
+  return s
+end
+
+local function get_default()
+  return function(path)
+    path = is.number(path) and getbufname(path) or path
+    if not is.string(path) then
+      return
+    elseif not str.match(path, '^/') then
+      return
+    end
+
+    local dir = fs.dirname(path)
+    if not str.match(dir, '^/') then
       return
     else
       return dir
@@ -44,6 +60,10 @@ end
 ---@param opts? boolean
 ---@return string?
 function project.find(path, opts)
+  if string.sub(path, 1, 1) ~= '/' then
+    return
+  end
+
   opts = opts or {}
   local limit = opts.check_depth or get_check_depth()
   local default = opts.default or get_default()
@@ -80,7 +100,12 @@ end
 ---@param opts? project.find.opts
 ---@return string?
 function project.find_by_buffer(buf, opts)
-  return project.find(bufname(buf or vim.fn.bufnr()), opts)
+  buf = buf or getbufnr()
+  if getbufnr(buf) == -1 then
+    return
+  else
+    return project.find(getbufname(buf), opts)
+  end
 end
 
 ---@param dir string
@@ -161,7 +186,7 @@ function project.refresh(opts)
   for proj, bufs in pairs(state) do
     local invalid = not project.is_dir(proj)
     for buf, _ in pairs(bufs) do
-      if bufnr(buf) ~= -1 then
+      if getbufnr(buf) ~= -1 then
         buffers[buf] = { ok = invalid, dir = proj }
       else
         bufs[buf] = nil
@@ -196,14 +221,43 @@ function project.cd(dir)
   vim.cmd.cd(dir)
 end
 
-local function trim(s)
-  s = string.gsub(s, "^~", os.getenv "HOME")
-  s = string.trim(s)
-  s = string.gsub(s, "/+$", "")
-  return s
+project.command = setmetatable({}, {
+  __newindex = function(self, name, func)
+    if name:match '1$' then
+      name = string.sub(name, 1, #name - 1)
+      rawset(self, name, function(args, rest)
+        return func(args[1], rest)
+      end)
+    elseif name:match '0$' then
+      name = string.sub(name, 1, #name - 1)
+      rawset(self, name, function(args, rest)
+        return func(nil, rest)
+      end)
+    else
+      rawset(self, name, func)
+    end
+  end
+})
+local cmds = project.command
+
+function cmds.buf_browse1(buf, _)
+  local proj = project.find_by_buffer(buf, { check_depth = get_check_depth() })
+  if proj then
+    cmds.browse(proj)
+  end
 end
 
 function project.setup_commands()
+  command.new('ProjectBrowse', function(dir)
+    neotree(dir[1])
+  end, {
+    nargs = 1,
+    complete = 'dir',
+    desc = 'Open neotree at project directory',
+    trim = true,
+    filter = project.is_dir,
+  })
+
   command.new('ProjectInit', function(args, _)
     local dir = trim(args)
     if not fs.is_dir(dir) then
@@ -243,7 +297,7 @@ function project.setup_commands()
       local buf = args[i]
       if string.match(buf, '^[0-9]+$') then
         buf = tonumber(buf)
-        if bufnr(buf) == -1 then
+        if getbufnr(buf) == -1 then
           local wd = project.find(buf)
           if wd then project.add(wd, buf) end
         end
@@ -257,7 +311,7 @@ function project.setup_commands()
     split = '%s+',
     complete = 'buffer',
     process = function(buf)
-      if buf == '%' then return vim.fn.bufnr() end
+      if buf == '%' then return getbufnr() end
       return buf
     end,
   })
@@ -272,12 +326,12 @@ end
 
 function project.setup_autocmds()
   autocmd.new('BufEnter', function(buf, _)
-    local proj = project.find_by_buffer(buf)
+    local proj = project.find_by_buffer(_.buf)
     if not proj then
       return
     end
 
-    project.track(proj, buf)
+    project.track(proj, _.buf)
     project.cd(proj)
   end, {
     desc = 'cd into project directory',

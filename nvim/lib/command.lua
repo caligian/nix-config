@@ -1,13 +1,16 @@
 require 'lua-utils.string'
 
-local list = require 'lua-utils.list'
-local options = require 'lib.options'
+local types = require 'lua-utils.type'
 local copy = vim.deepcopy
 local make_command = vim.api.nvim_create_user_command
 local make_buffer_command = vim.api.nvim_buf_create_user_command
 local make_autocmd = vim.api.nvim_create_autocmd
 local state = package.user.state.command
-local command = {}
+local as_value = types.as_value
+
+---@class command.utils
+local command = { __index = rawget }
+setmetatable(command, command)
 
 ---@class command.valid_completion
 command.valid_completion = {
@@ -53,6 +56,8 @@ command.valid_completion = {
   var = true,
 }
 
+---@alias command.callback fun(args: string|string[], rest: command.args)
+
 ---@class command.args
 ---@field name string
 ---@field args string
@@ -75,38 +80,82 @@ command.valid_completion = {
 ---@field safe boolean alias for .pcall
 ---@field process fun(x: string): any
 ---@field filter fun(x: string): boolean
----@field split string
+
+---@class command.spec
+---@field [1]? string
+---@field [2]? command.callback
+---@field [3]? command.opts
+---@field name? string
+---@field callback command.callback
+---@field opts? command.opts
+
+---@class command
+---@field name string
+---@field callback command.callback
+---@field opts? command.opts
 
 ---@param name string
----@param callback fun(args: string|string[], rest: command.args)
+---@param callback command.callback
 ---@param opts? table
+---@return command
 function command.new(name, callback, opts)
-  local _args = copy({ name, callback, opts })
-  opts = options.new(opts)
-  local cmd_opts = opts / { bang = true, complete = true, desc = true, force = true, nargs = true, }
-  cmd_opts.nargs = cmd_opts.nargs or 0
-  local event = opts.event
-  local pattern = opts.pattern
-  local buf = opts.buffer
-  local should_pcall = opts.pcall or opts.safe
-  local split = opts.split
-  local process = opts.process or function(s) return s end
-  local filter = opts.filter or function(_) return true end
+  opts = opts or {}
+  local nargs = as_value(opts.nargs)
+  local bang = as_value(opts.bang)
+  local desc = as_value(opts.desc)
+  local force = as_value(opts.force)
+  local trim = as_value(opts.trim)
+  local process = as_value(opts.process)
+  local filter = as_value(opts.filter)
+  local event = as_value(opts.event)
+  local pattern = as_value(opts.pattern)
+  local buf = as_value(opts.buffer)
+  local should_pcall = as_value(opts.pcall)
+  local _args = { name, callback, opts }
+  local cmd_opts = { bang = bang, desc = desc, force = force, nargs = nargs }
   local run = function(args)
-    local use = args.args
-    use = split and string.split(use, split) or use
-    if type(use) == 'table' then
-      use = list.filter(use, filter)
-      use = list.map(use, process)
-    else
-      use = not filter(use) and nil
-      use = process(use)
+    local process_arg = function(arg)
+      if arg == '' then
+        return
+      end
+
+      if trim then
+        arg = trim(arg)
+      end
+
+      if filter and not filter(arg) then
+        return
+      elseif process then
+        return process(arg)
+      else
+        return arg
+      end
+    end
+    local collect_args = function(fargs)
+      local res = {}
+      for i = 1, #fargs do
+        local value = process_arg(fargs[i])
+        if value ~= nil then res[#res + 1] = value end
+      end
+      return res
+    end
+    local call = function(use_args, rest_args)
+      if should_pcall then
+        return pcall(callback, use_args, rest_args)
+      else
+        return callback(use_args, rest_args)
+      end
     end
 
-    if should_pcall then
-      pcall(callback, use, args)
+    if nargs == 0 then
+      return call(nil, args)
+    end
+
+    local use = collect_args(args.fargs)
+    if nargs == 1 or nargs == '?' then
+      return call(use[1], args)
     else
-      callback(use, args)
+      return call(use, args)
     end
   end
 
@@ -127,17 +176,8 @@ function command.new(name, callback, opts)
   end
 
   state[name] = _args
+  return _args
 end
-
----@class command.spec
----@field [1] string
----@field [2] fun(args: string, fargs: string[], rest: command.args)
----@field [3]? command.opts
-
----@class command.define
----@overload fun(opts?: command.opts, specs: command.spec[])
-command.define = {}
-setmetatable(command.define, command.define)
 
 function command.define(opts, specs)
   opts = opts or {}
@@ -147,6 +187,14 @@ function command.define(opts, specs)
     local cmd_opts = dict.merge(copy(given_opts or {}), opts)
     command.new(name, callback, cmd_opts)
   end
+end
+
+---@param name string
+---@param callback command.callback
+---@param opts? command.opts
+---@return command
+function command:__call(name, callback, opts)
+  return command.new(name, callback, opts)
 end
 
 return command

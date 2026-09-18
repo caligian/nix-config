@@ -20,7 +20,7 @@ local options = require 'lib.options'
 
 ---@alias autocmd.event string|string[]
 ---@alias autocmd.pattern string|string[]
----@alias autocmd.callback string|fun(args: autocmd.callback.args)
+---@alias autocmd.callback string|fun(buf: integer, args: autocmd.callback.args)
 
 ---@class autocmd.opts
 ---@field pattern? autocmd.pattern|integer

@@ -58,7 +58,7 @@ function utils.map(mode, lhs, rhs, opts)
     au_opts.pattern = ft or au_opts.pattern or '*.*'
     vim.api.nvim_create_autocmd(au_opts.event, {
       pattern = au_opts.pattern,
-      callback = function(args)
+      callback = function(_)
         kbd_opts = copy(kbd_opts)
         kbd_opts.buffer = args.buf
         vim.keymap.set(mode, lhs, rhs, kbd_opts)
@@ -96,17 +96,17 @@ end
 
 function utils.project_map(mode, lhs, rhs, opts)
   assert(is.callable(rhs), sprintf("rhs: Expected callable, got [%s] %s", type(rhs), rhs))
-  local new_rhs = function()
+  return utils.map(mode, lhs, function()
     local buf = vim.fn.bufnr()
     local filename = vim.api.nvim_buf_get_name(buf)
+
     if not filename:match('^/') then
       return
     else
       local wd = project.find_project_dir(filename)
       rhs(wd or fs.getcwd())
     end
-  end
-  utils.map(mode, lhs, new_rhs, opts)
+  end, opts)
 end
 
 function utils.project_define(opts, specs)

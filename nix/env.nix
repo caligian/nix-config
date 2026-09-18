@@ -1,27 +1,35 @@
 {
-  pkgs ? import <nixpkgs> {},
+  pkgs ? import <nixpkgs> { },
   home ? builtins.getEnv "HOME",
 }:
 let
-  utils = import <my/utils.nix> { pkgs = pkgs; home = home; };
   myPkgs = import <my/pkgs.nix> { pkgs = pkgs; };
-  buildInputs = myPkgs.buildInputs;
+  utils = import <my/utils.nix> {
+    inherit pkgs;
+    inherit home;
+  };
   user = utils.user;
-  userDir = user.dir;
+  userDirs = user.dir;
+  userHomeDirs = user.dir.home;
   systemPath = builtins.getEnv "PATH";
   libraryPath = myPkgs.libraryPath;
   myEnv = rec {
     # Directories
-    MY_DIR = userDir;
-    MY_PKGS_DIR = "${home}/pkgs";
-    MY_GAMES_DIR = "${home}/Games";
-    MY_REPOS_DIR = "${home}/Repos";
-    MY_MUSIC_DIR = "${home}/Music";
-    MY_DOWNLOADS_DIR = "${home}/Downloads";
-    MY_PROJECTS_DIR = "${home}/Projects";
-    MY_WORK_DIR = "${home}/Work";
-    MY_SCRIPTS_DIR = "${home}/Scripts";
-    MY_API_KEYS_DIR = "${userDir}/api-keys";
+    MY_DIR = user.rootDir;
+    MY_KITTY_DIR = userDirs.kitty;
+    MY_NVIM_DIR = userDirs.nvim;
+    MY_API_KEYS_DIR = userDirs.apiKeys;
+    MY_LIB_DIR = userHomeDirs.lib.root;
+    MY_PERL_LIB_DIR = "${userHomeDirs.lib.root}/perl";
+    MY_PYTHON_LIB_DIR = "${userHomeDirs.lib.root}/python";
+    MY_LUAJIT_LIB_DIR = "${userHomeDirs.lib.root}/luajit";
+    MY_GAMES_DIR = userHomeDirs.games;
+    MY_REPOS_DIR = userHomeDirs.repos;
+    MY_MUSIC_DIR = userHomeDirs.music;
+    MY_DOWNLOADS_DIR = userHomeDirs.downloads;
+    MY_PROJECTS_DIR = userHomeDirs.projects;
+    MY_WORK_DIR = userHomeDirs.work;
+    MY_SCRIPTS_DIR = userHomeDirs.scripts;
 
     # API keys
     DEEPSEEK_API_KEY_FILE = "${MY_API_KEYS_DIR}/deepseek.txt";
@@ -38,12 +46,12 @@ let
     NIXPKGS_ALLOW_UNFREE = "1";
 
     # Language paths
-    PERL5LIB = "${MY_PKGS_DIR}/perl";
-    LUA_MODULES_DIR = "${MY_PKGS_DIR}/lua";
-    PIP_TARGET = "${MY_PKGS_DIR}/python";
+    PERL5LIB = "${MY_PERL_LIB_DIR}";
+    LUA_MODULES_DIR = "${MY_LUAJIT_LIB_DIR}";
+    PIP_TARGET = "${MY_PYTHON_LIB_DIR}";
 
     # Temporary overriding until I publish the package
-    PYTHONPATH = "${PIP_TARGET}:${MY_REPOS_DIR}/common_utils/src";
+    PYTHONPATH = "$PYTHONPATH:${MY_REPOS_DIR}/common_utils/src";
     PYTHONIOENCODING = "utf-8";
 
     # PATH
@@ -54,9 +62,6 @@ let
 
     # perl stuff
     PERLCRITICRC = "${home}/.perlcriticrc";
-
-    # Misc
-    IN_NIX_SHELL = "1";
   };
 in
-  myEnv
+myEnv

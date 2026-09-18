@@ -1,76 +1,29 @@
-local fs = require 'lua-utils.fs'
-local copy = require 'lua-utils.copy'
-local types = require 'lua-utils.type'
+local lutils = require 'lua-utils'
+local fs = lutils.fs
+local copy = lutils.copy
+local types = lutils.types
 -- local is = types.is
 local as = types.as
-local dict = require 'lua-utils.dict'
-local list = require 'lua-utils.list'
+local dict = lutils.dict
+local list = lutils.list
 local mydir = os.getenv("MY_DIR") .. "/nvim"
 local mylib = mydir .. "/lib"
 local myconfig = mydir .. "/config"
-
 
 ---@alias config.key string|number
 ---@alias config.keys config.keys[]
 
 ---@class user
 ---@field last_setup_result? user.setup.return
-local utils = {
-  setup_done = false,
-  state = {
-    autocmd = {},
-    keymap = {},
-    workspace = {},
-    command = {},
-    repl = {},
-    terminal = {},
-    filetype = {},
-  },
-  last_setup_result = nil,
-  config = {
-    pkgs = {
-      telescope = {
-        defaults = {
-          layout_config = { height = 0.3 },
-          layout_strategy = 'bottom_pane',
-          previewer = false,
-        },
-        pickers = {
-          ['*'] = { previewer = false, },
-          oldfiles = { previewer = false, },
-          find_files = { previewer = false, },
-          git_files = { previewer = false, },
-          buffers = {
-            show_all_buffers = true,
-            sort_lastused = true,
-            previewer = false,
-            mappings = {
-              i = { ["<c-d>"] = "delete_buffer", },
-              n = { ["dd"] = "delete_buffer", }
-            }
-          }
-        },
-        extensions = {
-          frecency = {
-            previewer = false,
-          },
-          file_browser = {
-            previewer = false,
-          },
-          project = {
-            previewer = false,
-          }
-        }
-      }
-    },
-    workspace = {
-      check_depth = 4,
-    }
-  }
-}
+---@field setup_done? boolean
+local utils = package.user
 
----@type user
-package.user = package.user or utils
+---@class user.state
+---@field terminal table
+package.user.state = package.user.state
+
+---@class user.config
+package.user.config = package.user.config
 
 ---@param ks config.key|config.keys
 ---@param value any
@@ -260,13 +213,13 @@ end
 ---@param name string
 ---@return boolean, any
 function utils.require_pkg(name)
-  return pcall(require, 'config.pkgs.' .. name)
+  return pcall(require, 'config.plugins.' .. name)
 end
 
 ---@param name string
 ---@return boolean, any
 function utils.load_pkg(name)
-  local filename = myconfig .. '/pkgs/' .. name .. '.lua'
+  local filename = myconfig .. '/plugins/' .. name .. '.lua'
   if not fs.is_file(name) then
     return false, string.format('Nonexistent file %s', filename)
   end
@@ -279,7 +232,7 @@ function utils.load_pkg(name)
   return pcall(chunk)
 end
 
----@class user.require_all_pkgs.return
+---@class user.require_all_plugins.return
 ---@field require string
 ---@field filename string
 ---@field ok boolean
@@ -288,15 +241,15 @@ end
 ---@field msg? string
 
 ---Setup all packages
----@return user.require_all_pkgs.return[]
-function utils.require_all_pkgs()
-  local dir = myconfig .. '/pkgs'
+---@return user.require_all_plugins.return[]
+function utils.require_all_plugins()
+  local dir = myconfig .. '/plugins'
   local files = fs.glob(string.format("%s/*.lua", dir))
 
   return list.map(files, function(filename)
     local file = fs.basename(filename)
     file = string.gsub(file, '%.lua$', '')
-    local req = string.format('config.pkgs.%s', file)
+    local req = string.format('config.plugins.%s', file)
     local ok, msg = pcall(require, req)
     local result = {
       ok = ok,
@@ -315,7 +268,7 @@ function utils.require_all_pkgs()
   end)
 end
 
----@class user.load_all_pkgs.return
+---@class user.load_all_plugins.return
 ---@field filename string
 ---@field ok boolean
 ---@field err boolean
@@ -323,15 +276,15 @@ end
 ---@field msg? string
 
 ---Load all package configurations
----@return user.load_all_pkgs.return[]
-function utils.load_all_pkgs()
-  local dir = myconfig .. '/pkgs'
+---@return user.load_all_plugins.return[]
+function utils.load_all_plugins()
+  local dir = myconfig .. '/plugins'
   local files = fs.glob(string.format("%s/*.lua", dir))
 
   return list.map(files, function(filename)
     local file = fs.basename(filename)
     file = string.gsub(file, '%.lua$', '')
-    local req = string.format('config.pkgs.%s', file)
+    local req = string.format('config.plugins.%s', file)
     local ok, msg = pcall(require, req)
     local result = {
       ok = ok,
@@ -351,7 +304,7 @@ function utils.load_all_pkgs()
 end
 
 ---@class user.setup.return
----@field pkgs (user.load_all_pkgs.return | user.require_all_pkgs.return)[]
+---@field plugins (user.load_all_plugins.return | user.require_all_plugins.return)[]
 ---@field user (user.require_all_configs.return | user.load_all_configs.return)[]
 
 ---@class user.setup.overrides
@@ -378,13 +331,13 @@ function utils.setup(opts)
     dict.force_merge(package.user, overrides)
   end
 
-  local result = { config = {}, pkgs = {}, }
+  local result = { config = {}, plugins = {}, }
   if load then
     result.config = utils.load_all_configs()
-    result.pkgs = utils.load_all_pkgs()
+    result.plugins = utils.load_all_plugins()
   else
     result.config = utils.require_all_configs()
-    result.pkgs = utils.require_all_pkgs()
+    result.plugins = utils.require_all_plugins()
   end
 
   require('lib.project').setup()
