@@ -1,4 +1,4 @@
-home: pkgs:
+name: home: pkgs:
 let
   utils = import <my/utils.nix> { inherit home pkgs; };
   env = import <my/env.nix> { inherit home; };
@@ -22,6 +22,7 @@ let
     }
 
     ${shellFile.postInit}
+    set-nix-PS1 "${name}"
   '';
 in
 {

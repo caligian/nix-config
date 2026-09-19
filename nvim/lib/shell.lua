@@ -27,17 +27,19 @@ package.user.state.tempfiles = package.user.state.tempfiles or {}
 ---@type {[integer|string]: terminal|string}
 local state = package.user.state.shell
 
+---@alias shell.cwd string|(fun(buf: integer): string)
+---@alias shell.cmd string|(fun(buf: integer, cwd: string): string)
 
----@class shell.root.opts
+---@class shell.new.opts.root
 ---@field check_depth? integer
 
----@class shell.opts
----@field cwd? string|(fun(buf: integer): string)
----@field cmd? string|(fun(buf: integer, cwd: string): string)
----@field root? shell.root.opts
+---@class shell.new.opts
+---@field cwd? shell.cwd
+---@field cmd? shell.cmd
+---@field root? shell.new.opts.root
 
 ---@param bufnr integer
----@param opts? shell.opts
+---@param opts? shell.new.opts
 ---@return terminal
 function shell.new(bufnr, opts)
   bufnr = bufnr or buffer.current()
@@ -336,8 +338,6 @@ function shell.setup()
   shell.setup_keymaps()
 end
 
-shell.setup()
-local term = shell.new(buffer.current())
-term:start()
+shell.getbufnr = normalize_buf
 
 return shell

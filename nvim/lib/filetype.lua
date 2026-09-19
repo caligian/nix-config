@@ -65,68 +65,68 @@ local function assert_type(x, pred, prefix)
   is[pred](x, { assert = true, dump = true, prefix = prefix })
 end
 
----@alias Filetype.Repl.cmd string|(fun(buf: integer, args: Filetype.Repl.cmd.args): string)
+---@alias filetype.repl.cmd string|(fun(buf: integer, args: filetype.repl.cmd.args): string)
 
----@class Filetype.Project
+---@class filetype.Project
 ---@field check_depth? integer
 
----@class Filetype.Repl.cmd.args
+---@class filetype.repl.cmd.args
 ---@field project? string
 ---@field dir? string
 
----@class Filetype.Repl.opts
+---@class filetype.repl.opts
 ---@field map fun(str: string[]): string[]
 ---@field file? boolean
 ---@field format? string
 
----@class Filetype.Repl
+---@class filetype.repl
 ---@field cmd string|fun(buf: integer, wd: string): string
----@field input Filetype.Repl.opts
+---@field input filetype.repl.opts
 
----@class Filetype.Keymap
+---@class filetype.Keymap
 ---@field [1]? string|string[]
 ---@field [2] string
 ---@field [3] string|function
 ---@field [4]? keymap.opts
 
----@class Filetype.Autocmd
+---@class filetype.Autocmd
 ---@field [1]? string|string[]
 ---@field [2] string|function
 ---@field [3]? autocmd.opts
 
----@class Filetype.Buffer
+---@class filetype.Buffer
 ---@field opt table<string,any>
 ---@field var table<string,any>
 
----@class Filetype.Config
----@field keymap Filetype.Keymap[]
----@field autocmd Filetype.Keymap[]
----@field buffer Filetype.Buffer
+---@class filetype.Config
+---@field keymap filetype.Keymap[]
+---@field autocmd filetype.Keymap[]
+---@field buffer filetype.Buffer
 
----@class Filetype
+---@class filetype
 ---@field name string
 ---@field config table
 ---@field state table
----@overload fun(name: string): Filetype
-local Filetype = class 'Filetype'
+---@overload fun(name: string): filetype
+local filetype = class 'filetype'
 
-function Filetype:initialize(name)
+function filetype:initialize(name)
   assert_type(name, 'string', 'name')
   self.name = name
   self.config = { keymap = {}, autocmd = {}, buffer = { opt = {}, var = {} } }
   self.state = {}
 end
 
----@class Filetype.Autocmd.opts
+---@class filetype.Autocmd.opts
 ---@field once? boolean
 ---@field desc? string
 
 ---@param callback fun(buf: integer, args: autocmd.callback.args)
----@param opts? Filetype.Autocmd.opts|string
-function Filetype:on(callback, opts)
+---@param opts? filetype.Autocmd.opts|string
+function filetype:on(callback, opts)
   opts = opts or {}
   opts = is.string(opts) and { desc = opts } or opts
-  autocmd.new({ 'Filetype' }, callback, {
+  autocmd.new({ 'filetype' }, callback, {
     pattern = self.name,
     once = opts.once,
     desc = opts.desc
@@ -137,18 +137,18 @@ end
 ---@param lhs string
 ---@param rhs string|function
 ---@param opts? keymap.opts
-function Filetype:map(mode, lhs, rhs, opts)
+function filetype:map(mode, lhs, rhs, opts)
   mode = mode or 'n'
   opts = opts or {}
   opts = is.string(opts) and { desc = opts } or opts
   opts = copy.copy(opts)
-  opts.event = 'Filetype'
+  opts.event = 'filetype'
   opts.pattern = self.name
   keymap.map(mode, lhs, rhs, opts)
 end
 
 ---@param config {[string]: any}
-function Filetype:set_opts(config)
+function filetype:set_opts(config)
   self:on(function(buf, _)
     for key, value in pairs(config) do
       vim.api.nvim_set_option_value(key, value, { buf = buf })
@@ -157,7 +157,7 @@ function Filetype:set_opts(config)
 end
 
 ---@param config {[string]: any}
-function Filetype:set_vars(config)
+function filetype:set_vars(config)
   self:on(function(buf, _)
     for key, value in pairs(config) do
       vim.api.nvim_buf_set_var(buf, key, value)
@@ -165,10 +165,10 @@ function Filetype:set_vars(config)
   end)
 end
 
----@param cmd Filetype.Repl.cmd
----@param opts? Filetype.Repl.opts
+---@param cmd filetype.repl.cmd
+---@param opts? filetype.repl.opts
 ---@param proj_opts?
-function Filetype:set_repl(cmd, opts, proj_opts)
+function filetype:set_repl(cmd, opts, proj_opts)
   local use = function()
     if is.string(cmd) then
       return cmd
@@ -187,8 +187,8 @@ function Filetype:set_repl(cmd, opts, proj_opts)
   self.config.repl = { cmd = use, input = opts, project = proj_opts }
 end
 
--- local lua = Filetype('lua')
+-- local lua = filetype('lua')
 -- lua:set_repl('luajit', {}, { check_depth = 'a' })
 -- pp(lua)
 
-return Filetype
+return filetype
