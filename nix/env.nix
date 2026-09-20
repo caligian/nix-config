@@ -1,24 +1,20 @@
+home:
 {
   pkgs ? import <nixpkgs> { },
-  home ? builtins.getEnv "HOME",
 }:
 let
-  myPkgs = import <my/pkgs.nix> { pkgs = pkgs; };
-  utils = import <my/utils.nix> {
-    inherit pkgs;
-    inherit home;
-  };
+  utils = import <my/utils.nix> home { inherit pkgs; };
   user = utils.user;
   userDirs = user.dir;
   userHomeDirs = user.dir.home;
   systemPath = builtins.getEnv "PATH";
-  libraryPath = myPkgs.libraryPath;
   myEnv = rec {
     # Directories
     MY_DIR = user.rootDir;
     MY_KITTY_DIR = userDirs.kitty;
     MY_NVIM_DIR = userDirs.nvim;
     MY_API_KEYS_DIR = userDirs.apiKeys;
+    MY_INCLUDE_DIR = userDirs.include;
     MY_LIB_DIR = userHomeDirs.lib.root;
     MY_PERL_LIB_DIR = "${userHomeDirs.lib.root}/perl";
     MY_PYTHON_LIB_DIR = "${userHomeDirs.lib.root}/python";
@@ -58,7 +54,7 @@ let
     PATH = "${home}/bin:${home}/.local/bin:${systemPath}";
 
     # Library path
-    LD_LIBRARY_PATH = "${libraryPath}";
+    # LD_LIBRARY_PATH = "${libraryPath}";
 
     # perl stuff
     PERLCRITICRC = "${home}/.perlcriticrc";

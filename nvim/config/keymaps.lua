@@ -136,10 +136,11 @@ map('n', '<leader>g?', ':botright Git status<CR>', { desc = 'Git status' })
 map('n', '<leader>gs', ':Git stage %<CR>', { desc = 'Stage current buffer' })
 map('n', '<leader>gf', ':Telescope git_files<CR>', { desc = 'List tracked files' })
 
---- Other telescope stuff
+--- Misc stuff
 map('n', '<leader>"', ':Telescope registers<CR>', { desc = "Telescope registers" })
 map('n', '<leader>/', ':Telescope grep_string<CR>', { desc = 'Grep current workspace' })
 map('n', '<leader>?', ':Telescope live_grep<CR>', { desc = 'Live grep workspace' })
 map('n', '<leader>\'', ':Telescope marks<CR>', { desc = "Telescope marks" })
 map('n', '<leader><leader>', ":Telescope resume<CR>", { desc = "Resume picker" })
 map('n', '<leader>j', ':Telescope jumplist<CR>', { desc = 'Telescope jumplist' })
+map('n', '<leader>u', ':UndotreeToggle<CR>', { desc = 'Telescope jumplist' })

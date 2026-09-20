@@ -4,9 +4,9 @@ let
   nvimDir = env.MY_NVIM_DIR;
   initVimFile = "${nvimDir}/configuration.vim";
   luaPath = "${nvimDir}/?.lua;${nvimDir}/?/?.lua;${nvimDir}/?/init.lua";
-  options = "{ tabstop = 4, shiftwidth = 4, softtabstop = 4, expandtab = true, autoindent = true, autochdir = false, background = 'dark', cursorline = false, wildmenu = true, wildmode = 'longest:full,full', number = true, relativenumber = true, termguicolors = true, clipboard = 'unnamedplus', autoindent = true, }";
-  globals = "{ tagbar_ctags_bin = '${pkgs.ctags}' }";
-  myNeovim = pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped {
+  sourceFile = "${env.MY_INCLUDE_DIR}/setup-neovim.lua";
+  mkNeovim = spec: pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped spec;
+  myNeovim = mkNeovim {
     plugins = with pkgs.vimPlugins; [
       fugitive
       blink-cmp
@@ -84,85 +84,20 @@ let
       unzip
     ];
     luaRcContent = ''
-      for key, value in pairs(${options}) do vim.o[key] = value end
-      for key, value in pairs(${globals}) do vim.g[key] = value end
+      if not string.match(package.path, ";" .. "${luaPath}") then
+        package.path = package.path .. ';' .. "${luaPath}"
+      end
 
-      require("lsp-format").setup {}
-      vim.keymap.set('n', '<leader>lf', ':Format<CR>', {desc = "Format buffer"})
+      ${builtins.readFile sourceFile}
 
-      vim.api.nvim_create_autocmd('LspAttach', {
-        callback = function(args)
-          pcall(function()
-            local client = assert(vim.lsp.get_client_by_id(args.data.client_id))
-            require("lsp-format").on_attach(client, args.buf)
-          end)
-        end,
-      })
+      vim.g.tagbar_ctags_bin = "${pkgs.ctags}" 
+      vim.cmd.source "${initVimFile}"
+      vim.cmd.colorscheme "catppuccin"
 
-      package.path = "${luaPath};" .. package.path
-      package.user = {}
-      package.user.state = {
-        autocmd = {},
-        keymap = {},
-        terminal = {id = {}, pid = {}},
-        filetype = {},
-        repl = {},
-        workspace = {},
-        buffer_group = {},
-        buffer = {},
-        command = {},
-        augroup = {},
-      }
-      package.user.config = {
-        plugins = {
-          telescope = {
-            defaults = {
-              layout_config = { height = 0.3 },
-              layout_strategy = 'bottom_pane',
-              previewer = false,
-            },
-            pickers = {
-              ['*'] = { previewer = false, },
-              oldfiles = { previewer = false, },
-              find_files = { previewer = false, },
-              git_files = { previewer = false, },
-              buffers = {
-                show_all_buffers = true,
-                sort_lastused = true,
-                previewer = false,
-                mappings = {
-                  i = { ["<c-d>"] = "delete_buffer", },
-                  n = { ["dd"] = "delete_buffer", }
-                }
-              },
-              diagnostics = {
-                previewer = false,
-              }
-            },
-            extensions = {
-              frecency = {
-                previewer = false,
-              },
-              file_browser = {
-                previewer = false,
-              },
-              project = {
-                previewer = false,
-              }
-            }
-          }
-        },
-        workspace = {
-          check_depth = 4,
-          marker = '.PROJECT',
-        },
-      }
+      _G.LIB = package.user.lib --- @diagnostic disable-line
+      _G.USER = package.user --- @diagnostic disable-line
 
-      _G.STATE = package.user.state
-      _G.CONFIG = package.user.config
-
-      vim.cmd ":source ${initVimFile}"
-      require 'configuration'
+      require("configuration")
     '';
   };
 in

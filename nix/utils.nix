@@ -1,8 +1,8 @@
 # ~/.user/nix/myUtils.nix
+home:
 {
   pkgs ? import <nixpkgs> { },
   lib ? pkgs.lib,
-  home,
 }:
 
 let
@@ -140,18 +140,22 @@ let
   };
   toUtils = {
     str = toString;
+    string = toString;
     dict = listToAttrs;
   };
   isUtils = {
     int = isInt;
     float = isFloat;
     string = isString;
-    attrs = isAttrs;
+    str = isString;
+    number = x: (isInt x) || (isString x);
+    num = x: (isInt x) || (isString x);
     dict = isAttrs;
     null = isNull;
     bool = isBool;
     path = isPath;
     derivation = isDerivation;
+    drv = isDerivation;
   };
   pathType =
     p:
@@ -210,8 +214,8 @@ let
     root = userRootDir;
     nix = "${userRootDir}/nix";
     nixPkgs = "${userRootDir}/nix/pkgs";
-    scripts = "${userRootDir}/scripts";
-    shell = "${userRootDir}/shell";
+    bin = "${userRootDir}/bin";
+    include = "${userRootDir}/include";
     lib = "${userRootDir}/lib";
     config = "${userRootDir}/config";
     lock = "${userRootDir}/lock";
@@ -242,8 +246,8 @@ let
     };
   };
   mkNixPath = name: "${userDirs.nix}/${name}.nix";
-  mkScriptPath = name: "${userDirs.scripts}/${name}.nix";
-  mkShellPath = name: "${userDirs.shell}/${name}.sh";
+  mkBinPath = name: "${userDirs.bin}/${name}";
+  mkIncludePath = name: "${userDirs.include}/${name}";
   mkPath = p: "${userRootDir}/${p}";
   lockMkPath = name: "${userDirs.lock}/${name}";
   lockUtils = {
@@ -270,19 +274,19 @@ let
   userUtils = {
     rootDir = userRootDir;
     mkNixPath = mkNixPath;
-    mkScriptPath = mkScriptPath;
-    mkShellPath = mkShellPath;
+    mkBinPath = mkBinPath;
+    mkIncludePath = mkIncludePath;
     mkPath = mkPath;
-    readShellFile =
+    source =
       name:
       let
-        p = mkShellPath name;
+        p = mkIncludePath name;
       in
       if pathExists p then readFile p else null;
-    readScriptFile =
+    sourceBin =
       name:
       let
-        p = mkScriptPath name;
+        p = mkBinPath name;
       in
       if pathExists p then readFile p else null;
     dir = userDirs;
@@ -300,68 +304,80 @@ let
     load = fromJSON;
     dump = toJSON;
   };
-  utils = {
-    git = fetchUtils.git;
-    github = fetchUtils.github;
-    ls = pathUtils.ls;
-    dirname = pathUtils.dirname;
-    basename = pathUtils.basename;
-    isFile = pathUtils.isFile;
-    isDir = pathUtils.isDir;
-    isPath = pathUtils.exists;
-    filetype = pathUtils.type;
-    mkLibraryPath = makeLibraryPath;
-    car = listUtils.car;
-    cdr = listUtils.cdr;
-    reduce = listUtils.reduce;
-    len = listUtils.length;
-    nth = listUtils.nth;
-    join = listUtils.join;
-    keep = listUtils.keep;
-    apply = listUtils.apply;
-    unique = listUtils.unique;
-    concat = listUtils.concat;
-    toList = toList;
-    toDict = listUtils.toDict;
-    keys = dictUtils.keys;
-    values = dictUtils.values;
-    merge = dictUtils.merge;
-    update = dictUtils.update;
-    has = dictUtils.has;
-    get = dictUtils.get;
-    dict = dictUtils;
-    list = listUtils;
-    str = strUtils;
-    to = toUtils;
-    file = fileUtils;
-    path = pathUtils;
-    is = isUtils;
-    json = jsonUtils;
-    fetch = fetchUtils;
-    log = msg: value: trace "${msg}: ${toString value}" value;
-    inspect = value: trace (toJSON value) value;
-    die = throw;
-    user = userUtils;
-    type =
-      x:
-      if isNull x then
-        "null"
-      else if isList x then
-        "list"
-      else if isBool x then
-        "bool"
-      else if isInt x then
-        "int"
-      else if isFloat x then
-        "float"
-      else if isString x then
-        "string"
-      else if isPath x then
-        "path"
-      else if isAttrs x then
-        "attrs"
-      else
-        "unknown";
-  };
 in
-utils
+{
+  mkNeovim =
+    {
+      plugins ? [ ],
+      rocks ? [ ],
+      pkgs ? [ ],
+      init ? "",
+    }:
+    pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped {
+      plugins = plugins;
+      extraLuaPackages = rocks;
+      extraPackages = pkgs;
+      luaRcContent = init;
+    };
+  git = fetchUtils.git;
+  github = fetchUtils.github;
+  ls = pathUtils.ls;
+  dirname = pathUtils.dirname;
+  basename = pathUtils.basename;
+  isFile = pathUtils.isFile;
+  isDir = pathUtils.isDir;
+  isPath = pathUtils.exists;
+  filetype = pathUtils.type;
+  mkLibraryPath = makeLibraryPath;
+  car = listUtils.car;
+  cdr = listUtils.cdr;
+  reduce = listUtils.reduce;
+  len = listUtils.length;
+  nth = listUtils.nth;
+  join = listUtils.join;
+  keep = listUtils.keep;
+  apply = listUtils.apply;
+  unique = listUtils.unique;
+  concat = listUtils.concat;
+  toList = toList;
+  toDict = listUtils.toDict;
+  keys = dictUtils.keys;
+  values = dictUtils.values;
+  merge = dictUtils.merge;
+  update = dictUtils.update;
+  has = dictUtils.has;
+  get = dictUtils.get;
+  dict = dictUtils;
+  list = listUtils;
+  str = strUtils;
+  to = toUtils;
+  file = fileUtils;
+  path = pathUtils;
+  is = isUtils;
+  json = jsonUtils;
+  fetch = fetchUtils;
+  log = msg: value: trace "${msg}: ${toString value}" value;
+  inspect = value: trace (toJSON value) value;
+  die = throw;
+  user = userUtils;
+  type =
+    x:
+    if isNull x then
+      "null"
+    else if isList x then
+      "list"
+    else if isBool x then
+      "bool"
+    else if isInt x then
+      "int"
+    else if isFloat x then
+      "float"
+    else if isString x then
+      "string"
+    else if isPath x then
+      "path"
+    else if isAttrs x then
+      "attrs"
+    else
+      "unknown";
+}

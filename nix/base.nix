@@ -1,19 +1,28 @@
-name: home: pkgs:
+name: home:
+{
+  pkgs ? import <nixpkgs> { },
+  env ? { },
+  buildInputs ? [ ],
+  shellHook ? "",
+}:
 let
-  utils = import <my/utils.nix> { inherit home pkgs; };
-  env = import <my/env.nix> { inherit home; };
-  buildInputs = import <my/pkgs/base.nix> home { inherit pkgs env; };
-  readShellFile = utils.user.readShellFile;
-  shellFile = {
-    init = readShellFile "init";
-    utils = readShellFile "utils";
-    postInit = readShellFile "post-init";
+  utils = import <my/utils.nix> home { inherit pkgs; };
+  myEnv = (import <my/env.nix> home { inherit pkgs; }) // env;
+  myBuildInputs = import <my/pkgs/base.nix> home {
+    inherit pkgs;
+    env = myEnv;
   };
-  shellHook = ''
-    ${shellFile.init}
-    ${shellFile.utils}
+  source = utils.user.source;
+  initSh = source "init.sh";
+  utilsSh = source "utils.sh";
+  postInitSh = source "post-init.sh";
+  myShellHook = ''
+    set-nix-PS1 "${name}"
 
-    function lrocks() {
+    ${initSh}
+    ${utilsSh}
+
+    lrocks() {
       luarocks --local --tree "$LUA_MODULES_DIR" --lua-version 5.1 "$@" RT_DIR="${pkgs.glibc}"
     }
 
@@ -21,10 +30,12 @@ let
       lrocks install --force "$@" RT_DIR="${pkgs.glibc}"
     }
 
-    ${shellFile.postInit}
-    set-nix-PS1 "${name}"
+    ${postInitSh}
+    ${shellHook}
   '';
 in
 {
-  inherit env buildInputs shellHook;
+  env = myEnv // env;
+  shellHook = myShellHook;
+  buildInputs = myBuildInputs ++ buildInputs;
 }

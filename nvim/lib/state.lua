@@ -1,9 +1,6 @@
-local lutils = require 'lua-utils'
+package.user = package.user
+local lutils = package.user.lib
 local fs = lutils.fs
-local copy = lutils.copy
-local types = lutils.types
--- local is = types.is
-local as = types.as
 local dict = lutils.dict
 local list = lutils.list
 local mydir = os.getenv("MY_DIR") .. "/nvim"
@@ -13,86 +10,7 @@ local myconfig = mydir .. "/config"
 ---@alias config.key string|number
 ---@alias config.keys config.keys[]
 
----@class user
----@field last_setup_result? user.setup.return
----@field setup_done? boolean
 local utils = package.user
-
----@class user.state
----@field terminal table
-package.user.state = package.user.state
-
----@class user.config
-package.user.config = package.user.config
-
----@param ks config.key|config.keys
----@param value any
----@return user
-function utils.set(ks, value)
-  value = types.as_value(value)
-  if value == nil then
-    error("value cannot be nil. For unsetting values, use utils:unset instead")
-  end
-
-  ks = as.list(ks)
-  dict.force_set(utils, ks, value)
-  return utils
-end
-
-function utils.unset(ks)
-  ks = as.list(ks)
-  dict.unset(utils, ks)
-  return utils
-end
-
----@param ks config.key
----@param value any
----@return user
-function utils.set_state(ks, value)
-  ks = copy.copy(ks)
-  ks = as.list(ks)
-  table.insert(ks, 1, 'state')
-  return utils.set(ks, value)
-end
-
----@param ks config.key
----@return user
-function utils.unset_state(ks)
-  ks = copy.copy(ks)
-  ks = as.list(ks)
-  table.insert(ks, 1, 'state')
-  return utils.unset(ks)
-end
-
----@param ... string
----@return boolean, any
-function utils.require(...)
-  local str = table.concat({ ... }, '.')
-  local ok, msg = pcall(require, str)
-  return ok, msg
-end
-
----@param str string
----@param on_ok fun(result: any): any
----@param on_err? fun(err_msg?: string): any (default: Raise the error message)
----@return any
-function utils.map_require(str, on_ok, on_err)
-  local ok, msg = utils.require(str)
-  on_err = on_err or function(err_msg)
-    if err_msg then
-      return string.format('require "%s": %s', str, err_msg)
-    else
-      return string.format('require "%s": ERROR', str)
-    end
-  end
-
-  if ok then
-    if on_ok then return on_ok(msg) end
-    return msg
-  else
-    on_err(msg)
-  end
-end
 
 ---Basically loadfile("~/.user/config/{name}.lua")
 ---@param name string
@@ -342,7 +260,6 @@ function utils.setup(opts)
 
   require('lib.project').setup()
   state.last_setup_result = result
-  if package.user == nil then package.user = utils end
 
   return state.last_setup_result
 end
