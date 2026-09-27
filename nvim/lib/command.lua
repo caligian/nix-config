@@ -1,6 +1,8 @@
-require 'lua-utils.string'
+require 'lib.definitions'
 
-local types = require 'lua-utils.type'
+local lib = package.user.lib
+local types = lib.types
+local is = lib.is
 local copy = vim.deepcopy
 local make_command = vim.api.nvim_create_user_command
 local make_buffer_command = vim.api.nvim_buf_create_user_command
@@ -9,7 +11,10 @@ local state = package.user.state.command
 local as_value = types.as_value
 
 ---@class command.utils
-local command = { __index = rawget }
+local command = {
+  __index = rawget,
+  validator = { is.string, is.callable, is.table }
+}
 setmetatable(command, command)
 
 ---@class command.valid_completion
@@ -195,6 +200,13 @@ end
 ---@return command
 function command:__call(name, callback, opts)
   return command.new(name, callback, opts)
+end
+
+---@param spec command.spec
+---@return boolean
+function command.isa_config(spec)
+  lib.assert.spec(spec, command.validator)
+  return true
 end
 
 return command

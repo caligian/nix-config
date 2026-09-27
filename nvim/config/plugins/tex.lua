@@ -1,1 +1,1 @@
-vim.g.vimtex_view_method = "evince"
+-- vim.g.vimtex_view_method = "evince"

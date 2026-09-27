@@ -1,5 +1,9 @@
-local types = require 'lua-utils.type'
-local is = types.is
+require 'lib.definitions'
+
+local lib = package.user.lib
+local list = lib.list
+local is = lib.is
+local union = lib.union
 local copy = vim.deepcopy
 local state = package.user.state.autocmd
 local enable = vim.api.nvim_create_autocmd
@@ -53,7 +57,13 @@ local options = require 'lib.options'
 
 ---@class autocmd.utils
 ---@overload fun(event: autocmd.event, callback: autocmd.callback, opts?: autocmd.opts|string|integer): autocmd
-local autocmd = {}
+local autocmd = {
+  validator = {
+    union(is.string, is.list),
+    union(is.callable, is.string),
+    union(is.table, is.string),
+  }
+}
 
 ---Valid options
 ---@type {[string]: boolean}
@@ -81,11 +91,11 @@ function autocmd.new(event, callback, opts)
   if is.string(callback) then
     opts.command = callback
   else
-    opts.callback = function(args)
+    opts.callback = function(_args)
       if should_pcall then
-        pcall(callback, args.buf, args)
+        pcall(callback, _args.buf, _args)
       else
-        callback(args.buf, args)
+        callback(_args.buf, _args)
       end
     end
   end
@@ -95,12 +105,18 @@ function autocmd.new(event, callback, opts)
   return id
 end
 
+---@param opts table
+---@param specs autocmd.spec[]
+---@return integer[]
 function autocmd.define(opts, specs)
+  local res = {}
   opts = opts or {}
+
   for i = 1, #specs do
     local spec = specs[i]
     local event, callback, given = unpack(spec)
     given = given or {}
+    given = is.string(given) and { desc = given } or given
     given = copy(given)
 
     for key, value in pairs(opts) do
@@ -109,8 +125,74 @@ function autocmd.define(opts, specs)
       end
     end
 
-    autocmd.new(event, callback, given)
+    res[i] = autocmd.new(event, callback, given)
   end
+
+  return res
 end
+
+---@param pattern string|string[]
+---@param callback like_function
+---@param opts? autocmd.opts|string
+---@return integer
+function autocmd.ft_new(pattern, callback, opts)
+  opts = opts or {}
+  opts = is.string(opts) and { desc = opts } or opts
+  opts = copy(opts)
+  opts.pattern = pattern
+  return autocmd.new('Filetype', callback, opts)
+end
+
+---@param ft string|string[]
+---@param opts table?
+---@param specs autocmd.spec[]
+---@return integer[]
+function autocmd.ft_define(ft, opts, specs)
+  opts = opts or {}
+  local res = {}
+
+  for i = 1, #specs do
+    local spec = specs[i]
+    local callback, given = unpack(spec)
+    given = given or {}
+    given = is.string(given) and { desc = given } or given
+    given = copy(given)
+    given.pattern = ft
+
+    for key, value in pairs(opts) do
+      if given[key] == nil then
+        given[key] = value
+      end
+    end
+
+    res[i] = autocmd.new('Filetype', callback, given)
+  end
+
+  return res
+end
+
+---@param id integer
+---@return boolean
+function autocmd.is_valid(id)
+  return #(vim.api.nvim_get_autocmds { id = id }) ~= 0
+end
+
+---@param ids integer[]|integer
+---@return boolean[]
+function autocmd.are_valid(ids)
+  ids = as.list(ids)
+  return list.map(ids, autocmd.is_valid)
+end
+
+---@param spec autocmd.spec
+---@return boolean
+function autocmd.isa_config(spec)
+  lib.assert.spec(spec, autocmd.validator)
+  return true
+end
+
+autocmd.map = autocmd.new
+autocmd.ft_map = autocmd.ft_new
+
 
 return autocmd

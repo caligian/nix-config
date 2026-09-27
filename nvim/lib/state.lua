@@ -1,8 +1,13 @@
-package.user = package.user
+require 'lib.definitions'
+
 local lutils = package.user.lib
+local is = lutils.is
 local fs = lutils.fs
 local dict = lutils.dict
 local list = lutils.list
+local autocmd = vim.api.nvim_create_autocmd
+local kbd = vim.keymap.set
+
 local mydir = os.getenv("MY_DIR") .. "/nvim"
 local mylib = mydir .. "/lib"
 local myconfig = mydir .. "/config"
@@ -11,6 +16,25 @@ local myconfig = mydir .. "/config"
 ---@alias config.keys config.keys[]
 
 local utils = package.user
+
+function utils.clear_gutter_bg()
+  local groups = {
+    "LineNr",
+    "LineNrAbove",
+    "LineNrBelow",
+    "CursorLineNr",
+    "SignColumn",
+    "FoldColumn",
+    "EndOfBuffer",
+  }
+  for _, name in ipairs(groups) do
+    vim.o.background = 'dark'
+    local hl = vim.api.nvim_get_hl(0, { name = name, link = false })
+    hl.bg = nil
+    hl.ctermbg = nil
+    vim.api.nvim_set_hl(0, name, hl)
+  end
+end
 
 ---Basically loadfile("~/.user/config/{name}.lua")
 ---@param name string
@@ -130,13 +154,13 @@ end
 
 ---@param name string
 ---@return boolean, any
-function utils.require_pkg(name)
+function utils.require_plugin(name)
   return pcall(require, 'config.plugins.' .. name)
 end
 
 ---@param name string
 ---@return boolean, any
-function utils.load_pkg(name)
+function utils.load_plugin(name)
   local filename = myconfig .. '/plugins/' .. name .. '.lua'
   if not fs.is_file(name) then
     return false, string.format('Nonexistent file %s', filename)
@@ -235,6 +259,10 @@ end
 
 ---@return user.setup.return
 function utils.setup(opts)
+  vim.g.netrw_banner = 0
+  vim.o.smartcase = true
+  vim.o.ignorecase = true
+
   opts = opts or {}
   local force = opts.force
   local load = opts.load
@@ -259,6 +287,25 @@ function utils.setup(opts)
   end
 
   require('lib.project').setup()
+  require('lib.filetype').setup()
+  require('lib.shell').setup()
+  require('lib.repl').setup()
+
+  require('themery').setup {
+    themes = list.filter(vim.fn.getcompletion("", 'color'), is.string)
+  }
+
+  autocmd("ColorScheme", {
+    desc = 'Clear gutter color',
+    callback = utils.clear_gutter_bg,
+    pattern = '*',
+  })
+
+  kbd('n', '<leader>hc', ':Themery<CR>', {
+    desc = 'Check out themes'
+  })
+
+  utils.clear_gutter_bg()
   state.last_setup_result = result
 
   return state.last_setup_result

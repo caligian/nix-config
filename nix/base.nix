@@ -11,7 +11,7 @@ let
   myBuildInputs = import <my/pkgs/base.nix> home {
     inherit pkgs;
     env = myEnv;
-  };
+  } ++ [pkgs.neovide];
   source = utils.user.source;
   initSh = source "init.sh";
   utilsSh = source "utils.sh";

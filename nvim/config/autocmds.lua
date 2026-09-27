@@ -9,9 +9,11 @@ map({ "VimLeave" }, function(_)
       term:stop()
     end
 
-    if term.buffer and buffer.exists(term.buffer) then
-      buffer.wipeout(term.buffer)
-    end
+    vim.schedule(function()
+      if term.buffer and buffer.exists(term.buffer) then
+        buffer.wipeout(term.buffer)
+      end
+    end)
 
     for i = 1, #state.tempfiles do
       if path.is_file(state.tempfiles[i]) then

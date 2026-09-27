@@ -1,8 +1,9 @@
-local fs = require 'lua-utils.fs'
-local result = require 'lua-utils.result'
-local list = require 'lua-utils.list'
-require 'lib.state'
+require 'lib.definitions'
 
+local lib = package.user.lib
+local fs = lib.fs
+local result = require 'lua-utils.result'
+local list = lib.list
 local nvim = {}
 
 nvim.fnamemodify = vim.fn.fnamemodify
@@ -194,18 +195,35 @@ function nvim.select(choices, prompt, on_choice, formatter)
   )
 end
 
----@param str_or_fmt string
 ---@param ... string
----@return boolean, any
-function nvim.exec(str_or_fmt, ...)
-  return pcall(vim.nvim_exec, string.format(str_or_fmt, ...))
+---@return Ok<boolean>|Err
+function nvim.cmd(...)
+  local cmd = table.concat({ ... }, "\n")
+  local res = result.Result(pcall(vim.api.nvim_exec2, cmd, { output = true }))
+
+  if result.is_err(res) then
+    ---@cast res Err
+    return res
+  else
+    res = result.Ok(true)
+    ---@cast res Ok<boolean>
+    return res
+  end
 end
 
----@param str_or_fmt string
 ---@param ... string
----@return boolean, string?
-function nvim.cmd(str_or_fmt, ...)
-  return pcall(vim.cmd, string.format(str_or_fmt, ...))
+---@return Ok<string>|Err
+function nvim.exec(...)
+  local cmd = table.concat({ ... }, "\n")
+  local res = result.Result(pcall(vim.api.nvim_exec2, cmd, { output = true }))
+
+  if result.is_ok(res) then
+    ---@cast res Ok<string>
+    return res
+  end
+
+  ---@cast res Err
+  return res
 end
 
 ---@param linenum number
@@ -233,5 +251,10 @@ nvim.get_mode = nvim.mode
 nvim.load_file = nvim.loadfile
 nvim.load_string = nvim.loadstring
 nvim.expand = nvim.fname.expand
+nvim.abspath = nvim.fname.abspath
+nvim.extension = nvim.fname.extension
+nvim.relpath = nvim.fname.relpath
+nvim.relhomepath = nvim.fname.relhomepath
+
 
 return nvim

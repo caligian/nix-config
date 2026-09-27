@@ -1,12 +1,9 @@
-local path = require 'lua-utils.fs'
-local T = require 'lua-utils.type'
+local T = package.user.lib.types
 local is = T.is
-local class = T.class
 local terminal = require 'lib.terminal'
 local buffer = require 'lib.buffer'
 local project = require 'lib.project'
 local kbd = require 'lib.keymap'
-local command = require 'lib.command'
 local timer = require 'lib.timer'
 local nvim = require 'lib.nvim'
 local shell = {}
@@ -339,5 +336,6 @@ function shell.setup()
 end
 
 shell.getbufnr = normalize_buf
+shell.normalize_buf = normalize_buf
 
 return shell

@@ -1,7 +1,10 @@
-local str = require 'lua-utils.string'
+require 'lib.definitions'
+
 local getbufnr = vim.fn.bufnr
-local fs = require 'lua-utils.fs'
-local types = require 'lua-utils.type'
+local lib = package.user.lib
+local str = lib.str
+local fs = lib.fs
+local types = lib.types
 local is = types.is
 local autocmd = require 'lib.autocmd'
 local command = require 'lib.command'
@@ -44,7 +47,7 @@ end
 
 ---@param path string
 ---@param ... integer buffers
----@return table
+---@return string
 function project.track(path, ...)
   state[path] = state[path] or {}
   for _, buf in ipairs({ ... }) do state[path][buf] = path end
@@ -230,7 +233,7 @@ project.command = setmetatable({}, {
       end)
     elseif name:match '0$' then
       name = string.sub(name, 1, #name - 1)
-      rawset(self, name, function(args, rest)
+      rawset(self, name, function(_, rest)
         return func(nil, rest)
       end)
     else

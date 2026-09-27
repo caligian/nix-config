@@ -33,7 +33,6 @@ let
       snacks-nvim
       telescope-nvim
       telescope-project-nvim
-      telescope-ultisnips-nvim
       telescope-frecency-nvim
       telescope-fzf-native-nvim
       telescope-file-browser-nvim
@@ -60,7 +59,6 @@ let
       tagbar
       undotree
       base16-vim
-      ultisnips
       lsp-format-nvim
     ];
     extraLuaPackages = with pkgs.luajitPackages; [

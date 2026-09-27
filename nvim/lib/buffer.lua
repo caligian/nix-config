@@ -1,8 +1,13 @@
-local fs = require 'lua-utils.fs'
+require 'lib.definitions'
+
+local lib = package.user.lib
+local fs = lib.fs
+local as = lib.as
+local is = lib.is
 local copy = vim.deepcopy
 local buffer = {}
 local curbuf = vim.fn.bufnr
-local workspaces = package.user.state.workspace ---@diagnostic disable-line
+local workspaces = package.user.state.workspace
 
 ---Get current buffer
 ---@return number
@@ -665,7 +670,7 @@ end
 ---@param command string|function
 ---@param opts? table
 ---@return number
-function buffer.add_autocmd(bufnr, event, command, opts)
+function buffer.on(bufnr, event, command, opts)
   bufnr = bufnr or curbuf()
   event = event or 'BufReadPost'
   opts = opts or {}
@@ -693,7 +698,7 @@ end
 ---@param command string|fun(buf: number)
 ---@param opts? table
 ---@return boolean
-function buffer.add_keymap(bufnr, mode, keys, command, opts)
+function buffer.map(bufnr, mode, keys, command, opts)
   bufnr = bufnr or curbuf()
   local cmd = command
   command = callable(cmd) and function()
@@ -854,6 +859,77 @@ function buffer.get_root_dir(bufnr, pat, depth)
   end
 end
 
+---Find the first instance of the matching pattern
+---@param bufnr integer
+---@param direction string (any of 'above' or 'below')
+---@param patterns string|string[]
+---@param start_row? integer (default: current line number)
+---@param nrows? integer Used for calculating the end_row by (start_row +- nrows)
+---@return integer?
+function buffer.find(bufnr, direction, patterns, start_row, nrows)
+  bufnr = bufnr or buffer.current()
+  patterns = as.list(patterns)
+  start_row = start_row or buffer.get_current_linenum(bufnr)
+  local matches = function(line)
+    if not line then
+      return false
+    end
+
+    for i = 1, #patterns do
+      if string.match(line, patterns[i]) then
+        return true
+      end
+    end
+    return false
+  end
+
+  if direction == 'below' then
+    local lc = buffer.get_line_count(bufnr)
+    local end_row = nrows and (start_row + nrows) or lc
+
+    for i = start_row + 1, end_row do
+      local line = buffer.get_line(bufnr, i)
+      if matches(line) then
+        return i
+      end
+    end
+
+    return
+  end
+
+  local end_row = nrows and (start_row - nrows) or 0
+  for i = start_row - 1, end_row, -1 do
+    local line = buffer.get_line(bufnr, i)
+    if matches(line) then
+      return i
+    end
+  end
+end
+
+function buffer.find_below(bufnr, patterns, start_row, nrows)
+  return buffer.find(bufnr, 'below', patterns, start_row, nrows)
+end
+
+function buffer.find_above(bufnr, patterns, start_row, nrows)
+  return buffer.find(bufnr, 'above', patterns, start_row, nrows)
+end
+
+function buffer.find_and_goto(bufnr, direction, patterns, start_row, nrows)
+  local linenum = buffer.find(bufnr, direction, patterns, start_row, nrows)
+  if linenum then
+    vim.cmd(string.format('normal! %dG', linenum + 1))
+    return linenum
+  end
+end
+
+function buffer.find_below_and_goto(bufnr, patterns, start_row, nrows)
+  return buffer.find_and_goto(bufnr, 'below', patterns, start_row, nrows)
+end
+
+function buffer.find_above_and_goto(bufnr, patterns, start_row, nrows)
+  return buffer.find_and_goto(bufnr, 'above', patterns, start_row, nrows)
+end
+
 buffer.rm = buffer.wipeout
 buffer.get_filename = buffer.get_name
 buffer.filename = buffer.get_name
@@ -867,5 +943,8 @@ buffer.winid = buffer.get_winid
 buffer.root_dir = buffer.get_root_dir
 buffer.tabpage = buffer.get_tabpage
 buffer.filetype = buffer.get_filetype
+buffer.workspace = buffer.get_root_dir
+buffer.get_workspace = buffer.get_root_dir
+buffer.get_line_count = vim.api.nvim_buf_line_count
 
 return buffer

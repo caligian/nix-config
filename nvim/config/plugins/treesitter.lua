@@ -1,10 +1,5 @@
 local kbd = vim.keymap.set
 
-vim.cmd [[
-  omap     <silent> m :<C-U>lua require('tsht').nodes()<CR>
-  xnoremap <silent> m :lua require('tsht').nodes()<CR>
-]]
-
 require('nvim-treesitter-textsubjects').configure({
   prev_selection = ',',
   keymaps = {
@@ -25,7 +20,7 @@ require('nvim-treesitter.configs').setup {
   indent = {
     enable = true,
     disable = { 'python' },
-  };
+  },
   textobjects = {
     move = {
       enable = true,
@@ -43,3 +38,8 @@ require('nvim-treesitter.configs').setup {
     },
   }
 }
+
+kbd({ 'v', 'n' }, '<C-M-n>', ']m', { desc = 'Go to start of next function' })
+kbd({ 'v', 'n' }, '<C-M-p>', '[m', { desc = 'Go to start of next function' })
+kbd({ 'v', 'n' }, '<C-M-a>', ']M', { desc = 'Go to end of next function' })
+kbd({ 'v', 'n' }, '<C-M-e>', '[M', { desc = 'Go to end of next function' })

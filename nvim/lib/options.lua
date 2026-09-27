@@ -1,3 +1,5 @@
+require 'lib.definitions'
+
 local copy = vim.deepcopy
 local types = require 'lua-utils.type'
 local dict = require 'lua-utils.dict'

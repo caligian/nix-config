@@ -1,3 +1,5 @@
+require 'lib.definitions'
+
 local is = require 'lua-utils.type.is'
 local class = require 'lua-utils.type.class'
 local project = require 'lib.project'
@@ -168,19 +170,13 @@ function terminal:stop(timeout, retries)
     vim.schedule(function()
       pcall(function()
         local id = self.id
-        local cmd = self.cmd
         local buf = self.buffer
         wait_for_job_stop(id, timeout)
         buffer.wipeout(buf)
         self.id = nil
         self.pid = nil
         self.buffer = nil
-
-        if self.shell then
-          printf("Stopped terminal for workspace %s", self.display_cwd)
-        else
-          printf('Stopped terminal [%s] for workspace %s', cmd, self.display_cwd)
-        end
+        printf("Stopped terminal for workspace %s", self.display_cwd)
       end)
     end)
 

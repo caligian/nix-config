@@ -3,6 +3,7 @@ opts@{ ... }:
 (with opts.pkgs; [
   python313
   (with python313Packages; [
+    pip
     jedi-language-server
     python-docx
     termcolor
@@ -17,5 +18,10 @@ opts@{ ... }:
     numpy
     selenium
     scipy
+    httpx
+    pydantic
+    pydantic-core
+    typing-extensions
+    websockets
   ])
 ])

@@ -1,7 +1,13 @@
-local check = require 'lua-utils.assert'
-local T = require 'lua-utils.type'
-local union = T.union
-local is = T.is
+require 'lib.definitions'
+
+local lib = package.user.lib
+local check = lib.assert
+local union = lib.union
+local is = lib.is
+local dict = lib.dict
+local fs = lib.fs
+local copy = require 'lua-utils.copy'
+
 local terminal = require 'lib.terminal'
 local buffer = require 'lib.buffer'
 local project = require 'lib.project'
@@ -9,21 +15,25 @@ local kbd = require 'lib.keymap'
 local timer = require 'lib.timer'
 local nvim = require 'lib.nvim'
 local shell = require 'lib.shell'
+local filetypes = package.user.config.filetype
+local state = package.user.state.repl or {}
 
----@diagnostic disable-next-line
-local filetypes = package.user.config.filetype or {}
----@diagnostic disable-next-line
-local state = package.user.state.repl
 local repl = {
-  validate = {
+  validator = {
     cmd = union('string', 'callable'),
-    opt_input = {
-      opt_map = is.callable,
-      opt_file = is.boolean,
-      opt_format = is.string,
-    },
-    opt_root = {
-      opt_check_depth = is.number,
+    opt_opts = {
+      opt_input = {
+        opt_map = is.callable,
+        opt_file = {
+          opt_use = is.boolean,
+          opt_format = is.string,
+        },
+        opt_format = is.string,
+        opt_cd = is.string,
+      },
+      opt_root = {
+        opt_check_depth = is.number,
+      }
     }
   }
 }
@@ -33,12 +43,13 @@ local repl = {
 function repl.get_config(bufnr, what)
   bufnr = shell.getbufnr(bufnr)
   local ft = buffer.get_filetype(bufnr)
-  local config = filetypes[ft]
+  local ft_obj = filetypes[ft]
+  local config
 
-  if not config or not config.repl then
+  if not ft_obj or not dict.has(ft_obj, { 'config', 'repl' }) then
     return
   else
-    config = config.repl
+    config = ft_obj.config.repl
   end
 
   if not what then
@@ -74,17 +85,22 @@ function repl.new(bufnr)
   end
 
   local term = terminal(proj, config.cmd)
-  dict.set(state, { ft, proj }, term)
+  dict.force_set(state, { ft, proj }, term)
   return term
 end
 
 function repl.get(bufnr)
+  bufnr = shell.getbufnr(bufnr)
   local root = repl.get_config(bufnr, 'root')
   local proj = project.find_by_buffer(bufnr, root)
   local ft = buffer.filetype(bufnr)
 
   if proj and ft then
     return dict.get(state, { ft, proj })
+  elseif ft == '' or vim.fn.bufname(bufnr) == '' then
+    printf("Cannot run REPL for an unnamed buffer")
+  elseif not proj then
+    printf("No project directory found for buffer %d [%s]", bufnr, ft)
   end
 end
 
@@ -117,8 +133,8 @@ function repl.start(bufnr)
 end
 
 ---@param bufnr integer
----@param timeout integer
----@param retries integer
+---@param timeout? integer
+---@param retries? integer
 ---@return boolean?
 function repl.stop(bufnr, timeout, retries)
   local term = repl.get(bufnr)
@@ -179,6 +195,7 @@ function repl.mktempfile(text, delete_after)
   end
 
   fh:write(text)
+  fh:close()
 
   if delete_after then
     timer('delete-' .. file, delete_after, 0, function()
@@ -206,7 +223,9 @@ end
 ---@return boolean?
 function repl.send(bufnr, s, opts)
   return repl.if_running(bufnr, function(term)
+    local conf = copy(repl.get_config(bufnr, 'input') or {})
     opts = opts or {}
+    opts = dict.merge(conf, opts)
     local file_opts = opts.file or {}
     local send_format = file_opts.format
     local use_file = file_opts.use
@@ -229,7 +248,7 @@ function repl.send(bufnr, s, opts)
 end
 
 function repl.send_current_line(bufnr, opts)
-  bufnr = shell.normalize_buf(bufnr)
+  bufnr = shell.getbufnr(bufnr)
   local line = buffer.call(bufnr, function()
     return vim.fn.getline(vim.fn.line("."))
   end)
@@ -237,13 +256,13 @@ function repl.send_current_line(bufnr, opts)
 end
 
 function repl.send_buffer(bufnr, opts)
-  bufnr = shell.normalize_buf(bufnr)
+  bufnr = shell.getbufnr(bufnr)
   local lines = buffer.as_string(bufnr)
   return repl.send(bufnr, lines, opts)
 end
 
 function repl.send_till_cursor(bufnr, opts)
-  bufnr = shell.normalize_buf(bufnr)
+  bufnr = shell.getbufnr(bufnr)
   local pos = buffer.get_curpos(bufnr)
   local lines = buffer.get_lines(bufnr, 0, pos.lnum, false)
   lines = table.concat(lines, "\n")
@@ -251,7 +270,7 @@ function repl.send_till_cursor(bufnr, opts)
 end
 
 function repl.send_region(bufnr, opts)
-  bufnr = shell.normalize_buf(bufnr)
+  bufnr = shell.getbufnr(bufnr)
   local region = buffer.call(bufnr, function()
     return nvim.region(false)
   end)
@@ -262,16 +281,14 @@ function repl.send_region(bufnr, opts)
 end
 
 function repl.setup_keymaps()
-  local fn = setmetatable({}, {
-    __index = function(_, fn)
-      return function()
-        return repl[fn](buffer.current())
-      end
-    end
-  })
   local map = function(mode, lhs, func, opts)
-    func = is.string(func) and fn[func] or func
-    kbd.map(mode, lhs, func, opts)
+    kbd.map(mode, lhs, function()
+      if is.string(func) then
+        repl[func](buffer.current())
+      else
+        func(buffer.current())
+      end
+    end, opts)
   end
   local nmap = function(lhs, func, opts)
     map('n', '<leader>' .. lhs, func, opts)
@@ -280,15 +297,30 @@ function repl.setup_keymaps()
     map('v', '<leader>' .. lhs, func, opts)
   end
 
-  nmap('rr', 'start', { desc = 'Start workspace terminal' })
+  nmap('rr', function()
+    local buf = buffer.current()
+    repl.new(buf)
+    repl.start(buf)
+  end, { desc = 'Start workspace REPL' })
+
   nmap('rk', 'hide', { desc = 'Hide terminal' })
   nmap('rq', 'stop', { desc = 'Stop terminal' })
   nmap('re', 'send_current_line', { desc = 'Send current line' })
   vmap('re', 'send_region', { desc = 'Send region' })
   nmap('rb', 'send_buffer', { desc = 'Send buffer' })
   nmap('r.', 'send_till_cursor', { desc = 'Send lines till cursor' })
-  nmap('rs', 'split_below', { desc = 'Split on right' })
-  nmap('rv', 'split_right', { desc = 'Split below' })
+  nmap('rs', 'split_below', { desc = 'Split below' })
+  nmap('rv', 'split_right', { desc = 'Split right' })
+end
+
+---Assert tbl is a repl configuration table
+---@param tbl table
+function repl.isa_config(tbl)
+  check.spec(tbl, repl.validator)
+end
+
+function repl.setup()
+  repl.setup_keymaps()
 end
 
 return repl

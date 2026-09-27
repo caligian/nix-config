@@ -26,37 +26,19 @@ let
     MY_PROJECTS_DIR = userHomeDirs.projects;
     MY_WORK_DIR = userHomeDirs.work;
     MY_SCRIPTS_DIR = userHomeDirs.scripts;
-
-    # API keys
     DEEPSEEK_API_KEY_FILE = "${MY_API_KEYS_DIR}/deepseek.txt";
-    DEEPSEEK_API_KEY = "";
-
-    # Editors and tools
+    SARVAMAI_API_KEY_FILE = "${home}/sarvamai-api-key.txt";
     EDITOR = "nvim";
     VISUAL = "gedit";
     BROWSER = "chromium";
     TERMINAL = "kitty";
     TERM = "xterm-256color";
-
-    # Nix settings
     NIXPKGS_ALLOW_UNFREE = "1";
-
-    # Language paths
     PERL5LIB = "${MY_PERL_LIB_DIR}";
     LUA_MODULES_DIR = "${MY_LUAJIT_LIB_DIR}";
-    PIP_TARGET = "${MY_PYTHON_LIB_DIR}";
-
-    # Temporary overriding until I publish the package
     PYTHONPATH = "$PYTHONPATH:${MY_REPOS_DIR}/common_utils/src";
     PYTHONIOENCODING = "utf-8";
-
-    # PATH
     PATH = "${home}/bin:${home}/.local/bin:${systemPath}";
-
-    # Library path
-    # LD_LIBRARY_PATH = "${libraryPath}";
-
-    # perl stuff
     PERLCRITICRC = "${home}/.perlcriticrc";
   };
 in

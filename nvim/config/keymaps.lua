@@ -7,7 +7,7 @@ local replace_termcodes = vim.api.nvim_replace_termcodes
 
 vim.g.kitty_keyboard_protocol = 1
 vim.g.mapleader = " "
-vim.g.maplocalleader = "<Tab>"
+vim.g.maplocalleader = "<C-c>"
 
 --- Emacs mappings for insert mode
 map('n', '<A-x>', ':Telescope commands<CR>', { desc = 'Telescope commands' })
@@ -29,6 +29,10 @@ map("i", "<C-M-i>", function()
   local tab = replace_termcodes("<Tab>", true, false, true)
   feedkeys(tab, "n", false)
 end, { desc = "Insert indentation" })
+map({ 'n' }, '<M-q>', 'gqq', { desc = 'Wrap lines' })
+map({ 'i' }, '<M-q>', '<C-o>gqq', { desc = 'Wrap lines' })
+map({ 'v', }, '<M-q>', 'gq', { desc = 'Wrap lines' })
+
 map('n', '<C-g>', ':noh<CR>', { desc = "Disable highlight" })
 map('n', '<C-x>q', ':qall!<CR>', { desc = 'Quit neovim without saving' })
 map('n', '<C-x>x', ':xa<CR>', { desc = 'Quit neovim' })
@@ -73,8 +77,7 @@ map('n', '<leader>bp', ':bprev<CR>', { desc = 'Previous buffer' })
 map('n', '<leader>bn', ':bnext<CR>', { desc = 'Next buffer' })
 map('n', '<leader>bk', ':call HideWindowIfPossible()<CR>', { desc = 'Hide buffer' })
 map('n', '<leader>bq', ':call DeleteBufferWindowIfPossible()<CR>', { desc = 'Delete buffer window' })
-map('n', '<leader>bb', ':Neotree bottom buffers<CR>', { desc = 'Browse buffers' })
-map('n', '<leader>.', ':Telescope buffers<CR>', { desc = 'Pick buffers' })
+map('n', '<leader>bb', ':Telescope buffers<CR>', { desc = 'Pick buffers' })
 
 -- Lsp operations
 map('n', '<leader>lr', ':Telescope lsp_references<CR>', { desc = 'LSP references' })
@@ -85,7 +88,7 @@ map('n', '<leader>ll', ':LspLog<CR>', { desc = 'Show LSP log' })
 map('n', '<leader>lf', ':Format<CR>', { desc = 'Format buffer using LSP if possible' })
 map('n', '<leader>lD', ':Telescope diagnostics<CR>', { desc = 'LSP workspace diagnostics' })
 map('n', '<leader>ld', ':Telescope diagnostics bufnr=0<CR>', { desc = 'Current buffer diagnostics' })
-map("n", "<C-t>", "<cmd>Outline<CR>", { desc = "Toggle Outline" })
+map("n", "<C-c>o", "<cmd>Outline<CR>", { desc = "Toggle Outline" })
 
 --- File operations
 map('n', '<leader>fs', ':w! %<CR>', { desc = 'Save file' })
@@ -93,40 +96,39 @@ map('n', '<leader>fS', ':SudaWrite %<CR>', { desc = 'Sudo write file' })
 map('n', '<leader>fR', ':SudaRead ', { desc = 'Sudo read file' })
 map('n', '<leader>fg', ':Telescope git_files<CR>', { desc = 'git ls-files' })
 map('n', '<leader>fr', ':Telescope frecency<CR>', { desc = 'Recent files' })
-map(
-  'n',
-  '<C-p>',
-  function()
-    local buf = vim.fn.bufnr()
-    local name = vim.api.nvim_buf_get_name(buf)
 
-    if name:sub(1, 1) ~= '/' then
-      return
-    end
+map('n', '<C-c>p', function()
+  local buf = vim.fn.bufnr()
+  local name = vim.api.nvim_buf_get_name(buf)
 
-    local proj = project.find_by_buffer(buf)
-    if proj then
-      vim.cmd(':Neotree bottom filesystem ' .. proj)
-    end
-  end,
-  { desc = 'Browse project directory' }
-)
-map(
-  'n',
-  '<M-p>',
-  function()
-    local buf = vim.api.nvim_buf_get_name(vim.fn.bufnr())
-    if buf:sub(1, 1) ~= '/' then
-      return
-    end
+  if name:sub(1, 1) ~= '/' then
+    return
+  end
 
-    local dir = fs.dirname(buf)
-    if dir then
-      vim.cmd(':Neotree bottom filesystem ' .. dir)
-    end
-  end,
-  { desc = 'Browse buffer directory' }
-)
+  local proj = project.find_by_buffer(buf)
+  if proj then
+    vim.cmd(':Neotree filesystem ' .. proj)
+  end
+end, { desc = 'Browse project directory' })
+
+map('n', '<C-c>d', function()
+  local buf = vim.api.nvim_buf_get_name(vim.fn.bufnr())
+  if buf:sub(1, 1) ~= '/' then
+    return
+  end
+
+  local dir = fs.dirname(buf)
+  if dir then
+    vim.cmd(':Neotree filesystem ' .. dir)
+  else
+    vim.cmd(':Neotree filesystem ' .. os.getenv("HOME"))
+  end
+end, { desc = 'Browse buffer directory' })
+
+map('n', '<C-c>.', ':Neotree filesystem<CR>', { desc = 'Browse cwd' })
+map('n', '<C-c>~', ':Neotree filesystem ~/<CR>', { desc = 'Browse HOME' })
+map('n', '<C-c>b', ':Neotree buffers<CR>', { desc = 'Browse buffers' })
+map('n', '<C-c>s', ':Neotree document_symbols<CR>', { desc = 'Browse document symbols' })
 
 --- Git operations
 map('n', '<leader>gg', ':botright Git<CR>', { desc = 'Git browser' })
@@ -144,3 +146,16 @@ map('n', '<leader>\'', ':Telescope marks<CR>', { desc = "Telescope marks" })
 map('n', '<leader><leader>', ":Telescope resume<CR>", { desc = "Resume picker" })
 map('n', '<leader>j', ':Telescope jumplist<CR>', { desc = 'Telescope jumplist' })
 map('n', '<leader>u', ':UndotreeToggle<CR>', { desc = 'Telescope jumplist' })
+
+--- Inspect stuff
+map('n', '<leader>hc', ':Telescope colorscheme<CR>', { desc = 'Telescope themes' })
+map('n', '<leader>ho', ':Telescope vim_options<CR>', { desc = 'Telescope vim options' })
+map('n', '<leader>hk', ':Telescope keymaps<CR>', { desc = 'Telescope keymaps' })
+map('n', '<leader>ha', ':Telescope autocommands<CR>', { desc = 'Telescope autocmds' })
+map('n', '<leader>hp', ':Telescope pickers<CR>', { desc = 'Telescope pickers' })
+map('n', '<leader>hr', ':Telescope registers<CR>', { desc = 'Telescope registers' })
+map('n', '<leader>hj', ':Telescope jumplist<CR>', { desc = 'Telescope jumplist' })
+map('n', '<leader>h:', ':Telescope command_history<CR>', { desc = 'Telescope command history' })
+
+--- Terminal keybindings
+map('t', '<esc>', '<C-\\><C-n>', { desc = 'Normal mode' })

@@ -9,6 +9,5 @@ opts@{ ... }:
     ggplot2
     shiny
     lintr
-    selenium
   ])
 ])

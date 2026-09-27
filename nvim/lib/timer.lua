@@ -1,8 +1,8 @@
+require 'lib.definitions'
+
 local T = require 'lua-utils.type'
 local class = T.class
 local uv = vim.uv
-local result = require 'lua-utils.result'
-local Ok, Err = result.Ok, result.Err
 
 ---@type {[string]: timer}
 package.user.state.timer = package.user.state.timer or {}
