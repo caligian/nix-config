@@ -32,10 +32,9 @@ end, { desc = "Insert indentation" })
 map({ 'n' }, '<M-q>', 'gqq', { desc = 'Wrap lines' })
 map({ 'i' }, '<M-q>', '<C-o>gqq', { desc = 'Wrap lines' })
 map({ 'v', }, '<M-q>', 'gq', { desc = 'Wrap lines' })
-
-map('n', '<C-g>', ':noh<CR>', { desc = "Disable highlight" })
 map('n', '<C-x>q', ':qall!<CR>', { desc = 'Quit neovim without saving' })
 map('n', '<C-x>x', ':xa<CR>', { desc = 'Quit neovim' })
+map('n', '<C-g>', ':noh<CR>', { desc = "Disable highlight" })
 map('v', '<M-w>', '"+y', { desc = 'Copy to clipboard' })
 map('i', '<C-y>', '<C-o>"+p', { desc = 'Paste from clipboard' })
 map('n', '<C-y>', '"+p', { desc = 'Paste from clipboard' })
@@ -96,7 +95,6 @@ map('n', '<leader>fS', ':SudaWrite %<CR>', { desc = 'Sudo write file' })
 map('n', '<leader>fR', ':SudaRead ', { desc = 'Sudo read file' })
 map('n', '<leader>fg', ':Telescope git_files<CR>', { desc = 'git ls-files' })
 map('n', '<leader>fr', ':Telescope frecency<CR>', { desc = 'Recent files' })
-
 map('n', '<C-c>p', function()
   local buf = vim.fn.bufnr()
   local name = vim.api.nvim_buf_get_name(buf)
@@ -110,7 +108,6 @@ map('n', '<C-c>p', function()
     vim.cmd(':Neotree filesystem ' .. proj)
   end
 end, { desc = 'Browse project directory' })
-
 map('n', '<C-c>d', function()
   local buf = vim.api.nvim_buf_get_name(vim.fn.bufnr())
   if buf:sub(1, 1) ~= '/' then
@@ -125,6 +122,7 @@ map('n', '<C-c>d', function()
   end
 end, { desc = 'Browse buffer directory' })
 
+--- Neo-tree
 map('n', '<C-c>.', ':Neotree filesystem<CR>', { desc = 'Browse cwd' })
 map('n', '<C-c>~', ':Neotree filesystem ~/<CR>', { desc = 'Browse HOME' })
 map('n', '<C-c>b', ':Neotree buffers<CR>', { desc = 'Browse buffers' })
