@@ -18,18 +18,8 @@ let
   postInitSh = source "post-init.sh";
   myShellHook = ''
     set-nix-PS1 "${name}"
-
     ${initSh}
     ${utilsSh}
-
-    lrocks() {
-      luarocks --local --tree "$LUA_MODULES_DIR" --lua-version 5.1 "$@" RT_DIR="${pkgs.glibc}"
-    }
-
-    function luajit-install() {
-      lrocks install --force "$@" RT_DIR="${pkgs.glibc}"
-    }
-
     ${postInitSh}
     ${shellHook}
   '';

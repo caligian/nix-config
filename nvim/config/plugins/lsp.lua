@@ -27,9 +27,10 @@ require('neo-tree').setup {
   close_if_last_window = false,
   enable_git_status = false,
   enable_diagnostics = false,
-  sources = { "filesystem", "buffers", "document_symbols" },
+  sources = { "filesystem", "buffers", --[[ "document_symbols" ]] },
   document_symbols = {
-    follow_cursor = true, auto_close = false,
+    follow_cursor = true,
+    auto_close = false,
   },
   filesystem = {
     hijack_netrw_behavior = "disabled",
@@ -176,6 +177,21 @@ enable('nil', {
   cmd = { 'nil' },
   filetypes = { 'nix' },
   root_markers = { 'flake.nix', '.git', '.PROJECT' },
+})
+
+enable('perlnavigator', {
+  cmd = { 'perlnavigator' },
+  filetypes = { 'perl' },
+  root_markers = { '.PROJECT' },
+  settings = {
+    perlnavigator = {
+      enableWarnings = true,
+      perlPath = "perl",
+      perlcriticEnabled = true,
+      perlcriticProfile = "",
+      perltidyProfile = os.getenv("HOME") .. "/.perltidyrc",
+    }
+  }
 })
 
 au('LspAttach', {

@@ -49,3 +49,14 @@ require('blink.cmp').setup {
   fuzzy = { implementation = "rust" },
   signature = { enabled = true, },
 }
+
+vim.api.nvim_create_autocmd('InsertLeave', {
+  callback = function()
+    pcall(vim.snippet.stop)
+  end
+})
+
+vim.keymap.set('i', '<esc>', function()
+  pcall(vim.snippet.stop)
+  return '<esc>'
+end, { expr = true })

@@ -1,0 +1,3 @@
+[-Modules::ProhibitAutomaticExportation]
+[-Subroutines::ProhibitUnusedVariables]
+severity = 4

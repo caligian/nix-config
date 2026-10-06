@@ -1,0 +1,11 @@
+lpath https://www.github.com/starwing/lpath
+luautf8 https://www.github.com/starwing/luautf8
+penlight https://www.github.com/lunarmodules/penlight
+luacheck https://www.github.com/lunarmodules/luacheck
+luasystem https://www.github.com/lunarmodules/luasystem
+busted https://www.github.com/lunarmodules/busted
+ldoc https://www.github.com/lunarmodules/ldoc
+inspect https://www.github.com/kikito/inspect.lua
+luafilesystem https://www.github.com/lunarmodules/luafilesystem
+lua-cjson https://www.github.com/mpx/lua-cjson
+luv https://www.github.com/luvit/luv

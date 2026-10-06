@@ -21,8 +21,34 @@ end
 package.user.state.shell = package.user.state.shell or {}
 package.user.state.tempfiles = package.user.state.tempfiles or {}
 
----@type {[integer|string]: terminal|string}
+---@type {[string]: terminal}
 local state = package.user.state.shell
+
+function shell.getcwd(bufnr, root)
+  if not bufnr then
+    return vim.fn.getcwd()
+  end
+
+  local name = buffer.get_name(bufnr)
+  local ft = buffer.get_filetype(bufnr)
+
+  if name == '' or ft == '' then
+    local winnr = buffer.get_winnr(bufnr)
+    local tabnr = buffer.get_tabpage(bufnr)
+
+    if winnr then
+      return vim.fn.getcwd(winnr, tabnr)
+    else
+      return vim.fn.getcwd()
+    end
+  end
+
+  root = root or package.user.config.workspace
+  return project.find_by_buffer(bufnr, {
+    default = buffer.dirname,
+    check_depth = root.check_depth,
+  })
+end
 
 ---@alias shell.cwd string|(fun(buf: integer): string)
 ---@alias shell.cmd string|(fun(buf: integer, cwd: string): string)
@@ -54,10 +80,7 @@ function shell.new(bufnr, opts)
       cwd = os.getenv "HOME"
     end
   else
-    cwd = project.find_by_buffer(bufnr, {
-      default = buffer.get_dirname,
-      check_depth = root.check_depth,
-    })
+    cwd = shell.getcwd(bufnr, root)
   end
 
   if state[cwd] and state[cwd]:is_running() then
@@ -76,17 +99,35 @@ function shell.new(bufnr, opts)
 
   local term = terminal(cwd, cmd)
   state[cwd] = term
-  state[bufnr] = cwd ---@diagnostic disable-line
 
   return term
 end
 
 ---@param bufnr? integer
+---@param opts? shell.new.opts.root
 ---@return terminal?
-function shell.get(bufnr)
+function shell.get(bufnr, opts)
+  local root = opts or package.user.config.workspace
   bufnr = normalize_buf(bufnr)
-  ---@diagnostic disable-next-line
-  return state[bufnr] and state[state[bufnr]]
+  local proj = shell.getcwd(bufnr, root)
+
+  if proj then
+    return state[proj]
+  else
+    return state[vim.fn.getcwd()]
+  end
+end
+
+---@param bufnr? integer
+---@param opts? shell.new.opts.root
+---@return boolean
+function shell.is_running(bufnr, opts)
+  local term = shell.get(bufnr, opts)
+  if term then
+    return term:is_running()
+  else
+    return false
+  end
 end
 
 ---@generic T, E
@@ -110,20 +151,22 @@ function shell.if_running(bufnr, ok, err)
 end
 
 ---@param bufnr integer
+---@param opts? shell.new.opts
 ---@return boolean?
-function shell.start(bufnr)
+function shell.start(bufnr, opts)
+  opts = opts or {}
   local buf = normalize_buf(bufnr)
-  local term = shell.get(buf)
+  local term = shell.get(buf, opts.root)
 
   if term then
     return term:start()
+  end
+
+  term = shell.new(buf, opts)
+  if term then
+    return term:start()
   else
-    term = shell.new(buf, { cmd = '' })
-    if term then
-      return term:start()
-    else
-      return false
-    end
+    return false
   end
 end
 
@@ -337,5 +380,6 @@ end
 
 shell.getbufnr = normalize_buf
 shell.normalize_buf = normalize_buf
+package.user.lib.shell = shell
 
 return shell

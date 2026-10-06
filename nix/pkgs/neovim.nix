@@ -5,6 +5,7 @@ let
   initVimFile = "${nvimDir}/configuration.vim";
   luaPath = "${nvimDir}/?.lua;${nvimDir}/?/?.lua;${nvimDir}/?/init.lua";
   sourceFile = "${env.MY_INCLUDE_DIR}/setup-neovim.lua";
+  luaPkgs = import <my/pkgs/luajit/common.nix> home { inherit pkgs; };
   mkNeovim = spec: pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped spec;
   myNeovim = mkNeovim {
     plugins = with pkgs.vimPlugins; [
@@ -61,21 +62,7 @@ let
       base16-vim
       lsp-format-nvim
     ];
-    extraLuaPackages = with pkgs.luajitPackages; [
-      lpeg
-      ldoc
-      busted
-      lpeg_patterns
-      inspect
-      ansicolors
-      luautf8
-      luafilesystem
-      plenary-nvim
-      lua-cjson
-      sqlite
-      luacheck
-      luaposix
-    ];
+    extraLuaPackages = luaPkgs;
     extraPackages = with pkgs; [
       gcc
       gnumake
@@ -92,8 +79,30 @@ let
       vim.cmd.source "${initVimFile}"
       vim.cmd.colorscheme "catppuccin"
 
-      _G.LIB = package.user.lib --- @diagnostic disable-line
-      _G.USER = package.user --- @diagnostic disable-line
+      --- Contains all the user configurations and state for neovim
+      ---@class package.user
+      package.user = package.user or {}
+
+      ---Contains all the user configurations
+      ---@class package.user.config
+      package.user.config = package.user.config or {}
+
+      ---Contains all the user libraries
+      ---@class package.user.lib
+      package.user.lib = package.user.lib or {}
+
+      ---Contains all the user state
+      ---@class package.user.state
+      package.user.state = package.user.state or {}
+
+      ---@type package.user.config
+      _G.CONFIG = package.user.config
+
+      ---@type package.user.state
+      _G.STATE = package.user.state
+
+      ---@type package.user.lib
+      _G.LIB = package.user.lib
 
       require("configuration")
     '';

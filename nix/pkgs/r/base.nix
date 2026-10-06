@@ -1,6 +1,6 @@
 home:
-args@{ ... }:
-(with args.pkgs; [
+opts@{ ... }:
+(with opts.pkgs; [
   R
   (with rPackages; [
     languageserver
@@ -9,7 +9,5 @@ args@{ ... }:
     ggplot2
     shiny
     lintr
-    dplyr
-    tidyr
   ])
 ])

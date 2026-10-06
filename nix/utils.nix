@@ -82,7 +82,54 @@ let
     map = dict: fn: mapAttrs fn dict;
     has = attrs: key: hasAttr key attrs;
     get = attrs: key: getAttr key attrs;
+    rm = removeAttrs;
   };
+  git =
+    {
+      pkgs,
+      name,
+      version,
+      owner,
+      repo,
+      commit,
+      desc ? "",
+      license ? pkgs.lib.licenses.mit,
+      nativeBuildInputs ? [ ],
+      buildInputs ? [ ],
+      propagatedBuildInputs ? [ ],
+      prePhase ? "",
+      buildPhase ? "",
+      installPhase ? "",
+      postPhase ? "",
+      meta ? { },
+    }:
+
+    let
+      src = pkgs.fetchFromGitHub {
+        inherit owner repo;
+        rev = commit;
+        hash = "";
+      };
+    in
+    pkgs.stdenv.mkDerivation {
+      pname = name;
+      inherit version src;
+
+      nativeBuildInputs = nativeBuildInputs;
+      buildInputs = buildInputs;
+      propagatedBuildInputs = propagatedBuildInputs;
+      preConfigure = prePhase;
+      buildPhase = buildPhase;
+      installPhase = installPhase;
+      postInstall = postPhase;
+
+      meta = {
+        description = desc;
+        inherit license;
+        maintainers = [ ];
+      }
+      // meta;
+    };
   toList =
     x: force:
     let
@@ -176,38 +223,6 @@ let
     isDir = p: pathType p == "directory";
     dir = userDirs;
   };
-  fetchUtils = {
-    url = fetchurl;
-    tar = fetchTarball;
-    tarball = fetchTarball;
-    github =
-      url: rev: specs:
-      let
-        required = splitString "/" url;
-        requiredLen = length required;
-        owner = elemAt required (requiredLen - 2);
-        repoFull = elemAt required (requiredLen - 1);
-        repo = replaceStrings [ ".git" ] [ "" ] repoFull;
-        mainArgs = {
-          owner = owner;
-          repo = repo;
-          rev = rev;
-        };
-        args = mainArgs // (removeAttrs specs [ "rev" ]);
-
-      in
-      fetchFromGitHub args;
-    git =
-      url: rev: specs:
-      let
-        allSpecs = {
-          url = url;
-          rev = rev;
-        }
-        // specs;
-      in
-      fetchgit allSpecs;
-  };
   userRootDir = "${home}/.user";
   homeLibDir = "${home}/lib";
   userDirs = {
@@ -245,6 +260,7 @@ let
       bin = "${home}/bin";
     };
   };
+  ftUtils = import <my/utils/ft.nix> { inherit pkgs; };
   mkNixPath = name: "${userDirs.nix}/${name}.nix";
   mkBinPath = name: "${userDirs.bin}/${name}";
   mkIncludePath = name: "${userDirs.include}/${name}";
@@ -306,21 +322,23 @@ let
   };
 in
 {
-  mkNeovim =
-    {
-      plugins ? [ ],
-      rocks ? [ ],
-      pkgs ? [ ],
-      init ? "",
-    }:
-    pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped {
-      plugins = plugins;
-      extraLuaPackages = rocks;
-      extraPackages = pkgs;
-      luaRcContent = init;
-    };
-  git = fetchUtils.git;
-  github = fetchUtils.github;
+  neovim = {
+    mkPlugin =
+      {
+        plugins ? [ ],
+        rocks ? [ ],
+        pkgs ? [ ],
+        init ? "",
+      }:
+      pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped {
+        plugins = plugins;
+        extraLuaPackages = rocks;
+        extraPackages = pkgs;
+        luaRcContent = init;
+      };
+  };
+  git = git;
+  ft = ftUtils;
   ls = pathUtils.ls;
   dirname = pathUtils.dirname;
   basename = pathUtils.basename;
@@ -355,7 +373,6 @@ in
   path = pathUtils;
   is = isUtils;
   json = jsonUtils;
-  fetch = fetchUtils;
   log = msg: value: trace "${msg}: ${toString value}" value;
   inspect = value: trace (toJSON value) value;
   die = throw;

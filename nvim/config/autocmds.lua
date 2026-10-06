@@ -25,3 +25,10 @@ end, {
   desc = "Exit cleanup",
   pattern = "*",
 })
+
+map('WinEnter', function(_, args)
+  if args.match:match('^term://') then
+    vim.wo.number = false
+    vim.wo.relativenumber = false
+  end
+end)

@@ -1,6 +1,6 @@
 home:
-opts@{ ... }:
-(with opts.pkgs; [
+args@{ ... }:
+(with args.pkgs; [
   python313
   (with python313Packages; [
     pip
@@ -23,5 +23,8 @@ opts@{ ... }:
     pydantic-core
     typing-extensions
     websockets
+    html5lib
+    lxml
+    beautifulsoup4
   ])
 ])

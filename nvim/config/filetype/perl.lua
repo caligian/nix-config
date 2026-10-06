@@ -6,7 +6,19 @@ return function(ft)
     tabstop = 2,
     expandtab = true,
   }
-  ft:set_lsp_config('perlpls', {})
+
+  ft:set_lsp_config('perlpls', {
+    cmd = { 'pls' },
+    settings = {
+      perl = {
+        perlcritic = { enabled = false },
+        syntax = { enabled = true },
+      },
+    },
+    filetypes = { 'perl' },
+    root_markers = { '.PROJECT' },
+  })
+
   ft:set_lsp_config('perlnavigator', {
     settings = {
       perlnavigator = {
