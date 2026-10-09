@@ -1,7 +1,6 @@
 require 'lib.definitions'
 
 local lib = package.user.lib
-local check = lib.assert
 local union = lib.union
 local is = lib.is
 local dict = lib.dict
@@ -84,7 +83,7 @@ function repl.new(bufnr)
     end
   end
 
-  local term = terminal(proj, config.cmd)
+  local term = terminal:new(proj, config.cmd)
   dict.force_set(state, { ft, proj }, term)
   return term
 end
@@ -198,7 +197,7 @@ function repl.mktempfile(text, delete_after)
   fh:close()
 
   if delete_after then
-    timer('delete-' .. file, delete_after, 0, function()
+    timer:new('delete-' .. file, delete_after, 0, function()
       if fs.is_file(file) then
         printf("Deleting file %s", file)
         fs.rm(file)
@@ -316,7 +315,7 @@ end
 ---Assert tbl is a repl configuration table
 ---@param tbl table
 function repl.isa_config(tbl)
-  check.spec(tbl, repl.validator)
+  -- is.match(tbl, repl.validator, { assert = true })
 end
 
 function repl.setup()

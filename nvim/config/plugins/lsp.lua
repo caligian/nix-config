@@ -1,14 +1,12 @@
 local kbd = vim.keymap.set
 local au = vim.api.nvim_create_autocmd
 local home = os.getenv("HOME")
-
--- Add default configurations
-local function enable(name, config)
+local enable = function(name, config)
   vim.lsp.config(name, config)
   if name ~= '*' then vim.lsp.enable(name) end
 end
 
-vim.diagnostic.config({
+vim.diagnostic.config {
   signs = {
     text = {
       [vim.diagnostic.severity.ERROR] = "E",
@@ -17,7 +15,7 @@ vim.diagnostic.config({
       [vim.diagnostic.severity.HINT] = "H",
     }
   }
-})
+}
 
 require('lsp-format').setup {}
 
@@ -27,7 +25,7 @@ require('neo-tree').setup {
   close_if_last_window = false,
   enable_git_status = false,
   enable_diagnostics = false,
-  sources = { "filesystem", "buffers", --[[ "document_symbols" ]] },
+  sources = { "filesystem", "buffers", },
   document_symbols = {
     follow_cursor = true,
     auto_close = false,
@@ -194,9 +192,33 @@ enable('perlnavigator', {
   }
 })
 
+if not vim.g.loaded_trouble then
+  require('trouble').setup {
+    win = {
+      position = 'left',
+      size = 0.3,
+    }
+  }
+  vim.g.loaded_trouble = true
+end
+
 au('LspAttach', {
   callback = function(args)
     local client = assert(vim.lsp.get_client_by_id(args.data.client_id))
     require("lsp-format").on_attach(client, args.buf)
   end,
 })
+
+kbd(
+  'n',
+  '<leader>ld',
+  '<cmd>Trouble diagnostics toggle focus=false filter.buf=0<CR>',
+  { desc = 'Show diagnostics' }
+)
+
+kbd(
+  'n',
+  '<leader>lD',
+  '<cmd>Trouble diagnostics toggle focus=false<CR>',
+  { desc = 'Show diagnostics' }
+)

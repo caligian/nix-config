@@ -1,6 +1,5 @@
 require('lib.state').setup()
 
-
 if vim.g.neovide then
   vim.o.guifont = "UbuntuMono Nerd Font:h13"
   vim.o.linespace = 0

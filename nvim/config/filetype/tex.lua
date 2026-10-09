@@ -66,19 +66,11 @@ function tex.has_dir(file, dir)
 end
 
 function tex.clear(bufname)
-  local name = path.basename(bufname)
+  local curdir = vim.fn.getcwd()
   local dir = path.dirname(bufname)
-  local files = path.glob(string.format("%s/*.*", dir))
-  local rm_files = list.filter(files, function(file)
-    local ok = not file:match '%.tex$' and not file:match '%.bib'
-    return ok and (string.match(file, name) ~= nil)
-  end)
-
-  for i = 1, #rm_files do
-    path.rm(rm_files[i])
-  end
-
-  printf("Deleted files:\n%s", table.concat(rm_files, "\n"))
+  path.cd(dir)
+  vim.cmd('latexmk -C ' .. bufname)
+  path.cd(curdir)
 end
 
 ---Open a tex PDF using xdg-open
@@ -95,16 +87,12 @@ function tex.open(bufname)
 end
 
 ---@param bufname string
-function tex.compile_pdf(bufname)
+function tex.compile(bufname)
   local dir = path.dirname(bufname)
-  if not path.is_dir(dir) then
-    printf("Invalid directory %s", dir)
-  else
-    tex.clear(bufname)
-    local pdf = tex.change_extension(bufname, 'tex', 'pdf')
-    if path.is_file(pdf) then path.rm(pdf) end
-    tex.run('latexmk -pdf -outdir=%s %s', dir, bufname)
-  end
+  tex.clear(bufname)
+  local pdf = tex.change_extension(bufname, 'tex', 'pdf')
+  if path.is_file(pdf) then path.rm(pdf) end
+  tex.run('latexmk -pdf -outdir=%s %s', dir, bufname)
 end
 
 function tex.wrap(name, ...)
@@ -190,7 +178,7 @@ tex.cmd_goto_next_env = tex.search_wrap_below('\\begin%{')
 tex.cmd_goto_prev_env = tex.search_wrap_above('\\begin%{')
 tex.cmd_goto_next_item = tex.search_wrap_below('\\item')
 tex.cmd_goto_prev_item = tex.search_wrap_above('\\item')
-tex.cmd_compile_pdf = tex.wrap 'compile_pdf'
+tex.cmd_compile = tex.wrap 'compile'
 tex.cmd_open = tex.wrap 'open'
 
 return function(ft)
@@ -213,7 +201,7 @@ return function(ft)
   ft:map({ 'i', 'v', 'n' }, '<M-a>', tex.cmd_goto_prev_env, { desc = 'Goto prev env' })
   ft:map({ 'i', 'v', 'n' }, "<M-f>", tex.cmd_goto_next_item, { desc = 'Goto next item' })
   ft:map({ 'i', 'v', 'n' }, '<M-b>', tex.cmd_goto_prev_item, { desc = 'Goto prev item' })
-  ft:map('n', '<leader>cp', tex.cmd_compile_pdf, { desc = 'Create PDF' })
+  ft:map('n', '<leader>cp', tex.cmd_compile, { desc = 'Create PDF' })
   ft:map('n', '<leader>co', tex.cmd_open, { desc = "Open PDF" })
   ft:map('n', '<leader>cr', tex.cmd_clear, { desc = 'Clear everything except .bib and .tex' })
   ft.utils = tex

@@ -145,7 +145,7 @@ function utils.new(name)
     name = fs.basename(name)
     name = string.gsub(name, '%.lua$', '')
   end
-  return filetype(name)
+  return filetype:new(name)
 end
 
 ---@param name string

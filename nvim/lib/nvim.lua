@@ -1,10 +1,13 @@
 require 'lib.definitions'
 
 local lib = package.user.lib
+local is = lib.is
 local fs = lib.fs
-local result = require 'lua-utils.result'
 local list = lib.list
 local nvim = {}
+local Result = lib.Result
+local Ok = lib.Ok
+local Err = lib.Err
 
 nvim.fnamemodify = vim.fn.fnamemodify
 nvim.fname = {}
@@ -149,7 +152,7 @@ end
 function nvim.loadstring(s)
   local fn, msg = loadstring(s)
   if fn then
-    return result.Result(pcall(fn))
+    return Result(pcall(fn))
   else
     return result.Err(msg)
   end
@@ -199,13 +202,13 @@ end
 ---@return Ok<boolean>|Err
 function nvim.cmd(...)
   local cmd = table.concat({ ... }, "\n")
-  local res = result.Result(pcall(vim.api.nvim_exec2, cmd, { output = true }))
+  local res = Result(pcall(vim.api.nvim_exec2, cmd, { output = true }))
 
-  if result.is_err(res) then
+  if is.Err(res) then
     ---@cast res Err
     return res
   else
-    res = result.Ok(true)
+    res = Ok(true)
     ---@cast res Ok<boolean>
     return res
   end
@@ -215,9 +218,9 @@ end
 ---@return Ok<string>|Err
 function nvim.exec(...)
   local cmd = table.concat({ ... }, "\n")
-  local res = result.Result(pcall(vim.api.nvim_exec2, cmd, { output = true }))
+  local res = Result(pcall(vim.api.nvim_exec2, cmd, { output = true }))
 
-  if result.is_ok(res) then
+  if is.Ok(res) then
     ---@cast res Ok<string>
     return res
   end

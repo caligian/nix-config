@@ -1,14 +1,13 @@
 require 'lib.definitions'
 
 local lib = package.user.lib
-local types = lib.types
 local is = lib.is
 local copy = vim.deepcopy
 local make_command = vim.api.nvim_create_user_command
 local make_buffer_command = vim.api.nvim_buf_create_user_command
 local make_autocmd = vim.api.nvim_create_autocmd
 local state = package.user.state.command
-local as_value = types.as_value
+local as_value = lib.as_value
 
 ---@class command.utils
 local command = {

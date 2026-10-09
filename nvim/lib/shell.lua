@@ -1,11 +1,12 @@
-local T = package.user.lib.types
-local is = T.is
+local lib = package.user.lib
+local is = lib.is
 local terminal = require 'lib.terminal'
 local buffer = require 'lib.buffer'
 local project = require 'lib.project'
 local kbd = require 'lib.keymap'
 local timer = require 'lib.timer'
 local nvim = require 'lib.nvim'
+local fs = lib.fs
 local shell = {}
 
 local function normalize_buf(buf)
@@ -74,7 +75,7 @@ function shell.new(bufnr, opts)
   if opts.cwd then
     if is.string(opts.cwd) then
       cwd = opts.cwd
-    elseif is.callable(opts.cwd) then
+    elseif is.like_function(opts.cwd) then
       cwd = opts.cwd(bufnr)
     else
       cwd = os.getenv "HOME"
@@ -90,14 +91,14 @@ function shell.new(bufnr, opts)
   if opts.cmd then
     if is.string(opts.cmd) then
       cmd = opts.cmd
-    elseif is.callable(opts.cmd) then
+    elseif is.like_function(opts.cmd) then
       cmd = opts.cmd(bufnr, cwd)
     else
       cmd = ''
     end
   end
 
-  local term = terminal(cwd, cmd)
+  local term = terminal:new(cwd, cmd)
   state[cwd] = term
 
   return term
@@ -344,9 +345,9 @@ end
 
 function shell.setup_keymaps()
   local fn = setmetatable({}, {
-    __index = function(_, fn)
+    __index = function(_, name)
       return function()
-        return shell[fn](buffer.current())
+        return shell[name](buffer.current())
       end
     end
   })
@@ -372,6 +373,52 @@ function shell.setup_keymaps()
   nmap('<enter>v', 'split_right', { desc = 'Split below' })
   nmap('<enter>d', 'cd_workspace', { desc = 'cd workspace' })
   nmap('<enter>D', 'cd_dir', { desc = 'cd workspace' })
+
+  package.user.state.global_shell = package.user.state.global_shell or terminal:new(os.getenv "HOME", '')
+  local global_shell = package.user.state.global_shell
+  local global_fn = setmetatable({}, {
+    __index = function(_, name)
+      return function()
+        if name == 'start' then
+          global_shell:start()
+        else
+          return global_shell[name](global_shell)
+        end
+      end
+    end
+  })
+  map = function(mode, lhs, func, opts)
+    func = is.string(func) and global_fn[func] or func
+    kbd.map(mode, lhs, func, opts)
+  end
+  nmap = function(lhs, func, opts)
+    map('n', '<leader>' .. lhs, func, opts)
+  end
+  vmap = function(lhs, func, opts)
+    map('v', '<leader>' .. lhs, func, opts)
+  end
+
+  nmap('xx', 'start', { desc = 'Start workspace terminal' })
+  nmap('xk', 'hide', { desc = 'Hide terminal' })
+  nmap('xq', 'stop', { desc = 'Stop terminal' })
+  nmap('xs', 'split_below', { desc = 'Split on right' })
+  nmap('xv', 'split_right', { desc = 'Split below' })
+  nmap('xd', function()
+    local buf = buffer.current()
+    local dir = project.find_by_buffer(buf)
+
+    if fs.is_dir(dir) then
+      global_shell:cd_buffer_dir(buffer.current())
+    end
+  end, { desc = 'cd workspace' })
+  nmap('xD', function()
+    local buf = buffer.current()
+    local dir = fs.dirname(buffer.get_name(buf))
+    if fs.is_dir(dir) then
+      global_shell:cd_buffer_dir(buffer.current())
+    end
+  end, { desc = 'cd workspace' })
+  nmap('xD', 'cd_dir', { desc = 'cd workspace' })
 end
 
 function shell.setup()
@@ -380,6 +427,5 @@ end
 
 shell.getbufnr = normalize_buf
 shell.normalize_buf = normalize_buf
-package.user.lib.shell = shell
 
 return shell

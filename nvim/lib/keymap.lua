@@ -18,7 +18,7 @@ local kbd = {
     union(is.string, is.table)
   }
 }
-local assert_spec = lib.assert.spec
+local assert_spec = is.match
 
 ---@class keymap.opts
 ---@field desc? string
@@ -111,7 +111,7 @@ function kbd.buf_define(bufnr, opts, specs)
 end
 
 function kbd.project_map(mode, lhs, rhs, opts)
-  assert(is.callable(rhs), sprintf("rhs: Expected callable, got [%s] %s", type(rhs), rhs))
+  assert(is.like_function(rhs), sprintf("rhs: Expected callable, got [%s] %s", type(rhs), rhs))
   return kbd.map(mode, lhs, function()
     local buf = vim.fn.bufnr()
     local filename = vim.api.nvim_buf_get_name(buf)

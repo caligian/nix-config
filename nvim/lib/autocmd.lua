@@ -1,13 +1,15 @@
 require 'lib.definitions'
 
-local lib = package.user.lib
-local list = lib.list
-local is = lib.is
-local union = lib.union
-local copy = vim.deepcopy
-local state = package.user.state.autocmd
-local enable = vim.api.nvim_create_autocmd
-local options = require 'lib.options'
+local lib                  = package.user.lib
+local list                 = lib.list
+local is                   = lib.is
+local union                = lib.union
+local copy                 = vim.deepcopy
+local enable               = vim.api.nvim_create_autocmd
+local options              = require 'lib.options'
+
+package.user.state.autocmd = package.user.state.autocmd or {}
+local state                = package.user.state.autocmd
 
 ---@class autocmd.callback.args
 ---@field id integer
@@ -57,7 +59,7 @@ local options = require 'lib.options'
 
 ---@class autocmd.utils
 ---@overload fun(event: autocmd.event, callback: autocmd.callback, opts?: autocmd.opts|string|integer): autocmd
-local autocmd = {
+local autocmd              = {
   validator = {
     union(is.string, is.list),
     union(is.callable, is.string),
@@ -67,7 +69,7 @@ local autocmd = {
 
 ---Valid options
 ---@type {[string]: boolean}
-autocmd.valid_opts = {
+autocmd.valid_opts         = {
   pattern = true,
   group = true,
   buffer = true,

@@ -311,4 +311,6 @@ function utils.setup(opts)
   return state.last_setup_result
 end
 
+utils.setup()
+
 return utils

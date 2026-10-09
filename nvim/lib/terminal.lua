@@ -1,13 +1,16 @@
 require 'lib.definitions'
 
-local is = require 'lua-utils.type.is'
-local class = require 'lua-utils.type.class'
+local types = require 'lua-utils.type'
+local is = types.is
+local class = types.class
 local project = require 'lib.project'
 local path = require 'lua-utils.fs'
 local nvim = require 'lib.nvim'
-local autocmd = require 'lib.autocmd'
 local buffer = require 'lib.buffer'
 local bufcall = vim.api.nvim_buf_call
+local wipeout = function(buf)
+  vim.api.nvim_buf_delete(buf, { force = true })
+end
 
 ---@alias terminal.cmd.cond string|string[]|(fun(args: terminal.cmd.args): boolean)
 ---@alias terminal.cmd.maker string|string[]|(fun(args: terminal.cmd.args): string)
@@ -27,7 +30,7 @@ local bufcall = vim.api.nvim_buf_call
 ---@field id? integer
 ---@field pid? integer
 ---@field buffer? integer
----@overload fun(cwd?: string, cmd?: terminal.cmd): terminal
+---@field new fun(cwd?: string, cmd?: terminal.cmd): terminal
 local terminal = class 'terminal'
 
 ---@class user.state.terminal
@@ -172,7 +175,7 @@ function terminal:stop(timeout, retries)
         local id = self.id
         local buf = self.buffer
         wait_for_job_stop(id, timeout)
-        buffer.wipeout(buf)
+        wipeout(buf)
         self.id = nil
         self.pid = nil
         self.buffer = nil
@@ -301,7 +304,41 @@ function terminal:open()
 
   local termbufnr = vim.api.nvim_create_buf(false, true)
   local map = vim.keymap.set
-  local id = bufcall(termbufnr, function() return self:start_job() end)
+  local id = bufcall(termbufnr, function()
+    local buf = buffer.current()
+    local stop = function(args)
+      self:stop()
+      if buffer.exists(buf) then wipeout(buf) end
+      if buffer.exists(termbufnr) then wipeout(termbufnr) end
+      if buffer.exists(args.buf) then wipeout(args.buf) end
+    end
+
+    vim.api.nvim_create_autocmd('TermClose', {
+      buffer = buf,
+      callback = stop
+    })
+
+    vim.api.nvim_create_autocmd('TermOpen', {
+      buffer = buf,
+      callback = function(args)
+        local winid = buffer.get_winid(args.buf)
+        local set = vim.api.nvim_set_option_value
+
+        if winid and winid ~= -1 then
+          set('number', false, { win = winid })
+          set('relativenumber', false, { win = winid })
+        end
+
+        set('modifiable', true, { buf = args.buf })
+        set('buflisted', false, { buf = args.buf })
+        set('modified', false, { buf = args.buf })
+
+        vim.bo.modified = false
+      end,
+    })
+
+    return self:start_job()
+  end)
 
   if not id then
     return
@@ -321,7 +358,7 @@ function terminal:open()
     { desc = 'Kill terminal and delete buffer', buffer = termbufnr }
   )
 
-  if is.callable(cmd) then
+  if is.like_function(cmd) then
     local buf = vim.fn.bufnr()
     local filename = buffer.filename(buf)
     local dir = path.dirname(filename)

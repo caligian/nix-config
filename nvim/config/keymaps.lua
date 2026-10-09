@@ -87,15 +87,17 @@ map('n', '<leader>ll', ':LspLog<CR>', { desc = 'Show LSP log' })
 map('n', '<leader>lf', ':Format<CR>', { desc = 'Format buffer using LSP if possible' })
 map('n', '<leader>lD', ':Telescope diagnostics<CR>', { desc = 'LSP workspace diagnostics' })
 map('n', '<leader>ld', ':Telescope diagnostics bufnr=0<CR>', { desc = 'Current buffer diagnostics' })
-map("n", "<C-c>o", "<cmd>Outline<CR>", { desc = "Toggle Outline" })
+map("n", "<C-x>o", "<cmd>Outline<CR>", { desc = "Toggle Outline" })
 
 --- File operations
 map('n', '<leader>fs', ':w! %<CR>', { desc = 'Save file' })
 map('n', '<leader>fS', ':SudaWrite %<CR>', { desc = 'Sudo write file' })
 map('n', '<leader>fR', ':SudaRead ', { desc = 'Sudo read file' })
 map('n', '<leader>fg', ':Telescope git_files<CR>', { desc = 'git ls-files' })
-map('n', '<leader>fr', ':Telescope frecency<CR>', { desc = 'Recent files' })
-map('n', '<C-c>p', function()
+map('n', '<leader>fr', ':Telescope oldfiles<CR>', { desc = 'Recent files' })
+map('n', '<leader>ff', ':Telescope file_browser<CR>', { desc = 'Telescope file browser' })
+map('n', '<leader>.', ':Telescope find_files<CR>', { desc = 'Telescope files' })
+map('n', '<C-x>p', function()
   local buf = vim.fn.bufnr()
   local name = vim.api.nvim_buf_get_name(buf)
 
@@ -108,7 +110,7 @@ map('n', '<C-c>p', function()
     vim.cmd(':Neotree filesystem ' .. proj)
   end
 end, { desc = 'Browse project directory' })
-map('n', '<C-c>d', function()
+map('n', '<C-x>d', function()
   local buf = vim.api.nvim_buf_get_name(vim.fn.bufnr())
   if buf:sub(1, 1) ~= '/' then
     return
@@ -123,10 +125,9 @@ map('n', '<C-c>d', function()
 end, { desc = 'Browse buffer directory' })
 
 --- Neo-tree
-map('n', '<C-c>.', ':Neotree filesystem<CR>', { desc = 'Browse cwd' })
-map('n', '<C-c>~', ':Neotree filesystem ~/<CR>', { desc = 'Browse HOME' })
-map('n', '<C-c>b', ':Neotree buffers<CR>', { desc = 'Browse buffers' })
-map('n', '<C-c>s', ':Neotree document_symbols<CR>', { desc = 'Browse document symbols' })
+map('n', '<C-x>.', ':Neotree filesystem<CR>', { desc = 'Browse cwd' })
+map('n', '<C-x>~', ':Neotree filesystem ~/<CR>', { desc = 'Browse HOME' })
+map('n', '<C-x>b', ':Neotree buffers<CR>', { desc = 'Browse buffers' })
 
 --- Git operations
 map('n', '<leader>gg', ':botright Git<CR>', { desc = 'Git browser' })
