@@ -3,25 +3,23 @@ if package.user.loaded_nvim then
 end
 
 ---@class user.state
-local state = package.user.state
-state.workspace = state.workspace or {}
-state.autocmd = state.autocmd or {}
-state.buffer = state.buffer or {}
-state.terminal = state.terminal or { id = {}, pid = {} }
-state.repl = state.repl or {}
-state.command = state.command or {}
-state.keymap = state.keymap or {}
-state.augroup = state.augroup or {}
+package.user.state.workspace = package.user.state.workspace or {}
+package.user.state.autocmd = package.user.state.autocmd or {}
+package.user.state.buffer = package.user.state.buffer or {}
+package.user.state.terminal = package.user.state.terminal or { id = {}, pid = {} }
+package.user.state.repl = package.user.state.repl or {}
+package.user.state.command = package.user.state.command or {}
+package.user.state.keymap = package.user.state.keymap or {}
+package.user.state.augroup = package.user.state.augroup or {}
 
 ---@class user.config
-local config = package.user.config
-config.filetype = config.filetype or {}
-config.keymap = config.keymap or {}
-config.autocmd = config.autocmd or {}
-config.augroup = config.augroup or {}
-config.workspace = config.workspace or { check_depth = 5 }
-config.plugins = config.plugins or {}
-config.plugins.telescope = {
+package.user.config.filetype = package.user.config.filetype or {}
+package.user.config.keymap = package.user.config.keymap or {}
+package.user.config.autocmd = package.user.config.autocmd or {}
+package.user.config.augroup = package.user.config.augroup or {}
+package.user.config.workspace = package.user.config.workspace or { check_depth = 5 }
+package.user.config.plugins = package.user.config.plugins or {}
+package.user.config.plugins.telescope = package.user.config.plugins.telescope or {
   defaults = {
     layout_config = { height = 0.3 },
     layout_strategy = 'bottom_pane',
@@ -57,7 +55,7 @@ config.plugins.telescope = {
     }
   }
 }
-config.buf_opts = {
+package.user.config.buf_opts = {
   tabstop = 4,
   shiftwidth = 4,
   softtabstop = 4,
@@ -77,12 +75,11 @@ config.buf_opts = {
 local map = vim.keymap.set
 local on = vim.api.nvim_create_autocmd
 
-for key, value in pairs(config.buf_opts) do
+for key, value in pairs(package.user.config.buf_opts) do
   vim.o[key] = value
 end
 
 map('n', '<leader>lf', ':Format<CR>', { desc = "Format buffer" })
-
 on('LspAttach', {
   callback = function(args)
     pcall(function()
