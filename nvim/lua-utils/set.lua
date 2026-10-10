@@ -1,11 +1,11 @@
----@class set
+---@class Set
 
----@class set.utils
----@overload fun(tbl: table): set
+---@class Set.utils
+---@overload fun(tbl: table): Set
 local set = {}
 setmetatable(set, set)
 
----@param x set
+---@param x Set
 ---@param sort? boolean|fun(a: any, b: any): boolean
 ---@return any[]
 function set.as_list(x, sort)
@@ -23,7 +23,7 @@ function set.as_list(x, sort)
   return res
 end
 
----@param x set
+---@param x Set
 ---@return integer
 function set.length(x)
   local len = 0
@@ -31,27 +31,27 @@ function set.length(x)
   return len
 end
 
----@param x set
+---@param x Set
 ---return boolean
 function set.is_empty(x)
   return set.length(x) == 0
 end
 
----@param x set
+---@param x Set
 ---@return boolean
 function set.not_empty(x)
   return not set.is_empty(x)
 end
 
----@param x set
----@param y set
+---@param x Set
+---@param y Set
 ---@return boolean
 function set.has_same_length(x, y)
   return set.length(x) == set.length(y)
 end
 
----@param x set
----@param y set
+---@param x Set
+---@param y Set
 ---@return boolean
 function set.equals(x, y)
   if set.length(x) ~= set.length(y) then
@@ -67,8 +67,8 @@ function set.equals(x, y)
   return true
 end
 
----@param x set
----@param y set
+---@param x Set
+---@param y Set
 ---@return boolean
 function set.not_equals(x, y)
   if set.length(x) ~= set.length(y) then
@@ -85,8 +85,8 @@ function set.not_equals(x, y)
 end
 
 ---Is x a subset of y
----@param x set
----@param y set
+---@param x Set
+---@param y Set
 ---@param strict? boolean
 ---@return boolean
 function set.is_subset(x, y, strict)
@@ -110,17 +110,17 @@ function set.is_subset(x, y, strict)
 end
 
 ---Is x a superset of y
----@param x set
----@param y set
+---@param x Set
+---@param y Set
 ---@param strict? boolean
 ---@return boolean
 function set.is_superset(x, y, strict)
   return set.is_subset(y, x, strict)
 end
 
----@param x set
----@param y set
----@return set
+---@param x Set
+---@param y Set
+---@return Set
 function set.intersection(x, y)
   local res = set.new {}
   for value, _ in pairs(x) do if y[value] then res[value] = true end end
@@ -128,9 +128,9 @@ function set.intersection(x, y)
   return res
 end
 
----@param x set
----@param y set
----@return set
+---@param x Set
+---@param y Set
+---@return Set
 function set.union(x, y)
   local res = set.new {}
   for value, _ in pairs(x) do res[value] = true end
@@ -138,9 +138,9 @@ function set.union(x, y)
   return res
 end
 
----@param x set
----@param y set
----@return set
+---@param x Set
+---@param y Set
+---@return Set
 function set.difference(x, y)
   local res = set.new {}
   for value, _ in pairs(x) do res[value] = true end
@@ -148,10 +148,10 @@ function set.difference(x, y)
   return res
 end
 
----@param x set
+---@param x Set
 ---@param f fun(elem: any): any
 ---@param safe? boolean
----@return set
+---@return Set
 function set.map(x, f, safe)
   local res = set.new {}
   for value, _ in pairs(x) do
@@ -167,10 +167,10 @@ function set.map(x, f, safe)
   return res
 end
 
----@param x set
+---@param x Set
 ---@param f string|string[]|fun(elem: any): any
 ---@param safe? boolean
----@return set
+---@return Set
 function set.filter(x, f, safe)
   if type(f) == 'string' or (type(f) == 'table' and type(f[1]) == 'string') then
     return set.grep(x, f)
@@ -189,7 +189,7 @@ function set.filter(x, f, safe)
   return res
 end
 
----@param x set
+---@param x Set
 ---@param elems any
 ---@return boolean[]
 function set.has(x, elems)
@@ -202,7 +202,7 @@ function set.has(x, elems)
   return res
 end
 
----@param x set
+---@param x Set
 ---@param patterns string|string[]
 ---@return any[]
 function set.grep(x, patterns)
@@ -222,7 +222,7 @@ function set.grep(x, patterns)
   return res
 end
 
----@param x set
+---@param x Set
 ---@param fn? fun(a: any, b: any): boolean
 ---@return any[]
 function set.sort(x, fn)
@@ -239,7 +239,7 @@ function set.sort(x, fn)
 end
 
 ---@param tbl? any[]
----@return set
+---@return Set
 function set.new(tbl)
   local mt = {}
   local new = setmetatable({}, mt)
@@ -278,7 +278,7 @@ function set.is_set(x)
 end
 
 ---@param tbl table
----@return set
+---@return Set
 function set:__call(tbl)
   return set.new(tbl)
 end

@@ -7,7 +7,6 @@ local make_command = vim.api.nvim_create_user_command
 local make_buffer_command = vim.api.nvim_buf_create_user_command
 local make_autocmd = vim.api.nvim_create_autocmd
 local state = package.user.state.command
-local as_value = lib.as_value
 
 ---@class command.utils
 local command = {
@@ -104,17 +103,17 @@ command.valid_completion = {
 ---@return command
 function command.new(name, callback, opts)
   opts = opts or {}
-  local nargs = as_value(opts.nargs)
-  local bang = as_value(opts.bang)
-  local desc = as_value(opts.desc)
-  local force = as_value(opts.force)
-  local trim = as_value(opts.trim)
-  local process = as_value(opts.process)
-  local filter = as_value(opts.filter)
-  local event = as_value(opts.event)
-  local pattern = as_value(opts.pattern)
-  local buf = as_value(opts.buffer)
-  local should_pcall = as_value(opts.pcall)
+  local nargs = opts.nargs
+  local bang = opts.bang
+  local desc = opts.desc
+  local force = opts.force
+  local trim = opts.trim
+  local process = opts.process
+  local filter = opts.filter
+  local event = opts.event
+  local pattern = opts.pattern
+  local buf = opts.buffer
+  local should_pcall = opts.pcall
   local _args = { name, callback, opts }
   local cmd_opts = { bang = bang, desc = desc, force = force, nargs = nargs }
   local run = function(args)

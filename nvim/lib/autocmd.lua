@@ -3,7 +3,7 @@ require 'lib.definitions'
 local lib                  = package.user.lib
 local list                 = lib.list
 local is                   = lib.is
-local union                = lib.union
+local union                = is.union
 local copy                 = vim.deepcopy
 local enable               = vim.api.nvim_create_autocmd
 local options              = require 'lib.options'

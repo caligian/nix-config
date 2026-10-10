@@ -5,7 +5,7 @@ local state = package.user.state.keymap
 local fs = lib.fs
 local copy = vim.deepcopy
 local dict = lib.dict
-local union = lib.union
+local union = lib.is.union
 local is = lib.is
 local as = lib.as
 local options = require 'lib.options'
@@ -19,6 +19,7 @@ local kbd = {
   }
 }
 local assert_spec = is.match
+local is = require 'lua-utils.type'.is
 
 ---@class keymap.opts
 ---@field desc? string

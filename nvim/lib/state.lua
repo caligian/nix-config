@@ -1,13 +1,12 @@
 require 'lib.definitions'
 
-local lutils = package.user.lib
-local is = lutils.is
-local fs = lutils.fs
-local dict = lutils.dict
-local list = lutils.list
+local lib = package.user.lib
+local is = lib.is
+local fs = lib.fs
+local dict = lib.dict
+local list = lib.list
 local autocmd = vim.api.nvim_create_autocmd
 local kbd = vim.keymap.set
-
 local mydir = os.getenv("MY_DIR") .. "/nvim"
 local mylib = mydir .. "/lib"
 local myconfig = mydir .. "/config"

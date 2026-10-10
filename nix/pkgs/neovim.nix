@@ -110,32 +110,7 @@ let
       vim.cmd.source "${initVimFile}"
       vim.cmd.colorscheme "catppuccin"
 
-      --- Contains all the user configurations and state for neovim
-      ---@class package.user
-      package.user = package.user or {}
-
-      ---Contains all the user configurations
-      ---@class package.user.config
-      package.user.config = package.user.config or {}
-
-      ---Contains all the user libraries
-      ---@class package.user.lib
-      package.user.lib = package.user.lib or {}
-
-      ---Contains all the user state
-      ---@class package.user.state
-      package.user.state = package.user.state or {}
-
-      ---@type package.user.config
-      _G.CONFIG = package.user.config
-
-      ---@type package.user.state
-      _G.STATE = package.user.state
-
-      ---@type package.user.lib
-      _G.LIB = package.user.lib
-
-      package.user.lib = require 'lua-utils'
+      require('lua-utils')
       require("configuration")
     '';
   };

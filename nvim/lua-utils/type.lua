@@ -1,4 +1,10 @@
-local inspect = require 'lua-utils.inspect'
+require 'lua-utils.definitions'
+
+local lib = package.user.lib
+local refself = lib.refself
+local set_mt = lib.set_mt
+local NIL = lib.NIL
+local guards = lib.guards
 
 ---@alias guard1 fun(x: any, opts?: is.opts): boolean, string?
 ---@alias guard2 fun(x: any, y: any, opts?: is.opts): boolean, string?
@@ -6,235 +12,53 @@ local inspect = require 'lua-utils.inspect'
 
 ---@class is
 ---@type {[string]: guard1 | guard2}
-local is = { assert = {}, optional = {}, dump = {}, }
-local as = {}
-local class = {}
-local utils = { is = is, as = as, class = class, }
+local is = set_mt({
+  assert = refself {},
+  opt = refself {},
+  dump = refself {},
+  NIL = NIL,
+}, {
+  __index = guards,
+})
+local as = refself({})
+local class = refself({})
 local Result, Ok, Err
 local Error, CallError, UnwrapError, TypeError
-is.opt = is.optional
-
-setmetatable(is, is)
-setmetatable(is.assert, is.assert)
-setmetatable(is.dump, is.dump)
-setmetatable(is.optional, is.optional)
-setmetatable(class, class)
-setmetatable(as, as)
-
-package = package or {}
-package.user = package.user or {}
-package.user.NIL = setmetatable({}, { __tostring = function(_) return 'nil' end })
-package.user.lib = package.user.lib or {}
-package.user.lib.NIL = package.user.NIL
-package.user.lib.types = package.user.lib.types or {}
-package.user.lib.builtin_types = package.user.lib.builtin_types or {
-  'boolean',
-  'string',
-  'number',
-  'function',
-  'userdata',
-  'thread',
-  'table',
-  'nil',
-}
-package.user.lib.dont_subclass = package.user.lib.dont_subclass or {
-  union = true,
-  multimethod = true,
-  pcall = true,
-  template = true,
-}
-package.user.lib.is = package.user.lib.is or is
-
-local types = package.user.lib.types
-NIL = package.user.NIL
-
----@param x any
----@return string
-function dump(x)
-  local tp = type(x)
-  if tp == 'table' then
-    local mt = getmetatable(x)
-    if mt and mt.__tostring then
-      return tostring(x)
-    else
-      return inspect(x, { indent = '  ' })
-    end
-  else
-    return tostring(x)
-  end
-end
-
----@param x any
----@return boolean
-function is_nil(x)
-  return x == NIL or x == nil
-end
-
----@param x any
----@return any
-function as_value(x)
-  if x == NIL or x == nil then
-    return nil
-  else
-    return x
-  end
-end
-
----@param x any
----@return string
-function pp(x)
-  local s = dump(x)
-  print(s)
-  return s
-end
-
----@param x any
----@return any
-function rtostring(x)
-  if type(x) ~= "table" then
-    return tostring(x)
-  elseif x.__tostring then
-    return x:__tostring()
-  end
-
-  local res = {}
-  for key, value in pairs(x) do
-    if type(value) == 'table' and value.__tostring then
-      res[key] = value:__tostring()
-    else
-      res[key] = package.user.lib.rtostring(value)
-    end
-  end
-
-  return dump(res)
-end
-
----@param ... any
----@return any[]
-function pack(...)
-  local args = { ... }
-  local nargs = select('#', ...)
-  local res = {}
-
-  for i = 1, nargs do
-    local value = args[i]
-    res[#res + 1] = (value == nil and package.user.NIL) or value
-  end
-
-  return res
-end
-
----@param msg string
----@param ... any
----@return string
-function sprintf(msg, ...)
-  local args = pack(...)
-  local res = {}
-
-  for i = 1, #args do
-    res[#res + 1] = dump(args[i])
-  end
-
-  return string.format(msg, unpack(res))
-end
-
----@param msg string
----@param ... any
----@return string
-function printf(msg, ...)
-  local args = pack(...)
-  local res = {}
-
-  for i = 1, #args do
-    res[#res + 1] = dump(args[i])
-  end
-
-  local s = string.format(msg, unpack(res))
-  print(s)
-
-  return s
-end
-
----@param msg string
----@param ... any
-function errorf(msg, ...)
-  error(sprintf(msg, ...))
-end
-
----@param x table|string
----@return integer
-function size(x)
-  if type(x) == 'string' then
-    return #x
-  end
-
-  local size = 0
-  for _, _ in pairs(x) do size = size + 1 end
-  return size
-end
-
----@param x table|string
----@return integer
-function length(x)
-  return #x
-end
-
----@param x? table
----@param metatable? table
----@return table
-function bless(x, metatable)
-  x = x or {}
-  metatable = metatable or x
-  return setmetatable(x, metatable)
-end
-
----@param x? any
----@return boolean
-function callable(x)
-  local x_tp = type(x)
-  if x_tp == 'function' then
-    return true
-  elseif x_tp == 'table' and x.__call then
-    return true
-  else
-    return false
-  end
-end
-
----@param x any
----@return boolean
-function sequence(x)
-  local x_tp = type(x)
-  if x_tp == 'table' then
-    return size(x) == length(x)
-  elseif x_tp == 'string' then
-    return true
-  else
-    return false
-  end
-end
-
-local function obj_message(x, prefix, msg, ...)
+local message = lib.message
+local type_name = function(x)
   local x_type = type(x)
-  local is_type = false
-
   if getmetatable(x) and x.__type and x.__name then
-    is_type = true
-    x_type = x.__type .. '.' .. x.__name
+    return true, x.__type .. '.' .. x.__name
+  else
+    return false, x_type
   end
-
+end
+local type_message = function(x, prefix, key)
+  local is_type, x_type = type_name(x)
   local s = (
     (is_type and tostring(x)) or
     ((x_type ~= 'string' and x_type ~= 'number') and dump(x)) or
     tostring(x)
   )
-  msg = msg .. "\n" .. string.format("Got {%s}: %s", x_type, s)
+  local key_type = type(key)
+  local msg = string.format('Got {%s} `%s`', x_type, s)
+  local fmt
 
   if prefix then
-    return string.format('%s: %s', prefix, string.format(msg, ...))
+    if key_type == 'number' then
+      fmt = (prefix .. string.format('[%d]', key))
+    else
+      fmt = (prefix .. '.' .. tostring(key))
+    end
   else
-    return string.format(msg, ...)
+    if key_type == 'number' then
+      fmt = string.format('[%d]', key)
+    else
+      fmt = tostring(key)
+    end
   end
+
+  return fmt .. ': ' .. msg
 end
 
 ---@class is.opts
@@ -258,18 +82,19 @@ function is:new(key, f)
     if not msg then
       return true
     elseif throw or should_dump then
-      local _msg = obj_message(x, prefix, msg)
+      local _msg = type_message(x, prefix, msg)
       if throw then error(_msg) end
       return false, _msg
     elseif should_dump then
-      return false, obj_message(x, prefix, msg)
+      return false, type_message(x, prefix, msg)
     else
       return false
     end
   end
 
   rawset(self, key, fn)
-  types[key] = fn
+  guards[key] = fn
+
   return fn
 end
 
@@ -290,7 +115,7 @@ function is.error(x, opts)
   local should_dump = opts.dump
 
   if not is.instance(x) then
-    local msg = obj_message(x, prefix, 'Expected {instance.Error}')
+    local msg = type_message(x, prefix, 'Expected {instance.Error}')
     if throw then
       error(msg)
     elseif should_dump then
@@ -314,7 +139,7 @@ function is.error(x, opts)
   end
 
   if should_dump or throw then
-    local msg = obj_message(x, prefix, 'Expected {instance.Error}')
+    local msg = type_message(x, prefix, 'Expected {instance.Error}')
     if throw then error(msg) end
     return false, msg
   end
@@ -414,7 +239,9 @@ is:new('like_function', function(x)
 end)
 
 is:new('integer', function(x)
-  if not is.number(x) and not tostring(x):match('^%d+$') then
+  if tonumber(x) and tostring(x):match('^%d+$') then
+    return
+  else
     return 'Expected {integer}'
   end
 end)
@@ -442,7 +269,7 @@ function is.instanceof(child, parent, opts)
   local throw = opts.assert
 
   if throw or should_dump then
-    local msg = obj_message(
+    local msg = type_message(
       child,
       prefix,
       string.format('Expected instance of class %s', parent.__name)
@@ -476,7 +303,7 @@ function is.subclass(child, parent, opts)
   local throw = opts.assert
 
   if throw or should_dump then
-    local msg = obj_message(child, prefix, 'Expected subclass of class %s', parent.__name)
+    local msg = type_message(child, prefix, string.format('Expected subclass of class %s', parent.__name))
     if throw then error(msg) end
     return false, msg
   else
@@ -858,7 +685,6 @@ is:new('Err', function(x)
   end
 end)
 
-
 ---@param x table
 ---@param y table
 ---@param opts? is.opts
@@ -1111,7 +937,7 @@ function is.union(display)
 
       local prefix = opts.prefix
       local throw = opts.assert
-      local msg = obj_message(x, prefix, 'Expected %s', display)
+      local msg = type_message(x, prefix, string.format('Expected %s', display))
 
       if throw then
         error(msg)
@@ -1156,37 +982,22 @@ function is.dump:__index(tp)
   end
 end
 
-function is.optional:__index(tp)
+function is.opt:__index(tp)
   return function(x, opts)
     return is[tp](x, {
       prefix = opts.prefix,
       assert = opts.assert,
       dump = opts.dump,
-      optional = true
+      optional = true,
     })
   end
 end
-
-package.user.lib.callable = callable
-package.user.lib.sequence = sequence
-package.user.lib.bless = bless
-package.user.lib.rtostring = rtostring
-package.user.lib.dump = dump
-package.user.lib.NIL = NIL
-package.user.lib.pp = pp
-package.user.lib.as_value = as_value
-package.user.lib.is_nil = is_nil
-package.user.lib.printf = printf
-package.user.lib.sprintf = sprintf
-package.user.lib.size = size
-package.user.lib.length = length
-package.user.lib.pack = pack
-package.user.lib.errorf = errorf
 
 is.na = is['nil']
 is.fun = is['function']
 is.n = is.number
 is.i = is.integer
+is.int = is.i
 is.s = is.string
 is.b = is.boolean
 is.f = is.fun
@@ -1203,117 +1014,42 @@ is.F = is.like_function
 as['function'] = as.fun
 as.n = as.number
 as.i = as.integer
-as.f = as.f
+as.f = as['function']
 as.b = as.boolean
 as.bool = as.boolean
 as.s = as.string
 as.str = as.string
 
-utils.bless = bless
-utils.callable = callable
-utils.sequence = sequence
-utils.dump = dump
-utils.pp = pp
-utils.as_value = package.user.lib.as_value
-utils.is_nil = package.user.lib.is_nil
-utils.rtostring = rtostring
-utils.is_result = is.Result
-utils.is_ok = is.Ok
-utils.is_err = is.Err
-utils.is_table = is.table
-utils.is_string = is.string
-utils.is_number = is.number
-utils.is_userdata = is.userdata
-utils.is_function = is.fun
-utils.is_boolean = is.boolean
-utils.is_thread = is.thread
-utils.is_list = is.list
-utils.is_dict = is.dict
-utils.is_pure_table = is.pure_table
-utils.is_class = is.class
-utils.is_instance = is.instance
-utils.is_error = is.error
-utils.is_object = is.object
-utils.as_number = as.number
-utils.as_integer = as.integer
-utils.as_function = as.fun
-utils.as_boolean = as.boolean
-utils.as_string = as.string
-utils.any_of = is.any_of
-utils.all_of = is.all_of
-utils.union = is.union
-utils.maybe = is.maybe
-utils.pack = pack
-utils.sprintf = sprintf
-utils.printf = printf
-utils.errorf = errorf
-utils.union = is.union
-utils.maybe = is.maybe
-utils.NIL = package.user.NIL
-utils.Error = Error
-utils.CallError = Error.CallError
-utils.TypeError = Error.TypeError
-utils.UnwrapError = Error.UnwrapError
-utils.as = as
-utils.Result = Result
-utils.Ok = Ok
-utils.Err = Err
+local M = {
+  is = is,
+  class = class,
+  Result = Result,
+  Ok = Ok,
+  Err = Err,
+  as = as,
+  Error = Error,
+  TypeError = TypeError,
+  CallError = CallError,
+  UnwrapError = UnwrapError,
+  pp = pp,
+  dump = dump,
+  errorf = errorf,
+  printf = printf,
+  sprintf = sprintf,
+  callable = callable,
+  sequence = sequence,
+  bless = bless,
+  rtostring = rtostring,
+  pack = pack,
+  length = length,
+  size = size,
+  isa = is.assert,
+  union = is.union,
+  maybe = is.maybe,
+}
 
-function utils:import()
-  _G.bless = bless
-  _G.callable = callable
-  _G.sequence = sequence
-  _G.dump = dump
-  _G.pp = pp
-  _G.errorf = errorf
-  _G.rtostring = rtostring
-  _G.is_result = is.Result
-  _G.is_ok = is.Ok
-  _G.is_err = is.Err
-  _G.is_table = is.table
-  _G.is_string = is.string
-  _G.is_number = is.number
-  _G.is_userdata = is.userdata
-  _G.is_function = is.fun
-  _G.is_boolean = is.boolean
-  _G.is_thread = is.thread
-  _G.is_list = is.list
-  _G.is_dict = is.dict
-  _G.is_pure_table = is.pure_table
-  _G.is_class = is.class
-  _G.is_instance = is.instance
-  _G.is_error = is.error
-  _G.is_object = is.object
-  _G.as_number = as.number
-  _G.as_integer = as.integer
-  _G.as_function = as.fun
-  _G.as_boolean = as.boolean
-  _G.as_string = as.string
-  _G.any_of = is.any_of
-  _G.all_of = is.all_of
-  _G.union = is.union
-  _G.maybe = is.maybe
-  _G.pack = pack
-  _G.sprintf = sprintf
-  _G.printf = printf
-  _G.errorf = errorf
-  _G.union = is.union
-  _G.maybe = is.maybe
-  _G.as = as
-  _G.Error = Error
-  _G.CallError = Error.CallError
-  _G.TypeError = Error.TypeError
-  _G.UnwrapError = Error.UnwrapError
-  _G.NIL = package.user.lib.NIL
-  _G.Result = Result
-  _G.Ok = Result.Ok
-  _G.Err = Result.Err
-  _G.TypeError = TypeError
-  _G.CallError = CallError
-  _G.UnwrapError = UnwrapError
-  _G.is = is
-  _G.class = class
-  _G.inspect = inspect
+for key, value in pairs(M) do
+  package.user.lib[key] = value
 end
 
-return utils
+return M
