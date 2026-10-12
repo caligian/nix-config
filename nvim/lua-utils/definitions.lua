@@ -100,6 +100,18 @@ package.user = {
     end,
 
     ---@param x any
+    ---@return boolean
+    defined = function(x)
+      return x ~= nil
+    end,
+
+    ---@param x any
+    ---@return boolean
+    undefined = function(x)
+      return x == nil or x == package.user.NIL
+    end,
+
+    ---@param x any
     ---@return any
     as_value = function(x)
       if x == package.user.NIL then
@@ -432,7 +444,9 @@ package.user = {
     bslurp = function(filename, mode)
       mode = mode or 'r'
       mode = not string.match(mode, 'b') and (mode .. 'b') or mode
-      return package.user.lib.slurp(filename, mode)
+      return package.user.lib.open_and_then(filename, mode, function(fh)
+        return fh:read('*a')
+      end)
     end,
 
     ---@param filename string
@@ -671,18 +685,6 @@ package.user = {
 
 package.user.loaded = true
 
----@class class<T>
----@field new fun(self, ...: any): instance<`T`>
----@field initialize fun(self, ...: any)
----@field __type "class"
----@field __name string
----@field __class? class
-
----@class instance<T>
----@field __type "instance"
----@field __name string
----@field __class class<`T`>
-
 ---@class callable
 ---@field __call fun(self, ...: any): any
 
@@ -868,12 +870,16 @@ end
 
 --- Track globals explicitly and wrap up
 unpack = unpack or table.unpack
+defined = package.user.lib.defined
+undefined = package.user.lib.undefined
+
 local include = package.user.include_from_table
 local gset = function(specs)
   for key, value in pairs(specs) do
     package.user.lib.gset(key, value)
   end
 end
+
 local globals = {
   sequence = sequence,
   callable = callable,
@@ -889,6 +895,7 @@ local globals = {
   as_value = as_value,
   bless = bless,
 }
+
 include(globals)
 gset(globals)
 

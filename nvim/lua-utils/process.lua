@@ -1,7 +1,9 @@
-require 'lua-utils.utils'
+require 'lua-utils.copy'
 require 'lua-utils.string'
+require 'lua-utils.type'
 
-local copy = require 'lua-utils.copy'
+local class = package.user.lib.class
+local copy = package.user.lib.copy
 local process = {}
 
 process.Popen = class 'Popen'
@@ -10,7 +12,7 @@ process.Popen = class 'Popen'
 ---@field cmd string
 ---@field mode? string
 ---@field handle? userdata
----@field output string[] | string 
+---@field output string[] | string
 local Popen
 
 ---@overload fun(cmd: string, mode?: string) -> Popen
@@ -61,7 +63,7 @@ function Popen:readline()
     self.output_read = true
     return
   else
-    self.output[#self.output+1] = line
+    self.output[#self.output + 1] = line
     return line
   end
 end
@@ -142,7 +144,7 @@ process.run = os.execute
 ---@param f? fun(lines: string) -> any
 ---@return any
 function process.check_output(cmd, f)
-  f = f or function (lines)
+  f = f or function(lines)
     return lines
   end
   fh = io.popen(cmd, 'r')
@@ -197,18 +199,12 @@ function process.systemlist(cmd, opts)
   opts.capture = true
   opts.newlines = true
 
-  return system(cmd, opts)
+  return process.system(cmd, opts)
 end
 
----Import some functions to global spaces
-function process:import()
-  _G.process = process
-  _G.system = process.system
-  _G.systemlist = process.systemlist
-  _G.Popen = process.Popen
-end
-
-systemlist = process.systemlist
-system = process.system
+package.user.lib.process = process
+package.user.lib.system = process.system
+package.user.lib.systemlist = process.systemlist
+package.user.lib.Popen = process.Popen
 
 return process

@@ -1,3 +1,5 @@
+require 'lib.definitions'
+
 ---Get string length
 string.length = string.len
 
@@ -170,5 +172,17 @@ function string.contains(s, pattern, init, plain)
   plain = (plain == nil and true) or plain
   return string.find(s, pattern, init, true)
 end
+
+package.user.lib.titlecase = string.title
+package.user.lib.trim = string.trim
+package.user.lib.ltrim = string.ltrim
+package.user.lib.rtrim = string.rtrim
+package.user.lib.strip = string.trim
+package.user.lib.lstrip = string.ltrim
+package.user.lib.rstrip = string.rtrim
+package.user.lib.startswith = string.startswith
+package.user.lib.endswith = string.endswith
+package.user.lib.findall = string.findall
+package.user.lib.split = string.split
 
 return string

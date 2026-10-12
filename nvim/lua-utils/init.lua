@@ -1,80 +1,9 @@
-local utils = {}
-local type_utils = require 'lua-utils.type'
-local list = require 'lua-utils.list'
-local dict = require 'lua-utils.dict'
-local copy = require 'lua-utils.copy'
-local fs = require 'lua-utils.fs'
-local set = require 'lua-utils.set'
+require 'lua-utils.type'
+require 'lua-utils.list'
+require 'lua-utils.dict'
+require 'lua-utils.copy'
+require 'lua-utils.fs'
+require 'lua-utils.set'
 require 'lua-utils.string'
 
-utils.type = type_utils
-utils.is = type_utils.is
-utils.class = type_utils.class
-utils.Result = type_utils.Result
-utils.Ok = type_utils.Ok
-utils.Err = type_utils.Err
-utils.as = type_utils.as
-utils.Error = type_utils.Error
-utils.TypeError = type_utils.TypeError
-utils.CallError = type_utils.CallError
-utils.UnwrapError = type_utils.UnwrapError
-utils.pp = type_utils.pp
-utils.dump = type_utils.dump
-utils.errorf = type_utils.errorf
-utils.printf = type_utils.printf
-utils.sprintf = type_utils.sprintf
-utils.callable = type_utils.callable
-utils.sequence = type_utils.sequence
-utils.bless = type_utils.bless
-utils.rtostring = type_utils.rtostring
-utils.pack = type_utils.pack
-utils.length = type_utils.length
-utils.size = type_utils.size
-utils.list = list
-utils.dict = dict
-utils.copy = copy
-utils.fs = fs
-utils.path = fs
-utils.Set = set
-utils.isa = type_utils.is.assert
-utils.union = type_utils.is.union
-utils.maybe = type_utils.is.maybe
-utils.join = table.concat
-utils.split = string.split
-
-package.user.lib.type = type_utils
-package.user.lib.is = type_utils.is
-package.user.lib.class = type_utils.class
-package.user.lib.Result = type_utils.Result
-package.user.lib.Ok = type_utils.Ok
-package.user.lib.Err = type_utils.Err
-package.user.lib.as = type_utils.as
-package.user.lib.Error = type_utils.Error
-package.user.lib.TypeError = type_utils.TypeError
-package.user.lib.CallError = type_utils.CallError
-package.user.lib.UnwrapError = type_utils.UnwrapError
-package.user.lib.pp = type_utils.pp
-package.user.lib.dump = type_utils.dump
-package.user.lib.errorf = type_utils.errorf
-package.user.lib.printf = type_utils.printf
-package.user.lib.sprintf = type_utils.sprintf
-package.user.lib.callable = type_utils.callable
-package.user.lib.sequence = type_utils.sequence
-package.user.lib.bless = type_utils.bless
-package.user.lib.rtostring = type_utils.rtostring
-package.user.lib.pack = type_utils.pack
-package.user.lib.length = type_utils.length
-package.user.lib.size = type_utils.size
-package.user.lib.list = list
-package.user.lib.dict = dict
-package.user.lib.copy = copy
-package.user.lib.fs = fs
-package.user.lib.path = fs
-package.user.lib.Set = set
-package.user.lib.isa = type_utils.is.assert
-package.user.lib.union = type_utils.is.union
-package.user.lib.maybe = type_utils.is.maybe
-package.user.lib.join = table.concat
-package.user.lib.split = string.split
-
-return utils
+return package.user.lib

@@ -1,5 +1,16 @@
-local copy = require 'lua-utils.copy'
-local tuple = require 'lua-utils.tuple'
+require 'lua-utils.copy'
+require 'lua-utils.tuple'
+
+local lib = package.user.lib
+local copy = lib.copy
+local tuple = lib.tuple
+local as_list = function(x, force)
+  if force or type(x) ~= 'table' then
+    return { x }
+  else
+    return x
+  end
+end
 
 ---@class list.opts
 ---@field default? (fun(): any)
@@ -1278,5 +1289,7 @@ list.size = list.length
 function list:import()
   _G.list = self
 end
+
+package.user.lib.list = list
 
 return list

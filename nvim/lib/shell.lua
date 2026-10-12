@@ -75,7 +75,7 @@ function shell.new(bufnr, opts)
   if opts.cwd then
     if is.string(opts.cwd) then
       cwd = opts.cwd
-    elseif is.like_function(opts.cwd) then
+    elseif is.callable(opts.cwd) then
       cwd = opts.cwd(bufnr)
     else
       cwd = os.getenv "HOME"
@@ -91,7 +91,7 @@ function shell.new(bufnr, opts)
   if opts.cmd then
     if is.string(opts.cmd) then
       cmd = opts.cmd
-    elseif is.like_function(opts.cmd) then
+    elseif is.callable(opts.cmd) then
       cmd = opts.cmd(bufnr, cwd)
     else
       cmd = ''

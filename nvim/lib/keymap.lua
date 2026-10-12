@@ -5,7 +5,7 @@ local state = package.user.state.keymap
 local fs = lib.fs
 local copy = vim.deepcopy
 local dict = lib.dict
-local union = lib.is.union
+local union = lib.union
 local is = lib.is
 local as = lib.as
 local options = require 'lib.options'
@@ -18,8 +18,7 @@ local kbd = {
     union(is.string, is.table)
   }
 }
-local assert_spec = is.match
-local is = require 'lua-utils.type'.is
+local assert_spec = lib.match
 
 ---@class keymap.opts
 ---@field desc? string
@@ -112,7 +111,7 @@ function kbd.buf_define(bufnr, opts, specs)
 end
 
 function kbd.project_map(mode, lhs, rhs, opts)
-  assert(is.like_function(rhs), sprintf("rhs: Expected callable, got [%s] %s", type(rhs), rhs))
+  assert(is.callable(rhs), sprintf("rhs: Expected callable, got [%s] %s", type(rhs), rhs))
   return kbd.map(mode, lhs, function()
     local buf = vim.fn.bufnr()
     local filename = vim.api.nvim_buf_get_name(buf)

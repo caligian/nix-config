@@ -253,6 +253,7 @@ function dict.flatten(x, opts)
 
   return result
 end
+
 ---@param x? table
 ---@param y? table
 ---@param force? boolean
@@ -263,10 +264,6 @@ function dict.merge(x, y, force)
     local cache = function(a, b)
       visited[a] = visited[a] or {}
       visited[a][b] = true
-    end
-    local exists = function(a, b)
-      local ok = visited[a]
-      if ok then return ok[b] end
     end
 
     for key, value in pairs(_y) do
@@ -473,5 +470,7 @@ end
 function dict:import()
   _G.dict = self
 end
+
+package.user.lib.dict = dict
 
 return dict

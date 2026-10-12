@@ -148,18 +148,18 @@ function nvim.in_normal_mode()
 end
 
 ---@param s string
----@return Result
+---@return Ok|Err
 function nvim.loadstring(s)
   local fn, msg = loadstring(s)
   if fn then
-    return Result(pcall(fn))
+    return Result:new(pcall(fn))
   else
-    return result.Err(msg)
+    return Err:new(msg)
   end
 end
 
 ---@param file string
----@return Result
+---@return Ok|Err
 function nvim.loadfile(file)
   if not nvim.is_file(file) then
     errorf("Invalid file %s", file)
@@ -202,7 +202,7 @@ end
 ---@return Ok<boolean>|Err
 function nvim.cmd(...)
   local cmd = table.concat({ ... }, "\n")
-  local res = Result(pcall(vim.api.nvim_exec2, cmd, { output = true }))
+  local res = Result:new(pcall(vim.api.nvim_exec2, cmd, { output = true }))
 
   if is.Err(res) then
     ---@cast res Err
@@ -218,7 +218,7 @@ end
 ---@return Ok<string>|Err
 function nvim.exec(...)
   local cmd = table.concat({ ... }, "\n")
-  local res = Result(pcall(vim.api.nvim_exec2, cmd, { output = true }))
+  local res = Result:new(pcall(vim.api.nvim_exec2, cmd, { output = true }))
 
   if is.Ok(res) then
     ---@cast res Ok<string>

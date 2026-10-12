@@ -1,3 +1,5 @@
+require 'lib.definitions'
+
 ---@overload fun(x: table, deep?: boolean): table
 local copy = {}
 copy.__index = rawget
@@ -65,5 +67,7 @@ function copy:__call(x, deep)
     return copy.copy(x)
   end
 end
+
+package.user.lib.copy = copy
 
 return copy

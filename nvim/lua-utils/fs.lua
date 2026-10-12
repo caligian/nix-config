@@ -10,6 +10,7 @@ local as = types.as
 ---When called with arguments, join arguments with '/' and return the path
 ---@overload fun(...: string): string
 local path = {}
+
 path.cd = lfs.chdir
 path.chdir = lfs.chdir
 path.getcwd = lfs.currentdir
@@ -41,10 +42,6 @@ function path.join(...)
   local p = table.concat({ ... }, '/')
   p = string.gsub(p, '//+', '/')
   return p
-end
-
-function path:__call(...)
-  return path.join(...)
 end
 
 function path.cp(src, dst)
@@ -467,7 +464,7 @@ function path.ls(dirname, opts)
   local exit = opts.exit
   local include = opts.include
   local exclude = opts.exclude
-  local result = not opts.each and {}
+  local result = not opts.each and {} or nil
   local map = opts.map
   local each = opts.each
   local hidden = opts.hidden
@@ -646,4 +643,64 @@ function path:__call(...)
 end
 
 setmetatable(path, path)
-return path
+
+path.find_git_dirs = path.git_dirs
+path.find_up = path.search_parents
+path.find_down = path.search_children
+
+package.user.lib.cd = path.cd
+package.user.lib.chdir = path.chdir
+package.user.lib.getcwd = path.getcwd
+package.user.lib.lock = path.lock
+package.user.lib.mkdir = path.mkdir
+package.user.lib.rmdir = path.rmdir
+package.user.lib.touch = path.touch
+package.user.lib.unlock = path.unlock
+package.user.lib.lockdir = path.lockdir
+package.user.lib.abspath = path.abspath
+package.user.lib.rmtree = path.rmtree
+package.user.lib.rm = path.rm
+package.user.lib.cp = path.cp
+package.user.lib.ln = path.ln
+package.user.lib.symlink = path.symlink
+package.user.lib.getenv = path.getenv
+package.user.lib.basename = path.basename
+package.user.lib.dirname = path.dirname
+package.user.lib.cp = path.cp
+package.user.lib.symlink = path.symlink
+package.user.lib.mtime = path.mtime
+package.user.lib.ctime = path.ctime
+package.user.lib.fstat = path.stat
+package.user.lib.fsize = path.size
+package.user.lib.fmode = path.mode
+package.user.lib.filetype = path.type
+package.user.lib.ftype = path.type
+package.user.lib.blksize = path.blksize
+package.user.lib.atime = path.atime
+package.user.lib.list_files = path.list_files
+package.user.lib.glob = path.glob
+package.user.lib.fsplit = path.split
+package.user.lib.extension = path.extension
+package.user.lib.strip_extension = path.strip_extension
+package.user.lib.ls = path.ls
+package.user.lib.git_dirs = path.git_dirs
+package.user.lib.find_git_dirs = path.git_dirs
+package.user.lib.slurp = path.slurp
+package.user.lib.spit = path.spit
+package.user.lib.path = path
+package.user.lib.fs = path
+package.user.lib.path.is = {
+  link = path.is_link,
+  symlink = path.is_symlink,
+  file = path.is_file,
+  dir = path.is_dir,
+  mount = path.is_mount,
+  git = path.is_git_dir,
+}
+package.user.lib.is.link = path.is_link
+package.user.lib.is.symlink = path.is_symlink
+package.user.lib.is.file = path.is_file
+package.user.lib.is.dir = path.is_dir
+package.user.lib.is.mount = path.is_mount
+package.user.lib.is.git = path.is_git_dir
+package.user.lib.is.path = path.exists

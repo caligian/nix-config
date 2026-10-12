@@ -70,4 +70,6 @@ function tuple:import()
 end
 
 unpack = unpack or table.unpack
-return tuple
+
+package.user.lib.tuple = tuple
+package.user.lib.unpack = unpack

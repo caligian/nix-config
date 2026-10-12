@@ -129,7 +129,7 @@ function buffer.in_dir(bufnr, markers, depth)
   end
   depth = depth or 3
   local currentdir = fs.dirname(vim.api.nvim_buf_get_name(bufnr))
-  markers = as_list(markers)
+  markers = as.list(markers)
   local home = os.getenv("HOME")
 
   for _ = 1, depth do

@@ -1,3 +1,8 @@
+require 'lua-utils.definitions'
+require 'lua-utils.type'
+
+local as = package.user.lib.as
+
 ---@class Set
 
 ---@class Set.utils
@@ -283,4 +288,4 @@ function set:__call(tbl)
   return set.new(tbl)
 end
 
-return set
+package.user.lib.Set = set

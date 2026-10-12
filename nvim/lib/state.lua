@@ -1,4 +1,4 @@
-require 'lib.definitions'
+require 'lua-utils'
 
 local lib = package.user.lib
 local is = lib.is
@@ -286,9 +286,9 @@ function utils.setup(opts)
   end
 
   require('lib.project').setup()
-  require('lib.filetype').setup()
   require('lib.shell').setup()
   require('lib.repl').setup()
+  require('lib.filetype').setup()
 
   require('themery').setup {
     themes = list.filter(vim.fn.getcompletion("", 'color'), is.string)
@@ -309,7 +309,5 @@ function utils.setup(opts)
 
   return state.last_setup_result
 end
-
-utils.setup()
 
 return utils

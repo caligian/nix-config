@@ -1,6 +1,6 @@
 local lib = package.user.lib
-local list = lib.list
-local path = lib.fs
+local is = lib.is
+local fs = lib.fs
 local buffer = require 'lib.buffer'
 local nvim = require 'lib.nvim'
 local lpeg = vim.lpeg
@@ -21,7 +21,7 @@ function tex.run(cmd, ...)
 end
 
 function tex.in_project(file)
-  return path.is_dir(dirname(file) .. '/.git')
+  return fs.is_dir(fs.dirname(file) .. '/.git')
 end
 
 function tex.if_in_project(file, when, unless)
@@ -52,25 +52,25 @@ end
 function tex.has_file(file, ext)
   file = tex.change_extension(file, 'tex', ext)
   ---@type string
-  return (path.is_file(file) and file)
+  return (fs.is_file(file) and file)
 end
 
 ---@param file string
 ---@param dir string
 ---@return string?
 function tex.has_dir(file, dir)
-  d = dirname(file)
+  d = fs.dirname(file)
   local check = d .. '/' .. dir
   ---@type string
-  return (path.is_dir(check) and check)
+  return (fs.is_dir(check) and check)
 end
 
 function tex.clear(bufname)
   local curdir = vim.fn.getcwd()
-  local dir = path.dirname(bufname)
-  path.cd(dir)
-  vim.cmd('latexmk -C ' .. bufname)
-  path.cd(curdir)
+  local dir = fs.dirname(bufname)
+  fs.cd(dir)
+  vim.cmd(':!latexmk -C ' .. bufname)
+  fs.cd(curdir)
 end
 
 ---Open a tex PDF using xdg-open
@@ -79,7 +79,7 @@ function tex.open(bufname)
   local app = 'xdg-open'
   local pdf = tex.change_extension(bufname, 'tex', 'pdf')
 
-  if path.is_file(pdf) then
+  if fs.is_file(pdf) then
     tex.run(app .. ' ' .. pdf)
   else
     printf("No PDF file exists for %s", bufname)
@@ -88,11 +88,12 @@ end
 
 ---@param bufname string
 function tex.compile(bufname)
-  local dir = path.dirname(bufname)
+  bufname = is.number(bufname) and buffer.get_name(bufname) or bufname
+  local dir = fs.dirname(bufname)
   tex.clear(bufname)
   local pdf = tex.change_extension(bufname, 'tex', 'pdf')
-  if path.is_file(pdf) then path.rm(pdf) end
-  tex.run('latexmk -pdf -outdir=%s %s', dir, bufname)
+  if fs.is_file(pdf) then fs.rm(pdf) end
+  vim.cmd(string.format(':!latexmk -pdf -outdir=%s %s', dir, bufname))
 end
 
 function tex.wrap(name, ...)

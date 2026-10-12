@@ -3,7 +3,8 @@ require 'lib.definitions'
 local lib                  = package.user.lib
 local list                 = lib.list
 local is                   = lib.is
-local union                = is.union
+local as                   = lib.as
+local union                = lib.union
 local copy                 = vim.deepcopy
 local enable               = vim.api.nvim_create_autocmd
 local options              = require 'lib.options'
@@ -134,7 +135,7 @@ function autocmd.define(opts, specs)
 end
 
 ---@param pattern string|string[]
----@param callback like_function
+---@param callback likeFunction
 ---@param opts? autocmd.opts|string
 ---@return integer
 function autocmd.ft_new(pattern, callback, opts)

@@ -1,10 +1,10 @@
-require 'lib.definitions'
+require 'lua-utils'
 
-local types = require 'lua-utils.type'
-local is = types.is
-local class = types.class
+local lib = package.user.lib
+local is = lib.is
+local class = lib.class
+local path = lib.path
 local project = require 'lib.project'
-local path = require 'lua-utils.fs'
 local nvim = require 'lib.nvim'
 local buffer = require 'lib.buffer'
 local bufcall = vim.api.nvim_buf_call
@@ -264,7 +264,11 @@ end
 function terminal:make_cmd()
   local cmd = self:make_nix_cmd()
   if not cmd then
-    return user_config.shell.cmd
+    if package.user.config.shell then
+      return package.user.config.shell
+    else
+      return ''
+    end
   else
     self.nix_cmd = cmd
     return cmd
@@ -306,16 +310,11 @@ function terminal:open()
   local map = vim.keymap.set
   local id = bufcall(termbufnr, function()
     local buf = buffer.current()
-    local stop = function(args)
-      self:stop()
-      if buffer.exists(buf) then wipeout(buf) end
-      if buffer.exists(termbufnr) then wipeout(termbufnr) end
-      if buffer.exists(args.buf) then wipeout(args.buf) end
-    end
-
     vim.api.nvim_create_autocmd('TermClose', {
       buffer = buf,
-      callback = stop
+      callback = function()
+        self:stop()
+      end,
     })
 
     vim.api.nvim_create_autocmd('TermOpen', {
@@ -358,7 +357,7 @@ function terminal:open()
     { desc = 'Kill terminal and delete buffer', buffer = termbufnr }
   )
 
-  if is.like_function(cmd) then
+  if is.callable(cmd) then
     local buf = vim.fn.bufnr()
     local filename = buffer.filename(buf)
     local dir = path.dirname(filename)

@@ -328,7 +328,7 @@ end
 
 function project.setup_autocmds()
   autocmd.new('BufEnter', function(buf, _)
-    local proj = project.find_by_buffer(_.buf)
+    local proj = project.find_by_buffer(buf)
     if not proj then
       return
     end
