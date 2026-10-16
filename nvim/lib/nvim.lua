@@ -259,5 +259,34 @@ nvim.extension = nvim.fname.extension
 nvim.relpath = nvim.fname.relpath
 nvim.relhomepath = nvim.fname.relhomepath
 
+package.user.lib.nvim = nvim
+package.user.lib.strftime = vim.fn.strftime
+package.user.lib.strptime = vim.fn.strptime
+package.user.lib.get_region = nvim.region
+package.user.lib.get_mode = nvim.mode
+package.user.lib.expand = nvim.fname.expand
+package.user.lib.abspath = nvim.fname.abspath
+package.user.lib.extension = nvim.fname.extension
+package.user.lib.relpath = nvim.fname.relpath
+package.user.lib.relhomepath = nvim.fname.relhomepath
+package.user.lib.fname = nvim.fname
+package.user.lib.feedkeys = nvim.feedkeys
+package.user.lib.replace_termcodes = nvim.replace_termcodes
+package.user.lib.normal = nvim.normal
+package.user.lib.noh = nvim.noh
+package.user.lib.goto_next_search = nvim.goto_next_search
+package.user.lib.goto_prev_search = nvim.goto_prev_search
+package.user.lib.region = nvim.region
+package.user.lib.eval = nvim.eval
+package.user.lib.eval_region = nvim.eval_region
+package.user.lib.get_mode = nvim.get_mode
+package.user.lib.in_visual_mode = nvim.in_visual_mode
+package.user.lib.in_normal_mode = nvim.in_normal_mode
+package.user.lib.loadstring = nvim.loadstring
+package.user.lib.loadfile = nvim.loadfile
+package.user.lib.load_file = nvim.loadfile
+package.user.lib.load_string = nvim.loadstring
+package.user.lib.load = { file = nvim.loadfile, string = nvim.loadstring }
+package.user.lib.eval = { string = nvim.eval, region = nvim.eval_region }
 
 return nvim

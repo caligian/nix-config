@@ -9,8 +9,9 @@ end
 ---@param x table
 ---@return table
 function dict.keys(x)
-  --- Stub method
-  return { x }
+  local ks = {}
+  for key, _ in pairs(x) do ks[#ks + 1] = key end
+  return ks
 end
 
 ---Get dict values

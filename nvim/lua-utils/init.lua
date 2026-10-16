@@ -6,4 +6,4 @@ require 'lua-utils.fs'
 require 'lua-utils.set'
 require 'lua-utils.string'
 
-return package.user.lib
+package.user.lib.loaded = true

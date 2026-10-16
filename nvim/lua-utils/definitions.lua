@@ -1,5 +1,5 @@
 if package.user and package.user.loaded then
-  return package.user
+  return
 end
 
 local inspect = require('inspect')

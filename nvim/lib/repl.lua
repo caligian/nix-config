@@ -312,14 +312,10 @@ function repl.setup_keymaps()
   nmap('rv', 'split_right', { desc = 'Split right' })
 end
 
----Assert tbl is a repl configuration table
----@param tbl table
-function repl.isa_config(tbl)
-  -- is.match(tbl, repl.validator, { assert = true })
-end
-
 function repl.setup()
   repl.setup_keymaps()
 end
+
+package.user.lib.repl = repl
 
 return repl

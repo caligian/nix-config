@@ -8,10 +8,12 @@ name: home:
 let
   utils = import <my/utils.nix> home { inherit pkgs; };
   myEnv = (import <my/env.nix> home { inherit pkgs; }) // env;
-  myBuildInputs = import <my/pkgs/base.nix> home {
-    inherit pkgs;
-    env = myEnv;
-  } ++ [pkgs.neovide];
+  myBuildInputs =
+    import <my/pkgs/base.nix> home {
+      inherit pkgs;
+      env = myEnv;
+    }
+    ++ [ pkgs.neovide ];
   source = utils.user.source;
   initSh = source "init.sh";
   utilsSh = source "utils.sh";
@@ -25,7 +27,7 @@ let
   '';
 in
 {
-  env = myEnv // env;
+  env = myEnv;
   shellHook = myShellHook;
   buildInputs = myBuildInputs ++ buildInputs;
 }

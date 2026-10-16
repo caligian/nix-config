@@ -499,5 +499,6 @@ function terminal:cd_buffer_dir(bufnr)
 end
 
 terminal.show = terminal.split
+package.user.lib.terminal = terminal
 
 return terminal

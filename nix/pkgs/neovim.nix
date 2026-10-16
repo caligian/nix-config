@@ -22,7 +22,7 @@ let
   nvimDir = env.MY_NVIM_DIR;
   initVimFile = "${nvimDir}/configuration.vim";
   luaPath = "${nvimDir}/?.lua;${nvimDir}/?/?.lua;${nvimDir}/?/init.lua";
-  luaPkgs = import <my/pkgs/luajit/common.nix> home { inherit pkgs; };
+  luaPkgs = import <my/pkgs/luajit.nix> home { inherit pkgs; };
   mkNeovim = spec: pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped spec;
   myNeovim = mkNeovim {
     plugins =

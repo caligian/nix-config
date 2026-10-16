@@ -197,5 +197,6 @@ end
 autocmd.map = autocmd.new
 autocmd.ft_map = autocmd.ft_new
 
+package.user.lib.autocmd = autocmd
 
 return autocmd

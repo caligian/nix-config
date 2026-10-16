@@ -110,8 +110,6 @@ end
 ---@param cmd repl.cmd
 ---@param opts? repl.opts
 function filetype:set_repl_config(cmd, opts)
-  repl.isa_config { cmd = cmd, opts = opts }
-
   opts = opts or {}
   opts = copy(opts)
   opts.root = opts.root or { check_depth = 4 }
@@ -222,6 +220,13 @@ function utils.require_all_configs()
   return res
 end
 
+filetype.R = filetype.set_repl_config
+filetype.V = filetype.set_vars
+filetype.O = filetype.set_opts
+filetype.L = filetype.set_lsp_config
+
 utils.setup = utils.require_all_configs
+package.user.lib.ft = filetype
+package.user.lib.ft.utils = utils
 
 return utils

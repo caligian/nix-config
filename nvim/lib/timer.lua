@@ -54,4 +54,6 @@ function timer:stop()
   return self.timer:stop() == 0
 end
 
+package.user.lib.timer = timer
+
 return timer

@@ -427,5 +427,6 @@ end
 
 shell.getbufnr = normalize_buf
 shell.normalize_buf = normalize_buf
+package.user.lib.shell = shell
 
 return shell

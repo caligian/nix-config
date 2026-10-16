@@ -378,4 +378,8 @@ function project.setup()
   project.setup_commands()
 end
 
+project.bfind = project.find_by_buffer
+package.user.lib.project = project
+
+
 return project

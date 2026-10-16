@@ -1,4 +1,4 @@
-require 'lib.definitions'
+require 'lua-utils.definitions'
 
 ---Get string length
 string.length = string.len

@@ -121,7 +121,19 @@ user-cp-profile()
 {
   local src="${1:-default}"
   local dst="${2:-./}"
-  src="$MY_DIR/nix/${src}.nix"
+  src="$MY_DIR/nix/profiles/${src}.nix"
+
+  [[ ! -f $src ]] && echo "Nonexistent nix profile" && return 1
+  [[ ! -d $dst ]] && echo "Nonexistent directory $dst" && return 1
+
+  cp "$src" "$dst/"
+}
+
+user-cp-pkgs()
+{
+  local src="${1:-default}"
+  local dst="${2:-./}"
+  src="$MY_DIR/nix/pkgs/${src}.nix"
 
   [[ ! -f $src ]] && echo "Nonexistent nix profile" && return 1
   [[ ! -d $dst ]] && echo "Nonexistent directory $dst" && return 1

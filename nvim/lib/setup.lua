@@ -310,4 +310,6 @@ function utils.setup(opts)
   return state.last_setup_result
 end
 
+package.user.lib.setup = utils
+
 return utils

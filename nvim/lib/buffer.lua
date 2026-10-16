@@ -946,5 +946,6 @@ buffer.filetype = buffer.get_filetype
 buffer.workspace = buffer.get_root_dir
 buffer.get_workspace = buffer.get_root_dir
 buffer.get_line_count = vim.api.nvim_buf_line_count
+package.user.lib.buffer = buffer
 
 return buffer

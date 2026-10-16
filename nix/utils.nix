@@ -3,7 +3,8 @@ home:
 {
   pkgs ? import <nixpkgs> { },
   lib ? pkgs.lib,
-}:
+  ...
+}@rest:
 
 let
   inherit (builtins)
@@ -260,7 +261,6 @@ let
       bin = "${home}/bin";
     };
   };
-  ftUtils = import <my/utils/ft.nix> { inherit pkgs; };
   mkNixPath = name: "${userDirs.nix}/${name}.nix";
   mkBinPath = name: "${userDirs.bin}/${name}";
   mkIncludePath = name: "${userDirs.include}/${name}";
@@ -320,25 +320,47 @@ let
     load = fromJSON;
     dump = toJSON;
   };
+  importPkgs =
+    names:
+    { ... }@args:
+    let
+      useArgs = args // {
+        inherit pkgs lib;
+      };
+      baseDir = "${home}/.user/pkgs";
+      basePkgs = import "${baseDir}/base.nix" home args;
+      doImport = name: import "${baseDir}/${name}.nix" home useArgs;
+    in
+    basePkgs ++ (builtins.concatMap doImport names);
+  mkShell =
+    name: names:
+    {
+      env ? { },
+      shellHook ? "",
+      buildInputs ? [ ],
+      ...
+    }@args:
+    let
+      ps = importPkgs names args;
+      base = import <my/base.nix> name home {
+        inherit
+          pkgs
+          env
+          shellHook
+          buildInputs
+          ;
+      };
+    in
+    pkgs.mkShell {
+      env = base.env;
+      packages = base.buildInputs ++ ps;
+      shellHook = base.shellHook;
+    };
 in
 {
-  neovim = {
-    mkPlugin =
-      {
-        plugins ? [ ],
-        rocks ? [ ],
-        pkgs ? [ ],
-        init ? "",
-      }:
-      pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped {
-        plugins = plugins;
-        extraLuaPackages = rocks;
-        extraPackages = pkgs;
-        luaRcContent = init;
-      };
-  };
+  importPkgs = importPkgs;
+  mkShell = mkShell;
   git = git;
-  ft = ftUtils;
   ls = pathUtils.ls;
   dirname = pathUtils.dirname;
   basename = pathUtils.basename;

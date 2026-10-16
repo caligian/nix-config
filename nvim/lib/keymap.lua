@@ -148,4 +148,6 @@ kbd.bdefine = kbd.buf_define
 kbd.pdefine = kbd.project_define
 kbd.new = kbd.map
 
+package.user.lib.kbd = kbd
+
 return kbd

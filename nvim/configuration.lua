@@ -1,1 +1,2 @@
-require('lib.state').setup()
+require('lib')
+package.user.lib.setup.setup()

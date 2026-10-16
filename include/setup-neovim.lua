@@ -146,7 +146,7 @@ package.user.state = {}
 ---@type {[number]: autocmd}
 package.user.state.autocmd = {}
 
----@type {[string]: keymap}
+---@type {[string]: keymap.spec}
 package.user.state.keymap = {}
 
 ---@class user.state.terminal

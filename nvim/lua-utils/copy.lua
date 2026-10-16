@@ -1,4 +1,4 @@
-require 'lib.definitions'
+require 'lua-utils.definitions'
 
 ---@overload fun(x: table, deep?: boolean): table
 local copy = {}

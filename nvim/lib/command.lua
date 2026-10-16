@@ -207,4 +207,6 @@ function command.isa_config(spec)
   return true
 end
 
+package.user.lib.command = command
+
 return command
