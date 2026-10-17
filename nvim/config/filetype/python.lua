@@ -29,7 +29,7 @@ return function(ft)
     input = {
       file = {
         use = true,
-        format = 'load -y %file\r\n',
+        format = '%load -y %file\r\n',
       },
       cd = 'import os; os.chdir("%s")',
     }
