@@ -12,7 +12,7 @@ local project = require 'lib.project'
 local buffer = require 'lib.buffer'
 local keymap = require 'lib.keymap'
 local autocmd = require 'lib.autocmd'
-local config_dir = vim.env.MY_NVIM_DIR .. '/config/filetype'
+local config_dir = vim.g.user_configuration_dir .. '/config/filetype'
 local filetypes = package.user.config.filetype
 
 ---@class filetype.state

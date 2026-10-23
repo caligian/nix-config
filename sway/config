@@ -1,3 +1,4 @@
+include /etc/sway/config.d/*
 include @sysconfdir@/sway/config.d/*
 
 # Variables
@@ -6,7 +7,7 @@ set $left h
 set $down j
 set $up k
 set $right l
-set $term kitty
+set $term foot -c ~/.user/foot/config.ini
 set $root_dir ~/.user/sway
 
 # Font
@@ -32,15 +33,15 @@ input type:keyboard {
 
 # Start a terminal
 bindsym $mod+Return exec $term
-bindsym $mod+Control+Return exec nautilus
-bindsym $mod+Shift+Return exec kitty -e --app-id filebrowser -e yazi
+bindsym $mod+Control+Return exec $term -a yazi-file-browser -e yazi
 
 # Kill focused window
 bindsym $mod+Shift+q kill
 
 # Start your launcher
 bindsym $mod+p exec rofi -show run -font 'Liberation Mono 14' -theme Arc
-bindsym $mod+n exec rofi-network-manager -font "Liberation Mono 14" -theme Arc
+bindsym $mod+q exec perl ~/.user/sway/fav-apps.pl
+bindsym $mod+n exec nmgui
 bindsym $mod+semicolon exec rofi -show window -font 'Liberation Mono 14' -theme Arc
 bindsym $mod+slash exec guake
 
@@ -81,7 +82,7 @@ bindsym $mod+Shift+Down move down
 bindsym $mod+Shift+Up move up
 bindsym $mod+Shift+Right move right
 
-# Workspaces
+# Workspace ops
 bindsym $mod+1 workspace number 1
 bindsym $mod+2 workspace number 2
 bindsym $mod+3 workspace number 3
@@ -104,7 +105,7 @@ bindsym $mod+Shift+8 move container to workspace number 8
 bindsym $mod+Shift+9 move container to workspace number 9
 bindsym $mod+Shift+0 move container to workspace number 10
 
-# Layout stuff:
+# Layout stuff
 bindsym $mod+b splith
 bindsym $mod+v splitv
 
@@ -131,7 +132,6 @@ bindsym $mod+Escape scratchpad show
 
 # Resizing containers:
 bindsym $mod+r mode "resize"
-
 mode "resize" {
     bindsym $left resize shrink width 15px
     bindsym $down resize grow height 15px
@@ -141,6 +141,7 @@ mode "resize" {
     bindsym Escape mode "default"
 }
 
+# Brightness/Volume
 bindsym --locked XF86AudioMute exec pactl set-sink-mute \@DEFAULT_SINK@ toggle
 bindsym --locked XF86AudioLowerVolume exec pactl set-sink-volume \@DEFAULT_SINK@ -5%
 bindsym --locked XF86AudioRaiseVolume exec pactl set-sink-volume \@DEFAULT_SINK@ +5%
@@ -153,16 +154,23 @@ bindsym --locked XF86AudioStop exec playerctl stop
 bindsym --locked XF86MonBrightnessDown exec brightnessctl set 5%-
 bindsym --locked XF86MonBrightnessUp exec brightnessctl set 5%+
 
+# Take screenshot
 bindsym Print exec grim
+bindsym $mod+backslash exec grim -g "$(slurp)" - | wl-copy
 
-# Theme
+# Show clipboard
+bindsym $mod+c exec nwg-clipman -w
+
+# swaybar stuff
 bar {
+    height 40
     tray_output *
     position bottom
     status_command i3status-rs ~/.user/sway/i3status.toml
+    binding_mode_indicator yes
     colors {
         statusline #ffffff
-        background #002b36
+        background #000000db
         focused_workspace  #dc322f #dc322f #ffffff
         active_workspace   #420f0e #420f0e #839496
         inactive_workspace #002b36 #002b36 #839496
@@ -170,25 +178,29 @@ bar {
     }
 }
 
-# class                 border    background  text      indicator  child_border
+# Window theming
+## class                 border    background  text      indicator  child_border
 client.focused          #dc322f   #dc322f     #ffffff   #dc322f    #dc322f
 client.focused_inactive #420f0e   #420f0e     #839496   #420f0e    #420f0e
 client.unfocused        #002b36   #002b36     #839496   #002b36    #002b36
 client.urgent           #cb4b16   #cb4b16     #ffffff   #cb4b16    #cb4b16
 client.background       #002b36
 
-mouse_warping output
-focus_follows_mouse yes
-
+# Startup applications
 exec dbus-sway-environment
 exec upower
 exec pavucontrol
-exec env GDK_BACKEND=x11 nm-applet --indicator
 exec swayosd
+exec wl-paste --type image --watch cliphist store
+exec wl-paste --type text --watch cliphist store
 
 # Rules
 for_window [app_id="filebrowser"] floating enable, resize set 1600 1000, move position center
-for_window [class="guake"] floating enable, resize set 1600 1000, move position center
+for_window [app_id="yazi-file-browser"] floating enable, resize set 1300 800, move position center
+for_window [app_id="cmus-music-player"] floating enable, resize set 1300 800, move position center
+for_window [class="pcmanfm-qt"] floating enable, resize set 1600 1000, move position center
+for_window [instance="pcmanfm-qt"] floating enable, resize set 1600 1000, move position center
+for_window [class="guake"] floating enable, resize set 1200 800, move position center
 for_window [window_role="pop-up"] floating enable
 for_window [window_role="bubble"] floating enable
 for_window [window_role="dialog"] floating enable
@@ -210,24 +222,25 @@ for_window [class="(?i)pinentry"] floating enable
 for_window [title="Administrator privileges required"] floating enable
 for_window [app_id="thunar"] floating enable
 for_window [class="Thunar"] floating enable
-for_window [app_id="org.gnome.Nautilus"] floating enable
 for_window [class="Nautilus"] floating enable
 for_window [shell="xwayland"] border pixel 3
 for_window [app_id=".*"] border pixel 3
+for_window [app_id="nwg-clipman"] floating enable, resize set 800 600, move position center
+for_window [app_id="org.gnome.Calendar"] floating enable
+for_window [app_id="org.gnome.Calculator"] floating enable
+for_window [app_id="org.gnome.Nautilus"] floating enable
+for_window [app_id="com.network.manager"] floating enable
 
-# Enable border
-default_border pixel 5
-default_floating_border pixel 5
-default_border pixel 5
+# Misc settings
+default_border pixel 7
+default_floating_border pixel 3
+focus_on_window_activation focus
+focus_follows_mouse yes
+mouse_warping output
+gaps inner 8
 
 # Setup monitors
-## Laptop monitor on the left
 output eDP-1 pos 0 0 res 1920x1080
-
-## External monitor on the left
 output DP-1 pos 1920 0  res 1920x1080
 output HDMI-1 pos 1920 0  res 1920x1080
 output HDMI-A-1 pos 1920 0  res 1920x1080
-
-# Do not touch
-include /etc/sway/config.d/*

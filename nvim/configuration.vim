@@ -72,6 +72,7 @@ nnoremap <leader>bQ :bwipeout %<CR>
 nnoremap <leader>bq :call DeleteBufferWindowIfPossible()<CR>
 nnoremap <leader>bn :bnext<CR>
 nnoremap <leader>bp :bprev<CR>
+nnoremap <leader>bv :! cat % <bar> wl-copy<CR>
 
 nnoremap <leader>fs :w<CR>
 nnoremap <leader>fv :w <bar> luafile %<CR>

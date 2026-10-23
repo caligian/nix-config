@@ -7,7 +7,7 @@ local dict = lib.dict
 local list = lib.list
 local autocmd = vim.api.nvim_create_autocmd
 local kbd = vim.keymap.set
-local mydir = os.getenv("MY_DIR") .. "/nvim"
+local mydir = vim.g.user_configuration_dir
 local mylib = mydir .. "/lib"
 local myconfig = mydir .. "/config"
 

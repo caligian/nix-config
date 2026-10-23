@@ -1,4 +1,5 @@
-local fs = require 'lua-utils.fs'
+local lib = package.user.lib
+local fs = lib.fs
 local project = require 'lib.project'
 local command = require 'lib.command'
 local buffer = require 'lib.buffer'

@@ -17,7 +17,7 @@ vim.diagnostic.config {
   }
 }
 
-require('lsp-format').setup {}
+-- require('lsp-format').setup {}
 
 require('outline').setup {}
 
@@ -202,12 +202,12 @@ if not vim.g.loaded_trouble then
   vim.g.loaded_trouble = true
 end
 
-au('LspAttach', {
-  callback = function(args)
-    local client = assert(vim.lsp.get_client_by_id(args.data.client_id))
-    require("lsp-format").on_attach(client, args.buf)
-  end,
-})
+-- au('LspAttach', {
+--   callback = function(args)
+--     local client = assert(vim.lsp.get_client_by_id(args.data.client_id))
+--     require("lsp-format").on_attach(client, args.buf)
+--   end,
+-- })
 
 kbd(
   'n',

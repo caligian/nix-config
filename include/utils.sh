@@ -8,17 +8,17 @@ symlink()
 user-cp()
 {
   [[ -z $1 ]] && echo "No path provided" && return 1
-  local src="$MY_DIR/$1"
+  local src="~/.user/$1"
   local dst="${2:-./$1}"
 
   [[ ! -e $src ]] && echo "Invalid path $src" && return 1
-  cp "$src" "$dst" && return 0 || return 1
+  cp -r "$src" "$dst" && return 0 || return 1
 }
 
 user-ln()
 {
   [[ -z $1 ]] && echo "No path provided" && return 1
-  local src="$MY_DIR/$1"
+  local src="~/.user/$1"
   local dst="${2:-./$1}"
 
   [[ ! -e $src ]] && echo "Invalid path $src" && return 1
@@ -92,7 +92,12 @@ git-ls()
   git ls-files
 }
 
-mapkeys()
+git-status()
+{
+  git status -s
+}
+
+mapkey()
 {
   local lhs="$1"
   local func="$2"
@@ -110,35 +115,11 @@ cp-template()
   fname="~/Templates/$fname"
 
   if [[ -f $fname  ]]; then
-    echo "Invalid template filename: $1"
+    echo "Nonexistent template: $fname"
     return 1
   fi
 
   cp -v "$fname" "$dst"
-}
-
-user-cp-profile()
-{
-  local src="${1:-default}"
-  local dst="${2:-./}"
-  src="$MY_DIR/nix/profiles/${src}.nix"
-
-  [[ ! -f $src ]] && echo "Nonexistent nix profile" && return 1
-  [[ ! -d $dst ]] && echo "Nonexistent directory $dst" && return 1
-
-  cp "$src" "$dst/"
-}
-
-user-cp-pkgs()
-{
-  local src="${1:-default}"
-  local dst="${2:-./}"
-  src="$MY_DIR/nix/pkgs/${src}.nix"
-
-  [[ ! -f $src ]] && echo "Nonexistent nix profile" && return 1
-  [[ ! -d $dst ]] && echo "Nonexistent directory $dst" && return 1
-
-  cp "$src" "$dst/"
 }
 
 loconvert()
@@ -156,4 +137,113 @@ json2nix()
 
   local path="$(realpath "$1")"
   nix eval --impure --expr "builtins.fromJSON (builtins.readFile \"$path\")" | nixfmt -
+}
+
+csv2xlsx()
+{
+  local filename="$1"
+  [[ ! -f $filename ]] && echo "Invalid filename: $filename" && return 1
+  [[ ! $filename =~ csv$ ]] && echo "Not a CSV file: $filename" && return 1
+  loconvert xlsx "$filename" 
+}
+
+pdf-merge()
+{
+  pdfunite "$@"
+}
+
+pdf-split()
+{
+  local src="$1"
+  local from="$2"
+  local to="$3"
+  local dst="${1%%.pdf}-%d.pdf"
+
+  [[ -z $src ]] || [[ ! -f $src ]] && echo "Nonexistent file: $src" && return 1
+  [[ -z $from ]] && echo "No first page provided" && return 1
+  [[ -z $to ]] && echo "No last page provided" && return 1
+
+  pdfseparate -f $from -l $to "$src" "$dst"
+}
+
+pdf-slice()
+{
+  local src="$1"
+  local from="$2"
+  local to="$3"
+  local dst="${src%%.pdf}_$from-$to.pdf"
+
+  [[ -z $src ]] || [[ ! -f $src ]] && echo "Nonexistent file: $src" && return 1
+  [[ -z $from ]] && echo "No first page provided" && return 1
+  [[ -z $to ]] && echo "No last page provided" && return 1
+
+  qpdf "$src" --pages . "$from"-"$to" -- "$dst"
+}
+
+pdf-ocr()
+{
+  local langs="${1:-eng}"
+  local src="$2"
+  local dst="${2%%.pdf}-ocr.pdf"
+
+  [[ -z $src ]] || [[ ! -f $src ]] && echo "Nonexistent file: $src" && return 1
+
+  ocrmypdf -l "$langs" --force-ocr "$src" "$dst"
+}
+
+pdf-ocr-rm()
+{
+  local src="$1"
+  local dst="${1%%.pdf}-no-ocr.pdf"
+  [[ -z $src ]] || [[ ! -f $src ]] && echo "Nonexistent file: $src" && return 1
+  ocrmypdf --mode strip "$src" "$dst"
+}
+
+pdf-text()
+{
+  local src="$1"
+  [[ -z $src ]] || [[ ! -f $src ]] && echo "Nonexistent file: $src" && return 1
+  shift 1
+  pdftotext -layout "$src" "$@"
+}
+
+pdf-chunk()
+{
+  local src="${1-}"
+  [[ -f "$src" ]] || { echo "Nonexistent file: ${src:-<empty>}" >&2; return 1; }
+
+  local size="${2:-10}"
+  local total=$(pdfinfo "$src" | awk '/^Pages:/ {print $2}')
+
+  [[ -n "$total" ]] || { echo "Could not determine page count" >&2; return 1; }
+
+  local from=1
+  while (( from <= total )); do
+    local to=$(( from + size - 1 ))
+    (( to > total )) && to=$total
+    pdf-slice "$src" "$from" "$to"
+    (( from += size ))
+  done
+}
+
+sys-rebuild()
+{
+  local src="~/.user/nixos"
+  local dst="/etc/nixos"
+
+  [[ -d "$src" ]] || { echo "No such directory: ~/.user/nixos" >&2; return 1; }
+
+  sudo bash -c '
+    set -euo pipefail
+    src="$1"; dst="$2"
+
+    shopt -s nullglob
+    for f in "$dst"/*.nix; do
+      cp -- "$f" "$f.bak"
+    done
+
+    cp -v -- "$src"/*.nix "$dst"/
+  ' _ "$src" "$dst" || { echo "Could not copy system nix files" >&2; return 1; }
+
+  sudo nixos-rebuild switch --show-trace
 }

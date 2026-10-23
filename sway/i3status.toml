@@ -1,4 +1,3 @@
-# --- Global icon font override ---
 icons_format = " <span font_family='Hack Nerd Font Propo'>{icon}</span> "
 
 [icons]
@@ -9,32 +8,48 @@ bat = ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "
 bat_charging = "󰂄"
 bat_full = "󰁹"
 backlight = "󰃠"
+net_wireless = "󰤨"
+net_wired   = "󰈀"
 
 [theme]
 theme = "semi-native"
 
 [[block]]
+block = "focused_window"
+format = " 󰖲 <b>$title.str(max_w:30)</b> "
+
+[[block]]
 block = "time"
 interval = 5
-format = " $icon $timestamp.datetime(f:'%Y-%m-%d %H:%M')"
+format = "$icon $timestamp.datetime(f:'%Y-%m-%d %H:%M') "
 
-
-# --- Brightness ---
 [[block]]
 block = "backlight"
 device = "amdgpu_bl1"
 format = "$icon $brightness "
 step_width = 5
 
-# --- Volume ---
 [[block]]
 block = "sound"
 driver = "pulseaudio"
 format = "$icon $volume "
 step_width = 5
 
-# --- Battery ---
 [[block]]
 block = "battery"
-format = "$icon $percentage"
+format = "$icon $percentage "
 interval = 10
+
+[[block]]
+block = "net"
+device = "wlo1"
+format = "$icon $ssid :: {$signal_strength|Wired} "
+interval = 5
+
+[[block.click]]
+button = "left"
+cmd = "nmgui"
+
+[[block.click]]
+button = "right"
+cmd = "nm-connection-editor"
