@@ -1,0 +1,741 @@
+{ config, lib, pkgs, ...  }:
+let 
+  user = "Kerambit";
+  homeDir = "/home/${user}";
+  imports = ["/etc/nixos/hardware-configuration.nix"];
+  dbus-sway-environment = pkgs.writeTextFile {
+    name = "dbus-sway-environment";
+    destination = "/bin/dbus-sway-environment";
+    executable = true;
+    text = ''
+      dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway
+      systemctl --user stop pipewire pipewire-media-session xdg-desktop-portal xdg-desktop-portal-wlr xdg-desktop-portal-gtk
+      systemctl --user start pipewire pipewire-media-session xdg-desktop-portal xdg-desktop-portal-wlr xdg-desktop-portal-gtk
+    '';
+  };
+  myPkgs = {
+    tesseract = pkgs.tesseract.override {
+      enableLanguages = ["eng" "mar" "hin" "osd"];
+    };
+    ocrmypdf = pkgs.ocrmypdf.override {
+      tesseract = myPkgs.tesseract;
+    };
+  };
+  myVim = pkgs.vim-full.customize {
+    name = "vi";
+    vimrcConfig.packages.myPlugins = with pkgs.vimPlugins; {
+      start = [
+        vim-surround
+        auto-pairs
+        vim-sexp
+        vim-suda
+        vim-bbye
+        vim-easymotion
+        rainbow
+        vim-mucomplete
+        fzf-vim
+      ];
+    };
+
+    vimrcConfig.customRC = ''
+      syntax on
+
+      set nocompatible
+      set backspace=indent,eol,start
+      set number
+      set hidden
+      set number
+      set relativenumber
+      set shiftwidth=4
+      set softtabstop=4
+      set expandtab
+      set autoindent
+      set background=dark
+      set clipboard=unnamedplus
+      set autochdir
+      set cursorline
+      set mouse=a
+      set bg=dark
+
+      let mapleader = "<space>"
+
+      noremap <space>bb :Buffers<CR>
+      noremap <space>ff :Files<CR>
+      noremap <space>/ :Rg<CR>
+      noremap <space>fs :w! %<CR>
+      noremap <space>o :setlocal readonly<CR>
+      noremap <space>w <C-w>
+      noremap <space>tt :tabnew<CR>
+      noremap <space>tk :tabclose<CR>
+      noremap <space>tn :tabnext<CR>
+      noremap <space>tp :tabprev<CR>
+      noremap <space>bn :bnext<CR>
+      noremap <space>bp :bprev<CR>
+      noremap <space>bq :bwipeout!<CR>
+      noremap <space>bk :hide<CR>
+
+      autocmd! Filetype nix,lua,sh,bash,perl setlocal tabstop=2 shiftwidth=2 softtabstop=2 expandtab
+
+      color unokai
+      '';
+  };
+in
+{
+  imports = imports;
+
+  # systemd.user.services.waybar = {
+  #   unitConfig = {
+  #     Description = "Waybar status bar";
+  #     PartOf = [ "graphical-session.target" ];
+  #     After = [ "graphical-session.target" ];
+  #     ConditionEnvironment = "XDG_CURRENT_DESKTOP=sway";
+  #   };
+  #   serviceConfig = {
+  #     ExecStart = "${pkgs.waybar}/bin/waybar";
+  #     Restart = "on-failure";
+  #   };
+  #   wantedBy = [ "graphical-session.target" ];  # ← moved here
+  # };
+  
+  systemd.user.services.mako = {
+    unitConfig = {
+      Description = "Mako notification daemon";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" ];
+      ConditionEnvironment = "XDG_CURRENT_DESKTOP=sway";
+    };
+    serviceConfig = {
+      ExecStart = "${pkgs.mako}/bin/mako";
+      Restart = "on-failure";
+    };
+    wantedBy = [ "graphical-session.target" ];  # ← moved here
+  };
+
+  # XDG MIME settings
+  xdg.mime.defaultApplications = {
+    "text/html" = "chromium-browser.desktop";
+    "x-scheme-handler/http" = "chromium-browser.desktop";
+    "x-scheme-handler/https" = "chromium-browser.desktop";
+    "x-scheme-handler/about" = "chromium-browser.desktop";
+    "x-scheme-handler/unknown" = "chromium-browser.desktop";
+    "application/pdf" = "org.gnome.Papers.desktop";
+    "image/*" = "org.gnome.eog.desktop";
+    "inode/directory" = "pcmanfm-qt.desktop";
+    "application/msword" = "libreoffice-writer.desktop";
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document" = "libreoffice-writer.desktop";
+    "application/vnd.oasis.opendocument.text" = "libreoffice-writer.desktop";
+    "application/rtf" = "libreoffice-writer.desktop";
+    "application/vnd.ms-excel" = "libreoffice-calc.desktop";
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" = "libreoffice-calc.desktop";
+    "application/vnd.oasis.opendocument.spreadsheet" = "libreoffice-calc.desktop";
+    "text/csv" = "libreoffice-calc.desktop";
+    "text/tab-separated-values" = "libreoffice-calc.desktop";
+    "application/vnd.ms-powerpoint" = "libreoffice-impress.desktop";
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation" = "libreoffice-impress.desktop";
+    "application/vnd.oasis.opendocument.presentation" = "libreoffice-impress.desktop";
+    "application/epub+zip" = "calibre-ebook-viewer.desktop";
+    "application/x-mobipocket-ebook" = "calibre-ebook-viewer.desktop";
+    "application/x-mobipocket-subscription" = "calibre-ebook-viewer.desktop";
+    "application/x-mobi8-ebook" = "calibre-ebook-viewer.desktop";
+    "image/vnd.djvu" = "calibre-ebook-viewer.desktop";
+  };
+
+#  systemd.user.services.nm-applet = {
+#    unitConfig = {
+#      Description = lib.mkForce "Network Manager Applet";
+#      PartOf = [ "graphical-session.target" ];
+#      After = [ "graphical-session.target" ];
+#      ConditionEnvironment = "XDG_CURRENT_DESKTOP=sway";
+#    };
+#    serviceConfig = {
+#      ExecStart = "${pkgs.networkmanagerapplet}/bin/nm-applet --indicator";
+#      Restart = "on-failure";
+#    };
+#    wantedBy = [ "graphical-session.target" ];  # ← moved here
+#  };
+
+  systemd.user.services.swayosd-server = {
+    unitConfig = {
+      Description = "SwayOSD server";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" ];
+      ConditionEnvironment = "XDG_CURRENT_DESKTOP=sway";
+    };
+    serviceConfig = {
+      ExecStart = "${pkgs.swayosd}/bin/swayosd-server";
+      Restart = "on-failure";
+    };
+    wantedBy = [ "graphical-session.target" ];  # ← moved here
+  };
+
+  environment.variables = {
+    GIT_SSL_CAINFO = "/etc/ssl/certs/ca-bundle.crt";
+    CURL_CA_BUNDLE = "/etc/ssl/certs/ca-bundle.crt";
+    OPENSSL_X509_CERT_FILE = "/etc/ssl/certs/ca-bundle.crt";
+    NIX_SSL_CERT_FILE = "/etc/ssl/certs/ca-bundle.crt";
+  };
+
+  environment.sessionVariables = {
+    XDG_DATA_DIRS = lib.mkAfter ["${pkgs.neovim-unwrapped}/share"];
+    SYSTEM_USER = user;
+    QT_QPA_PLATFORM = "wayland";
+    QT_QPA_PLATFORMTHEME = "qt5ct";
+  };
+
+  hardware.acpilight.enable = true;
+  hardware.enableRedistributableFirmware = true;
+  hardware.amdgpu = {
+    initrd.enable = true;
+    overdrive.enable = true;
+    opencl.enable = true;
+  };
+  hardware.graphics = {
+    enable = true;
+    enable32Bit = true;
+    extraPackages = with pkgs; [ mesa ];
+    extraPackages32 = with pkgs; [ driversi686Linux.mesa ];
+  };
+  hardware.bluetooth = {
+    enable = true;
+    powerOnBoot = false;
+  };
+
+  virtualisation.waydroid.enable = false;
+  virtualisation.waydroid.package = pkgs.waydroid-nftables;
+
+  boot.loader.systemd-boot.enable = true;
+  boot.kernelPackages = pkgs.linuxPackages_latest;
+  boot.loader.efi.canTouchEfiVariables = true;
+  boot.loader.systemd-boot.configurationLimit = 10;
+  boot.initrd.kernelModules = [ ];
+  boot.kernelParams = [
+    "amd_pstate=disable"
+    "nohibernate" 
+    "acpi_enforce_resources=lax"
+    "usbcore.autosuspend=-1"
+    "iommu=pt"
+    "processor.max_cstate=1"
+    "usbcore.quirks=36ae:feac:k"
+  ];
+  boot.extraModprobeConfig = ''
+  '';
+
+  networking.hostName = user;
+  networking.networkmanager.enable = true;
+  networking.nameservers = [
+    "1.1.1.1"
+    "1.0.0.1"
+  ];
+
+  xdg.portal = {
+    enable = true;
+    extraPortals = with pkgs; [ xdg-desktop-portal-gtk ];
+  };
+
+  time.timeZone = "Asia/Kolkata";
+  i18n = {
+    defaultLocale = "en_US.UTF-8";
+    inputMethod = {
+      enable = false;
+      type = "null";
+    };
+  };
+
+  console = {
+    font = "Lat2-Terminus16";
+    useXkbConfig = true;
+  };
+
+  services.xserver.videoDrivers = [ "amdgpu" ];
+  services.geoclue2.enable = false;
+  services.xserver = {
+    enable = true;
+    xkb = {
+      layout = "us";
+      options = "caps:escape";
+    };
+    desktopManager.budgie.enable = false;
+    displayManager.lightdm.enable = false;
+  };
+  services.gnome = {
+    gnome-keyring.enable = true;
+    gnome-browser-connector.enable = true;
+  };
+  services.displayManager = {
+    gdm = {
+      enable = true;
+    };
+    sddm = {
+      enable = false;
+      wayland.enable = false;
+    };
+  };
+  services.desktopManager = {
+    gnome.enable = true;
+    plasma6.enable = false;
+  };
+  services.pipewire = {
+    enable = true;
+    alsa.enable = true;
+    alsa.support32Bit = true;
+    pulse.enable = true;
+    wireplumber.enable = true;
+    wireplumber.extraConfig = {
+      "bluetoothEnhancements" = {
+        "monitor.bluez.properties" = {
+          "bluez5.enable-sbc-xq" = true;
+          "bluez5.enable-msbc" = true;
+          "bluez5.roles" = [
+            "hsp_hs"
+            "hsp_ag"
+            "hfp_hf"
+            "hfp_ag"
+            "a2dp_sink"
+            "a2dp_source"
+          ];
+        };
+      };
+    };
+  };
+  services.clamav = {
+    daemon.enable = true;
+    updater.enable = true;
+    daemon.settings = {
+      LogTime = true;
+      LogClean = true;
+    };
+  };
+  services.printing.enable = true;
+  services.libinput.enable = true;
+  services.avahi.enable = false;
+  services.opensnitch.enable = false;
+
+  # User configuration
+  users.users.${user} = {
+    isNormalUser = true;
+    hashedPasswordFile = "/etc/secrets/${user}";
+    extraGroups = [ "wheel" "network" "video" "sudo" ];
+    packages = with pkgs; [ tree ];
+  };
+
+  security.sudo = {
+    enable = true;
+    extraConfig = ''
+      Defaults timestamp_timeout=15
+    '';
+  };
+
+  security.polkit.enable = true;
+  security.pam.services.gdm.enableGnomeKeyring = true;
+
+  # All program configurations
+  programs.sway = {
+    enable = true;
+    wrapperFeatures.gtk = true;
+    extraOptions = [
+      "--config"
+      "${homeDir}/.user/sway/config"
+    ];
+  };
+
+  # QT stuff?
+  qt = {
+    enable = true;
+    platformTheme = "qt5ct";
+  };
+
+  programs.steam.enable = true;
+  programs.adb.enable = true;
+  programs.gpaste.enable = true;
+  programs.firefox.enable = true;
+  programs.chromium.enable = true;
+  programs.appimage.enable = true;
+  programs.nm-applet.enable = true;
+  programs.direnv = {
+    enable = false;
+    nix-direnv.enable = true;
+  };
+  programs.nix-ld = {
+    enable = true;
+    libraries = with pkgs; [
+      xorg.libxcb
+    ];
+  };
+  programs.gamescope = {
+    enable = false;
+    capSysNice = true;
+  };
+  programs.steam.gamescopeSession.enable = true;
+  programs.tmux = {
+    enable = true;
+    baseIndex = 1;
+    newSession = true;
+    escapeTime = 0;
+    secureSocket = false;
+    clock24 = true;
+    historyLimit = 50000;
+    plugins = with pkgs; [
+      tmuxPlugins.yank
+      tmuxPlugins.better-mouse-mode
+      tmuxPlugins.jump
+      tmuxPlugins.lazy-restore
+    ];
+    extraConfig = ''
+      unbind C-b
+      set -g prefix M-space
+      bind M-space send-prefix
+
+      set -g default-terminal "screen-256color"
+      set -g default-command "/usr/bin/env bash"
+      set -g mouse
+      set -ga terminal-overrides ",xterm-256color:Tc"
+
+      bind r source-file ~/.user/tmux.conf
+      bind h select-pane -L
+      bind l select-pane -R
+      bind k select-pane -U
+      bind j select-pane -D
+
+      bind -n C-Left resize-pane -L 5
+      bind -n C-Right resize-pane -R 5
+      bind -n C-Up resize-pane -U 5
+      bind -n C-Down resize-pane -D 5
+
+      bind -n S-Left resize-pane -L 2
+      bind -n S-Right resize-pane -R 2
+      bind -n S-Up resize-pane -U 1
+      bind -n S-Down resize-pane -D 1
+    '';
+  };
+
+  fonts = {
+    fontconfig = {
+      enable = true;
+      defaultFonts = {
+        monospace = [
+          "UbuntuMono Nerd Font"
+          "Hack Nerd Font"
+          "LiberationMono Nerd Font"
+          "Unifont"
+          "Inconsolata"
+        ];
+      };
+    };
+    packages = with pkgs; [
+      font-awesome
+      inconsolata
+      inconsolata-lgc
+    ];
+  };
+
+
+  programs.ssh = {
+    startAgent = false;
+    # askPassword = "${pkgs.kdePackages.ksshaskpass}/bin/ksshaskpass";
+  };
+
+  # The heart of the oasis
+  environment.systemPackages = with pkgs; [
+    # Screenshot stuff
+    grim slurp
+
+    # Bluetooth packages
+    blueman
+
+    # nix utilities
+    nix-init
+    nix-prefetch-git
+    nix-prefetch-github
+
+    dbus
+    dbus-sway-environment
+    mako
+
+    # waybar
+    libsForQt5.qt5ct
+    qt6Packages.qt6ct
+    qt6.qtwayland
+    qt5.qtwayland
+    xorg.xprop
+
+    cliphist
+    nwg-clipman
+
+    wofi
+    swayosd
+    networkmanagerapplet
+    pavucontrol
+    upower
+
+    nmgui
+    tree-sitter
+    unzip
+    p7zip
+    ctags
+    gamescope
+    universal-ctags
+    nil
+    texstudio
+    geckodriver
+    chromedriver
+    selenium-manager
+    selenium-server-standalone
+    yank
+    xclip
+    xsel
+    wl-clipboard
+    poppler-utils
+    qpdf
+    anydesk
+    nixfmt-rfc-style
+    tmux
+    brightnessctl
+    nix-index
+    zip
+    aria2
+    fzf
+    fzy
+    gnome-monitor-config
+    cozette
+    arashi
+    guake
+    xsel
+    pavucontrol
+    rofi
+    rofi-network-manager
+    dmidecode
+    sof-firmware
+    alsa-utils
+    zoom-us
+    microcode-amd
+    aerc
+    msmtp
+    unzip
+    unrar
+    cmus
+    git
+    curl
+    wget
+    unzip
+    ripgrep
+    fd
+    yazi
+    chafa
+    poppler-utils
+    nodejs
+    ffmpeg
+
+    myPkgs.ocrmypdf
+    myPkgs.tesseract
+
+    htop
+    tree
+    jq
+    yq-go
+    openssl
+    zlib
+    libxml2
+    libxslt
+    sqlite
+    readline
+    ncurses
+    cairo
+    harfbuzz
+    fribidi
+    libpng
+    libtiff
+    libjpeg
+    pango
+    gdk-pixbuf
+    blas
+    lapack
+    openblas
+    libuv
+    python313
+    mdf2iso
+    linux_latest
+    linux-firmware
+
+    #waydroid
+    #waydroid-helper
+    #waydroid-nftables
+
+    (lutris.override {
+     extraLibraries = pkgs: with pkgs; [ libgudev ];
+     extraPkgs = pkgs: with pkgs; [
+     gst_all_1.gst-plugins-base
+     gst_all_1.gst-plugins-good
+     gst_all_1.gst-plugins-bad
+     gst_all_1.gst-plugins-ugly
+     gst_all_1.gst-libav
+     libtheora   
+     libxml2 
+     openssl_1_1
+     libwebp   
+     libvdpau 
+     speex   
+     libdrm 
+     ];
+     })
+
+    luajit
+    luajitPackages.inspect
+
+    vulkan-tools
+    vulkan-loader
+    amdctl
+    xf86-video-amdgpu
+
+    # themes
+    stilo-themes
+    adapta-gtk-theme
+    marwaita
+    canta-theme
+    numix-icon-theme
+    papirus-icon-theme
+    yaru-theme
+    mint-themes
+    greybird
+
+    lua-language-server
+    nixd
+
+    perlnavigator
+    (perl.withPackages (
+      ps: with ps; [
+        Moose
+        MooseXGetopt
+        MooseXTypes
+        MooseXTypesPathTiny
+        NamespaceAutoclean
+        CarpAssert
+        PathTiny
+        FileTouch
+        FileUtil
+        FileSlurp
+        JSONXS
+        ConfigAny
+        ConfigTiny
+        YAMLLibYAML
+        PLS
+        ArchiveTar
+        GetoptLongDescriptive
+      ]
+    ))
+
+    ruff
+    noto-fonts
+    nerd-fonts.ubuntu-mono
+    nerd-fonts.hack
+    nerd-fonts.liberation
+    jq
+    gnome-tweaks
+    gnome-browser-connector
+    myVim
+    gedit
+    wget
+    git
+    curl
+    # terminator
+    gnome-terminal
+    foot
+    
+    fuzzel
+    swaybg
+    swaylock
+    rofi
+    i3status-rust
+    nautilus
+    pcmanfm-qt
+    qt6Packages.qt6ct
+    firefox
+    chromium
+    dconf
+    vlc
+    cmus
+    mpv
+    parallel
+    fd
+    ripgrep
+    libreoffice-still
+    unoconv
+    pandoc
+    desktop-file-utils
+    pipewire
+    imagemagick
+    eog
+    mlocate
+    wayland-utils
+    texlab
+    qbittorrent
+    foliate
+    rstudio
+    exfat exfatprogs
+    bash-completion
+    bash-git-prompt
+    bash-snippets
+    bash-language-server
+
+    (texlive.combine {
+      inherit (texlive)
+        scheme-medium
+        apacite
+        latexmk
+        biber
+        xetex
+        fontawesome
+        xurl
+        booktabs
+        graphics
+        enumitem
+        xcolor
+        noto
+        paracol
+        chemfig
+        footmisc
+        titlesec
+        ;
+    })
+  ];
+
+  nix.settings = {
+    experimental-features = ["nix-command" "flakes"];
+  };
+
+  nixpkgs.config = {
+    permittedInsecurePackages = [ "electron-38.8.4"  "openssl-1.1.1w"];
+    rocmSupport = true;
+  };
+
+  systemd.tmpfiles.rules = [
+    "L+    /opt/rocm   -    -    -     -    ${pkgs.rocmPackages.clr}"
+  ];
+
+  # Disable AMD p-state and all sleep/suspend/hibernate stuff
+  programs.dconf.profiles.user.databases = [{
+    settings."org/gnome/settings-daemon/plugins/power" = {
+      sleep-inactive-ac-type = "nothing";
+      sleep-inactive-battery-type = "nothing";
+      sleep-inactive-ac-timeout = lib.gvariant.mkInt32 0;
+      sleep-inactive-battery-timeout = lib.gvariant.mkInt32 0;
+    };
+  }];
+  services.logind.settings.Login.HandleLidSwitch = "ignore";
+  services.logind.settings.Login.HandleLidSwitchExternalPower = "ignore";
+  services.logind.settings.Login.HandleLidSwitchDocked = "ignore";
+
+  systemd.sleep.extraConfig = ''
+    AllowSuspend=no
+    AllowHibernation=no
+    AllowHybridSleep=no
+    AllowSuspendThenHibernate=no
+  '';
+  systemd.targets.sleep.enable = false;
+  systemd.targets.suspend.enable = false;
+  systemd.targets.hibernate.enable = false;
+  systemd.targets.hybrid-sleep.enable = false;
+
+  # DO NOT TOUCH
+  nixpkgs.config.allowUnfree = true;
+  system.stateVersion = "25.11";
+}
