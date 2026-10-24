@@ -4,6 +4,10 @@
   pkgs,
   ...
 }:
+let
+  admin = import "/etc/nixos/admin.nix" { inherit user lib pkgs; };
+  adminEnv = admin.adminEnv;
+in
 {
   programs = {
     sway = {
@@ -11,7 +15,7 @@
       wrapperFeatures.gtk = true;
       extraOptions = [
         "--config"
-        "${user}/home/.user/sway/config"
+        "${adminEnv.ADMIN_DIR_SWAY}/config"
       ];
     };
     dconf.profiles.user.databases = [

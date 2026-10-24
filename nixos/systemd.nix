@@ -40,24 +40,25 @@ let
     };
     wants = [ "graphical-session.target" ];
   };
-  waybar = mkService {
-    unit = {
-      Description = "Waybar status bar";
-      PartOf = [ "graphical-session.target" ];
-      After = [ "graphical-session.target" ];
-      ConditionEnvironment = "XDG_CURRENT_DESKTOP=sway";
-    };
-    service = {
-      ExecStart = "${pkgs.waybar}/bin/waybar";
-      Restart = "on-failure";
-    };
-    wants = [ "graphical-session.target" ];
-  };
+  # waybar = mkService {
+  #   unit = {
+  #     Description = "Waybar status bar";
+  #     PartOf = [ "graphical-session.target" ];
+  #     After = [ "graphical-session.target" ];
+  #     ConditionEnvironment = "XDG_CURRENT_DESKTOP=sway";
+  #   };
+  #   service = {
+  #     ExecStart = "${pkgs.waybar}/bin/waybar";
+  #     Restart = "on-failure";
+  #   };
+  #   wants = [ "graphical-session.target" ];
+  # };
 in
 {
   systemd = {
     user.services = {
-      inherit mako swayosd-server waybar;
+      inherit mako swayosd-server;
+      # inherit waybar;
     };
     sleep.extraConfig = ''
       AllowSuspend=no

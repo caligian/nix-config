@@ -4,7 +4,7 @@ home:
   pkgs ? import <nixpkgs> { },
   lib ? pkgs.lib,
   ...
-}@rest:
+}:
 
 let
   inherit (builtins)
@@ -69,10 +69,10 @@ let
     writeText
     # writeShellScript
     # runCommand
-    fetchurl
-    fetchTarball
-    fetchFromGitHub
-    fetchgit
+    # fetchurl
+    # fetchTarball
+    # fetchFromGitHub
+    # fetchgit
     ;
   dictUtils = {
     keys = attrNames;
@@ -222,92 +222,6 @@ let
     type = pathType;
     isFile = p: pathType p == "regular";
     isDir = p: pathType p == "directory";
-    dir = userDirs;
-  };
-  userRootDir = "${home}/.user";
-  homeLibDir = "${home}/lib";
-  userDirs = {
-    root = userRootDir;
-    nix = "${userRootDir}/nix";
-    nixPkgs = "${userRootDir}/nix/pkgs";
-    bin = "${userRootDir}/bin";
-    include = "${userRootDir}/include";
-    lib = "${userRootDir}/lib";
-    config = "${userRootDir}/config";
-    lock = "${userRootDir}/lock";
-    apiKeys = "${userRootDir}/api-keys";
-    nvim = "${userRootDir}/nvim";
-    kitty = "${userRootDir}/kitty";
-    home = {
-      lib = {
-        root = homeLibDir;
-        perl = "${homeLibDir}/perl";
-        python = "${homeLibDir}/python";
-        luajit = "${homeLibDir}/luajit";
-      };
-      games = "${home}/Games";
-      repos = "${home}/Repos";
-      music = "${home}/Music";
-      downloads = "${home}/Downloads";
-      projects = "${home}/Projects";
-      work = "${home}/Work";
-      scripts = "${home}/Scripts";
-      personal = "${home}/Personal";
-      pictures = "${home}/Pictures";
-      config = "${home}/.config";
-      local = "${home}/.local";
-      localState = "${home}/.local/state";
-      localBin = "${home}/.local/bin";
-      bin = "${home}/bin";
-    };
-  };
-  mkNixPath = name: "${userDirs.nix}/${name}.nix";
-  mkBinPath = name: "${userDirs.bin}/${name}";
-  mkIncludePath = name: "${userDirs.include}/${name}";
-  mkPath = p: "${userRootDir}/${p}";
-  lockMkPath = name: "${userDirs.lock}/${name}";
-  lockUtils = {
-    mkPath = lockMkPath;
-    exists = name: pathExists (lockMkPath name);
-    read =
-      name:
-      let
-        p = lockMkPath name;
-      in
-      if pathUtils.isFile p then readFile p else null;
-  };
-  mkAPIKeyPath = name: "${userDirs.apiKeys}/${name}.txt";
-  apiKeyUtils = {
-    mkPath = mkAPIKeyPath;
-    exists = name: pathUtils.isFile (mkAPIKeyPath name);
-    read =
-      name:
-      let
-        p = mkAPIKeyPath name;
-      in
-      if pathUtils.isFile p then readFile p else null;
-  };
-  userUtils = {
-    rootDir = userRootDir;
-    mkNixPath = mkNixPath;
-    mkBinPath = mkBinPath;
-    mkIncludePath = mkIncludePath;
-    mkPath = mkPath;
-    source =
-      name:
-      let
-        p = mkIncludePath name;
-      in
-      if pathExists p then readFile p else null;
-    sourceBin =
-      name:
-      let
-        p = mkBinPath name;
-      in
-      if pathExists p then readFile p else null;
-    dir = userDirs;
-    lock = lockUtils;
-    apiKeys = apiKeyUtils;
   };
   fileUtils = {
     write = toFile;
@@ -398,7 +312,6 @@ in
   log = msg: value: trace "${msg}: ${toString value}" value;
   inspect = value: trace (toJSON value) value;
   die = throw;
-  user = userUtils;
   type =
     x:
     if isNull x then

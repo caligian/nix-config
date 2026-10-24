@@ -1,4 +1,3 @@
-home:
 opts@{ ... }:
 (with opts.pkgs; [
   R

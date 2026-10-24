@@ -228,5 +228,6 @@ filetype.L = filetype.set_lsp_config
 utils.setup = utils.require_all_configs
 package.user.lib.ft = filetype
 package.user.lib.ft.utils = utils
+package.user.lib.filetype = package.user.lib.ft
 
 return utils

@@ -1,5 +1,10 @@
+# Setting up user password after the system is functional after first install
+# openssl passwd -6
+# sudo nano /etc/secrets/Kerambit
+# sudo chown root:root /etc/secrets/Kerambit
+# sudo chmod 600 /etc/secrets/Kerambit
 {
-  config,
+  # config,
   lib,
   pkgs,
   ...
@@ -68,4 +73,16 @@ in
 
   # DO NOT TOUCH
   system.stateVersion = "25.11";
-} // programs // services // security // environment // fonts // boot // xdg // hardware // networking // nixpkgs // qt // systemd
+}
+// programs
+// services
+// security
+// environment
+// fonts
+// boot
+// xdg
+// hardware
+// networking
+// nixpkgs
+// qt
+// systemd

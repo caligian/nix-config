@@ -90,3 +90,5 @@ nnoremap <M-!> :!
 nnoremap <RightMouse> <Nop>
 inoremap <RightMouse> <Nop>
 vnoremap <RightMouse> <Nop>
+
+set guifont=Hack\ Nerd\ Font\ Mono:h13

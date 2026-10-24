@@ -3,8 +3,7 @@
 }:
 
 let
-  home = builtins.getEnv "HOME";
-  myEnv = import <my/env.nix> home { inherit pkgs; };
+  myEnv = import <my/env.nix> { inherit pkgs; };
 in
 pkgs.mkShell {
   name = "wine";

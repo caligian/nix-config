@@ -1,11 +1,10 @@
 {
   pkgs ? import <nixpkgs> { },
   ...
-}@args:
+}:
 let
-  home = builtins.getEnv "HOME";
-  base = import <my/base.nix> "R" home { inherit pkgs; };
-  rPkgs = import <my/pkgs/r.nix> home { inherit pkgs;  };
+  base = import <my/base.nix> "R" { inherit pkgs; };
+  rPkgs = import <my/pkgs/r.nix> { inherit pkgs; };
 in
 pkgs.mkShell {
   env = base.env;

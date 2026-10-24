@@ -285,10 +285,17 @@ function utils.setup(opts)
     result.plugins = utils.require_all_plugins()
   end
 
-  require('lib.project').setup()
-  require('lib.shell').setup()
-  require('lib.repl').setup()
-  require('lib.filetype').setup()
+  require('lib.project')
+  require('lib.shell')
+  require('lib.repl')
+  require('lib.filetype')
+  require('lib.neotree-filesystem')
+
+  lib.project.setup()
+  lib.shell.setup()
+  lib.repl.setup()
+  lib.ft.utils.setup()
+  lib.neotree.setup()
 
   require('themery').setup {
     themes = list.filter(vim.fn.getcompletion("", 'color'), is.string)

@@ -33,6 +33,7 @@ input type:keyboard {
 
 # Start a terminal
 bindsym $mod+Return exec $term
+bindsym $mod+Shift+Return exec neovide
 bindsym $mod+Control+Return exec $term -a yazi-file-browser -e yazi
 
 # Kill focused window

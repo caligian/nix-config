@@ -1,6 +1,6 @@
-{ user, pkgs, ... }:
+{ user, lib, pkgs, ... }:
 let
-  # luaPkgs = import "/etc/nixos/luajit.nix" { inherit pkgs; };
+  admin = import "/etc/nixos/admin.nix" { inherit user lib pkgs; };
   myRocks = {
     luasystem = pkgs.luajitPackages.luasystem.overrideAttrs (old: {
       preConfigure = (old.preConfigure or "") + ''
@@ -78,7 +78,7 @@ let
       ]
     );
   };
-  nvimDir = "/home/${user}/.user/nvim";
+  nvimDir = admin.adminEnv.ADMIN_DIR_NVIM;
   initVimFile = "${nvimDir}/configuration.vim";
   luaPath = "${nvimDir}/?.lua;${nvimDir}/?/?.lua;${nvimDir}/?/init.lua";
   mkNeovim = spec: pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped spec;
@@ -161,9 +161,9 @@ let
       };" .. package.cpath
 
       vim.g.tagbar_ctags_bin = "${pkgs.ctags}/bin/ctags" 
-      vim.g.user_home = "/home/${user}"
-      vim.g.user_dir = vim.g.user_home .. "/.user"
-      vim.g.user_configuration_dir = vim.g.user_dir .. "/nvim"
+      vim.g.user_home = "${admin.adminEnv.ADMIN_HOME}"
+      vim.g.user_dir = "${admin.adminEnv.ADMIN_DIR}"
+      vim.g.user_configuration_dir = "${admin.adminEnv.ADMIN_DIR_NVIM}"
 
       require('conform').setup {
         formatters_by_ft = {
@@ -228,7 +228,6 @@ in
   nodePackages.npm
   cargo
   rustc
-  myNeovim
   nil
   nixd
   lua-language-server
@@ -245,4 +244,5 @@ in
   shfmt
   air-formatter
 ])
+++ [myNeovim]
 ++ luaPkgs

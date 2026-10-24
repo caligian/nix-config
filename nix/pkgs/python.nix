@@ -1,4 +1,3 @@
-home:
 args@{ ... }:
 (with args.pkgs; [
   python313

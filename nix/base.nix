@@ -1,4 +1,4 @@
-name: home:
+name:
 {
   pkgs ? import <nixpkgs> { },
   env ? { },
@@ -6,18 +6,13 @@ name: home:
   shellHook ? "",
 }:
 let
-  utils = import <my/utils.nix> home { inherit pkgs; };
-  myEnv = (import <my/env.nix> home { inherit pkgs; }) // env;
-  myBuildInputs =
-    import <my/pkgs/base.nix> home {
-      inherit pkgs;
-      env = myEnv;
-    }
-    ++ [ pkgs.neovide ];
-  source = utils.user.source;
-  initSh = source "init.sh";
-  utilsSh = source "utils.sh";
-  postInitSh = source "post-init.sh";
+  myEnv = (import <my/env.nix> { inherit pkgs; }) // env;
+  myBuildInputs = import <my/pkgs/build.nix> { inherit pkgs; };
+  includeDir = (builtins.getEnv "ADMIN_DIR") + "/include";
+  source = name: builtins.readFile (includeDir + "/" + name + ".sh");
+  initSh = source "init";
+  utilsSh = source "utils";
+  postInitSh = source "post-init";
   myShellHook = ''
     set-nix-PS1 "${name}"
     ${initSh}
