@@ -225,25 +225,3 @@ pdf-chunk()
     (( from += size ))
   done
 }
-
-sys-rebuild()
-{
-  local src="~/.user/nixos"
-  local dst="/etc/nixos"
-
-  [[ -d "$src" ]] || { echo "No such directory: ~/.user/nixos" >&2; return 1; }
-
-  sudo bash -c '
-    set -euo pipefail
-    src="$1"; dst="$2"
-
-    shopt -s nullglob
-    for f in "$dst"/*.nix; do
-      cp -- "$f" "$f.bak"
-    done
-
-    cp -v -- "$src"/*.nix "$dst"/
-  ' _ "$src" "$dst" || { echo "Could not copy system nix files" >&2; return 1; }
-
-  sudo nixos-rebuild switch --show-trace
-}

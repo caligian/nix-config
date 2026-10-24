@@ -21,6 +21,7 @@ let
     ADMIN_DIR_NIX_PKGS = "${root}/nix/pkgs";
     ADMIN_DIR_NIX_PROFILES = "${root}/nix/profiles";
     ADMIN_DIR_NIXOS = "${root}/nixos";
+    ADMIN_DIR_NIXOS_PKGS = "${root}/nixos/pkgs";
     ADMIN_DIR_NVIM = "${root}/nvim";
     ADMIN_DIR_FOOT = "${root}/foot";
     ADMIN_DIR_SWAY = "${root}/sway";

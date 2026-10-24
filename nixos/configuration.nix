@@ -12,6 +12,7 @@
 let
   user = "Kerambit";
   imports = [ "/etc/nixos/hardware-configuration.nix" ];
+  admin = import "/etc/nixos/admin.nix" { inherit user pkgs lib; };
   qt = import "/etc/nixos/qt.nix" { };
   nixpkgs = import "/etc/nixos/nixpkgs.nix" { };
   services = import "/etc/nixos/services.nix" { };
@@ -64,10 +65,20 @@ in
   users.users.${user} = userConfig;
 
   # Nix settings
-  nix.settings = {
-    experimental-features = [
-      "nix-command"
-      "flakes"
+  nix = {
+    settings = {
+      experimental-features = [
+        "nix-command"
+        "flakes"
+      ];
+    };
+    nixPath = [
+      "nixpkgs=${pkgs.path}"
+      "nixos-config=/etc/nixos/configuration.nix"
+      "system=${admin.adminEnv.ADMIN_DIR_NIXOS}"
+      "systemPkgs=${admin.adminEnv.ADMIN_DIR_NIXOS_PKGS}"
+      "admin=${admin.adminEnv.ADMIN_DIR_NIX}"
+      "adminPkgs=${admin.adminEnv.ADMIN_DIR_NIX_PKGS}"
     ];
   };
 
