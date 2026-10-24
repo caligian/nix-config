@@ -5,11 +5,11 @@ if ! command -v git >/dev/null || ! command -v ssh-keygen >/dev/null || ! comman
   exec nix-shell -p git openssh mkpasswd --run "$(printf 'bash %q' "$(realpath "$0")") $*"
 fi
 
-USER_NAME="${USER_NAME:-Kerambit}"
+ADMIN="${USER:-Kerambit}"
 REPO="${REPO:-git@github.com:caligian/nix-config.git}"
 REPO_DIR="$HOME/.user"
 CHANNEL="${CHANNEL:-nixos-26.05}"
-SECRET_FILE="/etc/secrets/${USER_NAME}"
+SECRET_FILE="/etc/secrets/${ADMIN}"
 SSH_KEY="$HOME/.ssh/id_ed25519"
 
 log()  { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
@@ -18,9 +18,9 @@ die()  { printf '\033[1;31mERROR: %s\033[0m\n' "$*" >&2; exit 1; }
 confirm() { read -rp "$1 [y/N] " a; [[ ${a:-N} =~ ^[Yy]$ ]]; }
 
 [[ $EUID -ne 0 ]] || die "Run as your normal user, not root."
-[[ "$USER_NAME" == "$(id -un)" ]] || die "USER_NAME=$USER_NAME but running as $(id -un). configuration.nix hardcodes user='Kerambit'."
+[[ "$ADMIN" == "$(id -un)" ]] || die "ADMIN=$ADMIN but running as $(id -un). configuration.nix hardcodes user='Kerambit'."
 [[ "$CHANNEL" =~ ^nixos-[0-9]+\.[0-9]+$ ]] || die "Bad channel name: $CHANNEL"
-[[ -f /etc/nixos/configuration.nix ]] || die "/etc/nixos/configuration.nix missing — is NixOS installed?"
+[[ -f /etc/nixos/configuration.nix ]] || die "/etc/nixos/configuration.nix missing - is NixOS installed?"
 
 log "Ensuring root channel -> $CHANNEL"
 if ! sudo nix-channel --list | grep -qE "^nixos\s+https://nixos.org/channels/${CHANNEL}$"; then
@@ -32,7 +32,7 @@ log "Ensuring SSH key for GitHub"
 mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
 
 if [[ ! -f "$SSH_KEY" ]]; then
-  ssh-keygen -t ed25519 -C "${USER_NAME}@$(hostname)" -f "$SSH_KEY" -N ""
+  ssh-keygen -t ed25519 -C "${ADMIN}@$(hostname)" -f "$SSH_KEY" -N ""
 else
   echo "Key exists: $SSH_KEY"
 fi
@@ -93,8 +93,10 @@ else
   sudo mkdir -p /etc/secrets
   sudo chmod 700 /etc/secrets
   hash=$(mkpasswd -m yescrypt)
+
   [[ "$hash" == \$y\$* ]] || die "Unexpected hash format: ${hash:0:8}..."
   printf '%s\n' "$hash" | sudo tee "$SECRET_FILE" >/dev/null
+
   sudo chmod 600 "$SECRET_FILE"
   sudo chown root:root "$SECRET_FILE"
 fi
@@ -102,5 +104,4 @@ fi
 
 log "First rebuild: sudo nixos-rebuild switch"
 sudo nixos-rebuild switch --show-trace
-
 log "Bootstrap complete."
