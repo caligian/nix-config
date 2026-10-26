@@ -1,33 +1,25 @@
 import csv
-import subprocess
-import shutil
 import os
 import re
-
-from typing import Iterator
+import shutil
+import subprocess
+from csv import reader as csv_reader
+from csv import writer as csv_writer
 from glob import glob
-from typing import Callable, overload, Literal
-from pickle import (
-    load as fh_load_pkl,
-    dump as fh_dump_pkl,
-    loads as load_pkl,
-    dumps as dump_pkl,
-)
-from csv import (
-    reader as csv_reader,
-    writer as csv_writer,
-)
-from json import (
-    load as fh_load_json,
-    dump as fh_dump_json,
-    loads as load_json,
-    dumps as dump_json,
-)
-from .table import split
-from .process import system
-from .result import Ok, Err, T, E
-from .is_a import module
+from json import dump as fh_dump_json
+from json import dumps as dump_json
+from json import load as fh_load_json
+from json import loads as load_json
+from pickle import dump as fh_dump_pkl
+from pickle import dumps as dump_pkl
+from pickle import load as fh_load_pkl
+from pickle import loads as load_pkl
+from typing import Callable, Iterator, Literal, overload
 
+from .is_a import module
+from .process import system
+from .result import E, Err, Ok, T
+from .table import split
 
 CSVFile = list[list[str | int | float]]
 
@@ -298,10 +290,7 @@ def cp(
     makedirs: bool = False,
     overwrite: bool = True,
     **kwargs,
-) -> (
-    Ok[str]
-    | Err[PermissionError | FileNotFoundError | OSError | FileExistsError]
-):
+) -> Ok[str] | Err[PermissionError | FileNotFoundError | OSError | FileExistsError]:
     if not os.path.exists(src):
         return Err(FileNotFoundError(src), dict(src=src))
 
@@ -311,9 +300,7 @@ def cp(
     dirname = os.path.dirname(dest)
     if not makedirs:
         if not os.path.exists(dirname):
-            return Err(
-                FileNotFoundError(dirname), dict(dest_dir=dirname, dest=dest)
-            )
+            return Err(FileNotFoundError(dirname), dict(dest_dir=dirname, dest=dest))
     else:
         try:
             os.makedirs(dirname)
@@ -456,9 +443,7 @@ def writetext(
     except Exception as error:
         return Err(
             error,
-            dict(
-                file=filename, binary=binary, encoding=encoding, errors=errors
-            ),
+            dict(file=filename, binary=binary, encoding=encoding, errors=errors),
         )
 
 

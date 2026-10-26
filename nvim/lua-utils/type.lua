@@ -262,11 +262,16 @@ end)
 
 is.callable = utils.defguard("callable", function(x)
 	local x_type = type(x)
-	local mt = x_type == "table" and getmetatable(x)
-
-	if x_type ~= "table" or not mt or not mt.__call then
-		return "Expected {table} with __call metamethod"
+	if x_type == "function" then
+		return
+	elseif x_type == "table" then
+		local mt = getmetatable(x)
+		if mt and mt.__call then
+			return
+		end
 	end
+
+	return "Expected {table with __call metamethod | function}"
 end)
 
 is.class = utils.defguard("class", function(x)

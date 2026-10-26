@@ -355,6 +355,9 @@ function terminal:open()
 	self.id = id
 	self.buffer = termbufnr
 	self.pid = pid
+
+  print(cmd, is.callable(cmd))
+
   self:send(cmd)
 
 	if cmd then
