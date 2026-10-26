@@ -1,15 +1,15 @@
-require 'lua-utils'
+require("lua-utils")
 
 local lib = package.user.lib
 local is = lib.is
 local class = lib.class
 local path = lib.path
-local project = require 'lib.project'
-local nvim = require 'lib.nvim'
-local buffer = require 'lib.buffer'
+local project = require("lib.project")
+local nvim = require("lib.nvim")
+local buffer = require("lib.buffer")
 local bufcall = vim.api.nvim_buf_call
 local wipeout = function(buf)
-  vim.api.nvim_buf_delete(buf, { force = true })
+	vim.api.nvim_buf_delete(buf, { force = true })
 end
 
 ---@alias terminal.cmd.cond string|string[]|(fun(args: terminal.cmd.args): boolean)
@@ -31,7 +31,7 @@ end
 ---@field pid? integer
 ---@field buffer? integer
 ---@field new fun(cwd?: string, cmd?: terminal.cmd): terminal
-local terminal = class 'terminal'
+local terminal = class("terminal")
 
 ---@class user.state.terminal
 ---@field id {[integer]: terminal}
@@ -43,12 +43,12 @@ local by_pid = state.pid
 --- Since we are using nix-shell in some places, skip running the shell interpreter
 ---@type table<string,boolean>
 terminal.valid_shell = {
-  sh = true,
-  zsh = true,
-  bash = true,
-  csh = true,
-  tcsh = true,
-  fish = true,
+	sh = true,
+	zsh = true,
+	bash = true,
+	csh = true,
+	tcsh = true,
+	fish = true,
 }
 
 local chansend = vim.api.nvim_chan_send
@@ -56,446 +56,433 @@ local jobstop = vim.fn.jobstop
 
 ---@return boolean
 function terminal:track()
-  if self:is_running() then
-    by_id[self.id] = self
-    by_pid[self:get_pid()] = self
-    return true
-  else
-    return false
-  end
+	if self:is_running() then
+		by_id[self.id] = self
+		by_pid[self:get_pid()] = self
+		return true
+	else
+		return false
+	end
 end
 
 function terminal:initialize(cwd, cmd)
-  cwd = cwd or os.getenv("HOME")
+	cwd = cwd or os.getenv("HOME")
 
-  if not path.is_dir(cwd) then
-    errorf('Invalid directory provided: %s', cwd)
-  end
+	if not path.is_dir(cwd) then
+		errorf("Invalid directory provided: %s", cwd)
+	end
 
-  self.shell = not cmd
-  self.cmd = cmd
-  self.id = nil
-  self.pid = nil
-  self.buffer = nil
-  self.cwd = cwd
-  self.display_cwd = cwd:gsub(os.getenv("HOME"), "~")
+	self.shell = not cmd
+	self.cmd = cmd
+	self.id = nil
+	self.pid = nil
+	self.buffer = nil
+	self.cwd = cwd
+	self.display_cwd = cwd:gsub(os.getenv("HOME"), "~")
 end
 
 ---@param s string|string[]?
 ---@return boolean
 function terminal:send(s)
-  if self:is_stopped() then
-    return false
-  elseif not s then
-    return true
-  end
+	if self:is_stopped() then
+		return false
+	elseif not s then
+		return true
+	end
 
-  s = is.table(s) and table.concat(s, "\n") or s
-  s = s .. "\r"
-  chansend(self.id, s)
+	s = is.table(s) and table.concat(s, "\n") or s
+	s = s .. "\r"
+	chansend(self.id, s)
 
-  return true
+	return true
 end
 
 ---@param bufnr? integer (default: current buffer)
 ---@return boolean
 function terminal:send_region(bufnr)
-  bufnr = bufnr or vim.fn.bufnr()
-  local region = vim.api.nvim_buf_call(bufnr, function() return nvim.region(false) end)
-  return self:send(region)
+	bufnr = bufnr or vim.fn.bufnr()
+	local region = vim.api.nvim_buf_call(bufnr, function()
+		return nvim.region(false)
+	end)
+	return self:send(region)
 end
 
 ---@param bufnr? integer (default: current buffer)
 ---@return boolean
 function terminal:send_buffer(bufnr)
-  bufnr = bufnr or vim.fn.bufnr()
-  local str = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
-  return self:send(str)
+	bufnr = bufnr or vim.fn.bufnr()
+	local str = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
+	return self:send(str)
 end
 
 ---@param bufnr? integer (default: current buffer)
 ---@return boolean
 function terminal:send_current_line(bufnr)
-  bufnr = bufnr or vim.fn.bufnr()
-  local line = vim.api.nvim_buf_call(bufnr, function() return vim.fn.getline('.') end)
-  return self:send(line)
+	bufnr = bufnr or vim.fn.bufnr()
+	local line = vim.api.nvim_buf_call(bufnr, function()
+		return vim.fn.getline(".")
+	end)
+	return self:send(line)
 end
 
 --- Send Ctrl-c
 function terminal:send_ctrl_c()
-  return self:send('')
+	return self:send("")
 end
 
 --- Send Ctrl-Z
 function terminal:send_ctrl_z()
-  return self:send('')
+	return self:send("")
 end
 
 --- Send Ctrl-D
 function terminal:send_ctrl_d()
-  return self:send('')
+	return self:send("")
 end
 
 ---@param timeout? integer (default: 500ms)
 ---@param retries? integer (default: 5)
 ---@return boolean
 function terminal:stop(timeout, retries)
-  timeout = timeout or 300
-  retries = retries or 5
+	timeout = timeout or 300
+	retries = retries or 5
 
-  if not self:is_running() then
-    return false
-  end
+	if not self:is_running() then
+		return false
+	end
 
-  local function is_job_stopped(id)
-    local status = jobstop(id)
-    if status == 0 then
-      return true
-    else
-      return false
-    end
-  end
+	local function is_job_stopped(id)
+		local status = jobstop(id)
+		if status == 0 then
+			return true
+		else
+			return false
+		end
+	end
 
-  local function wait_for_job_stop(id)
-    while not is_job_stopped(id) and retries ~= 0 do
-      vim.wait(timeout)
-      retries = retries - 1
-    end
+	local function wait_for_job_stop(id)
+		while not is_job_stopped(id) and retries ~= 0 do
+			vim.wait(timeout)
+			retries = retries - 1
+		end
 
-    return is_job_stopped(id)
-  end
+		return is_job_stopped(id)
+	end
 
-  local function stop()
-    if not self.id then
-      return true
-    end
+	local function stop()
+		if not self.id then
+			return true
+		end
 
-    vim.schedule(function()
-      pcall(function()
-        local id = self.id
-        local buf = self.buffer
-        wait_for_job_stop(id, timeout)
-        wipeout(buf)
-        self.id = nil
-        self.pid = nil
-        self.buffer = nil
-        printf("Stopped terminal for workspace %s", self.display_cwd)
-      end)
-    end)
+		vim.schedule(function()
+			pcall(function()
+				local id = self.id
+				local buf = self.buffer
+				wait_for_job_stop(id, timeout)
+				wipeout(buf)
+				self.id = nil
+				self.pid = nil
+				self.buffer = nil
+				printf("Stopped terminal for workspace %s", self.display_cwd)
+			end)
+		end)
 
-    if not self.id then
-      return true
-    end
-  end
+		if not self.id then
+			return true
+		end
+	end
 
-  vim.wait(timeout, stop)
+	vim.wait(timeout, stop)
 
-  while self.id ~= nil or retries ~= 0 do
-    vim.wait(timeout, stop)
-    retries = retries - 1
-  end
+	while self.id ~= nil or retries ~= 0 do
+		vim.wait(timeout, stop)
+		retries = retries - 1
+	end
 
-  return self.id == nil
+	return self.id == nil
 end
 
 ---@param timeout? integer
 ---@return integer?
 function terminal:get_status_code(timeout)
-  timeout = timeout or 0
-  if self.id then
-    return vim.fn.jobwait({ self.id }, timeout)[1]
-  end
+	timeout = timeout or 0
+	if self.id then
+		return vim.fn.jobwait({ self.id }, timeout)[1]
+	end
 end
 
 ---Is terminal running?
 ---@return boolean
 function terminal:is_running()
-  if not self.id or not self.buffer then
-    return false
-  else
-    return self:get_status_code(0) == -1
-  end
+	if not self.id or not self.buffer then
+		return false
+	else
+		return self:get_status_code(0) == -1
+	end
 end
 
 function terminal:is_stopped()
-  return not self:is_running()
+	return not self:is_running()
 end
 
 function terminal:get_exit_status()
-  if not self.id then
-    return false
-  else
-    local status = self:get_status_code()
-    if status < 0 then return false end
-    return status
-  end
+	if not self.id then
+		return false
+	else
+		local status = self:get_status_code()
+		if status < 0 then
+			return false
+		end
+		return status
+	end
 end
 
 ---Return a nix-shell command depending on whether ./shell.nix | $HOME/shell.nix exists
 ---@return string?
 function terminal:make_nix_cmd()
-  local nix_file = self.cwd .. '/shell.nix'
-  local is_nix_dir = path.is_file(nix_file)
+	local is_nix_dir = function(d)
+		local check = d .. "/shell.nix"
+		return path.is_file(check)
+	end
+	local make_cmd = function(d)
+		return string.format("nix-shell %s", d)
+	end
 
-  if is_nix_dir then
-    return sprintf('nix-shell %s', nix_file)
-  else
-    nix_file = self.cwd .. '/default.nix'
-    is_nix_dir = path.is_file(nix_file)
-  end
+	if is_nix_dir(self.cwd) then
+		return make_cmd(self.cwd)
+	end
 
-  if is_nix_dir then
-    return sprintf('nix-shell %s', nix_file)
-  else
-    nix_file = os.getenv("HOME") .. '/shell.nix'
-    if path.is_file(nix_file) then
-      return sprintf('nix-shell %s', nix_file)
-    else
-      nix_file = os.getenv("HOME") .. '/default.nix'
-      if path.is_file(nix_file) then
-        return sprintf('nix-shell %s', nix_file)
-      end
-    end
-  end
+	local home = os.getenv("HOME")
+	if is_nix_dir(home) then
+		return make_cmd(home)
+	end
 end
 
----Make main command to start the terminal with
----@return string
 function terminal:make_cmd()
-  local cmd = self:make_nix_cmd()
-  if not cmd then
-    if package.user.config.shell then
-      return package.user.config.shell
-    else
-      return ''
-    end
-  else
-    self.nix_cmd = cmd
-    return cmd
-  end
+	local nix_cmd = self:make_nix_cmd()
+	if nix_cmd then
+		return nix_cmd
+	else
+		return 'bash'
+	end
 end
 
 ---Start the terminal job with command obtained by self:make_cmd()
 ---@return integer?
 function terminal:start_job()
-  local nix_cmd = self:make_cmd()
-  local env = vim.fn.environ()
-  env.TERM = "xterm-256color"
-  local job_id = vim.fn.jobstart(
-    nix_cmd,
-    { env = env, cwd = self.cwd, term = true }
-  )
+	local cmd = self:make_cmd()
+	local env = vim.fn.environ()
+	local job_id = vim.fn.jobstart(cmd, {
+		env = env,
+		cwd = self.cwd,
+		term = true,
+	})
 
-  if job_id == 0 or job_id == -1 then
-    return
-  end
+	if job_id == 0 or job_id == -1 then
+		return
+	end
 
-  return job_id
+	return job_id
 end
 
 function terminal:get_pid()
-  if self.id and self:is_running() then
-    return vim.fn.jobpid(self.id)
-  end
+	if self.id and self:is_running() then
+		return vim.fn.jobpid(self.id)
+	end
 end
 
 ---Start terminal and return job id or crash on error
 ---@return integer?
 function terminal:open()
-  if self.id and self:is_running() then
-    return self.id
-  end
+	if self.id and self:is_running() then
+		return self.id
+	end
 
-  local termbufnr = vim.api.nvim_create_buf(false, true)
-  local map = vim.keymap.set
-  local id = bufcall(termbufnr, function()
-    local buf = buffer.current()
-    vim.api.nvim_create_autocmd('TermClose', {
-      buffer = buf,
-      callback = function()
-        self:stop()
-      end,
-    })
+	local termbufnr = vim.api.nvim_create_buf(false, true)
+	local map = vim.keymap.set
+	local id = bufcall(termbufnr, function()
+		local buf = buffer.current()
+		vim.api.nvim_create_autocmd("TermClose", {
+			buffer = buf,
+			callback = function()
+				self:stop()
+			end,
+		})
 
-    vim.api.nvim_create_autocmd('TermOpen', {
-      buffer = buf,
-      callback = function(args)
-        local winid = buffer.get_winid(args.buf)
-        local set = vim.api.nvim_set_option_value
+		vim.api.nvim_create_autocmd("TermOpen", {
+			buffer = buf,
+			callback = function(args)
+				local winid = buffer.get_winid(args.buf)
+				local set = vim.api.nvim_set_option_value
 
-        if winid and winid ~= -1 then
-          set('number', false, { win = winid })
-          set('relativenumber', false, { win = winid })
-        end
+				if winid and winid ~= -1 then
+					set("number", false, { win = winid })
+					set("relativenumber", false, { win = winid })
+				end
 
-        set('modifiable', true, { buf = args.buf })
-        set('buflisted', false, { buf = args.buf })
-        set('modified', false, { buf = args.buf })
+				set("modifiable", true, { buf = args.buf })
+				set("buflisted", false, { buf = args.buf })
+				set("modified", false, { buf = args.buf })
 
-        vim.bo.modified = false
-      end,
-    })
+				vim.bo.modified = false
+			end,
+		})
 
-    return self:start_job()
-  end)
+		return self:start_job()
+	end)
 
-  if not id then
-    return
-  end
+	if not id then
+		return
+	end
 
-  local pid = vim.fn.jobpid(id)
-  local cmd = self.cmd
+	local pid = vim.fn.jobpid(id)
+	local cmd = self.cmd
 
-  map(
-    { 'n' }, 'q', ':call HideWindowIfPossible()<CR>',
-    { desc = 'Hide buffer', buffer = termbufnr }
-  )
+	map({ "n" }, "q", ":call HideWindowIfPossible()<CR>", { desc = "Hide buffer", buffer = termbufnr })
 
-  map(
-    { 'n' }, 'Q',
-    function() self:stop() end,
-    { desc = 'Kill terminal and delete buffer', buffer = termbufnr }
-  )
+	map({ "n" }, "Q", function()
+		self:stop()
+	end, { desc = "Kill terminal and delete buffer", buffer = termbufnr })
 
-  if is.callable(cmd) then
-    local buf = vim.fn.bufnr()
-    local filename = buffer.filename(buf)
-    local dir = path.dirname(filename)
-    local proj = project.find_by_buffer(buf)
-    cmd = cmd { buf = buf, project = proj, file = filename, dir = dir, }
-  end
+	if is.callable(cmd) then
+		local buf = vim.fn.bufnr()
+		local filename = buffer.filename(buf)
+		local dir = path.dirname(filename)
+		local proj = project.find_by_buffer(buf)
+		cmd = cmd({ buf = buf, project = proj, file = filename, dir = dir })
+	end
 
-  self.id = id
-  self.buffer = termbufnr
-  self.pid = pid
+	self.id = id
+	self.buffer = termbufnr
+	self.pid = pid
   self:send(cmd)
 
-  if cmd then
-    printf("Started terminal [%s] in workspace %s", cmd, self.display_cwd)
-  else
-    printf("Started terminal in workspace %s", self.display_cwd)
-  end
+	if cmd then
+		printf("Started terminal [%s] in workspace %s", cmd, self.display_cwd)
+	else
+		printf("Started terminal in workspace %s", self.display_cwd)
+	end
 
-  return self.id
+	return self.id
 end
 
 ---@return boolean
 function terminal:start()
-  if self:is_running() then
-    return true
-  end
+	if self:is_running() then
+		return true
+	end
 
-  if not self:open() then
-    return false
-  end
+	if not self:open() then
+		return false
+	end
 
-  by_id[self.id] = self
-  by_pid[self.pid] = self
+	by_id[self.id] = self
+	by_pid[self.pid] = self
 
-  return true
+	return true
 end
 
 ---Is the terminal buffer visible?
 ---@return boolean
 function terminal:is_visible()
-  if not self:is_running() then
-    return false
-  elseif not self.buffer then
-    return false
-  else
-    return buffer.is_visible(self.buffer)
-  end
+	if not self:is_running() then
+		return false
+	elseif not self.buffer then
+		return false
+	else
+		return buffer.is_visible(self.buffer)
+	end
 end
 
 ---@param direction? string (default: s)
 ---@param resize? integer (default: -5)
 ---@return boolean
 function terminal:split(direction, resize)
-  resize = resize or -5
-  if not self:is_running() or not self.buffer then
-    return false
-  elseif self:is_visible() then
-    return true
-  elseif self.buffer then
-    buffer.split(vim.fn.bufnr(), direction)
-    vim.cmd('b ' .. self.buffer)
+	resize = resize or -5
+	if not self:is_running() or not self.buffer then
+		return false
+	elseif self:is_visible() then
+		return true
+	elseif self.buffer then
+		buffer.split(vim.fn.bufnr(), direction)
+		vim.cmd("b " .. self.buffer)
 
-    if resize then
-      buffer.resize(self.buffer, direction, resize)
-    end
+		if resize then
+			buffer.resize(self.buffer, direction, resize)
+		end
 
-    return true
-  else
-    return false
-  end
+		return true
+	else
+		return false
+	end
 end
 
 ---Display terminal window on the right
 ---@param resize string|integer?
 function terminal:split_right(resize)
-  return self:split('v', resize)
+	return self:split("v", resize)
 end
 
 ---Display terminal window below
 ---@param resize string|integer?
 function terminal:split_below(resize)
-  return self:split('s', resize)
+	return self:split("s", resize)
 end
 
 ---Hide terminal window
 function terminal:hide()
-  if self.buffer and self:is_visible() then
-    bufcall(self.buffer, function()
-      vim.cmd ':call HideWindowIfPossible()'
-    end)
-    return true
-  else
-    return false
-  end
+	if self.buffer and self:is_visible() then
+		bufcall(self.buffer, function()
+			vim.cmd(":call HideWindowIfPossible()")
+		end)
+		return true
+	else
+		return false
+	end
 end
 
 ---@param dir string
 ---@return boolean
 function terminal:cd(dir)
-  if path.is_dir(dir) then
-    return self:send(string.format('cd "%s"', dir))
-  else
-    printf("Invalid directory %s", dir)
-    return false
-  end
+	if path.is_dir(dir) then
+		return self:send(string.format('cd "%s"', dir))
+	else
+		printf("Invalid directory %s", dir)
+		return false
+	end
 end
 
 ---@param bufnr integer
 ---@return boolean
 function terminal:cd_buffer_workspace(bufnr)
-  bufnr = bufnr or vim.fn.bufnr()
-  if not self:is_running() then
-    return false
-  else
-    local proj = project.find_by_buffer(bufnr)
-    if not proj then
-      return false
-    end
+	bufnr = bufnr or vim.fn.bufnr()
+	if not self:is_running() then
+		return false
+	else
+		local proj = project.find_by_buffer(bufnr)
+		if not proj then
+			return false
+		end
 
-    return self:cd(proj)
-  end
+		return self:cd(proj)
+	end
 end
 
 ---@param bufnr integer
 ---@return boolean
 function terminal:cd_buffer_dir(bufnr)
-  bufnr = bufnr or vim.fn.bufnr()
-  if not self:is_running() then
-    return false
-  else
-    local dir = path.dirname(buffer.filename(bufnr))
-    if dir then
-      self:cd(dir)
-      return true
-    else
-      return false
-    end
-  end
+	bufnr = bufnr or vim.fn.bufnr()
+	if not self:is_running() then
+		return false
+	else
+		local dir = path.dirname(buffer.filename(bufnr))
+		if dir then
+			self:cd(dir)
+			return true
+		else
+			return false
+		end
+	end
 end
 
 terminal.show = terminal.split

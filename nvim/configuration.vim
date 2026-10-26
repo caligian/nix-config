@@ -55,7 +55,7 @@ let maplocalleader = "<C-x>"
 aunmenu PopUp
 
 au TextYankPost * silent! lua vim.hl.on_yank {higroup='Visual', timeout=100}
-au FileType vim,lua,nix,sh,bash,tex,latex,zsh set sw=2 tabstop=2 sts=2 expandtab
+au FileType r,vim,lua,nix,sh,bash,tex,latex,zsh set sw=2 tabstop=2 sts=2 expandtab
 au FileType text set textwidth=72
 au FileType help noremap <buffer> Q :call HideWindowIfPossible()<CR>
 au FileType help noremap <buffer> q :call DeleteBufferWindowIfPossible()<CR>

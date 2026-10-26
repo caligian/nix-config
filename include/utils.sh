@@ -1,12 +1,12 @@
-symlink()
-{
+#!/usr/bin/env bash
+
+function symlink() {
   [[ -z $1 ]] && echo "No path provided" && return 1
   [[ -z $2 ]] && echo "No link name provided" && return 1
   ln -sf "$1" "$2"
 }
 
-user-cp()
-{
+function user-cp() {
   [[ -z $1 ]] && echo "No path provided" && return 1
   local src="~/.user/$1"
   local dst="${2:-./$1}"
@@ -15,8 +15,7 @@ user-cp()
   cp -r "$src" "$dst" && return 0 || return 1
 }
 
-user-ln()
-{
+function user-ln() {
   [[ -z $1 ]] && echo "No path provided" && return 1
   local src="~/.user/$1"
   local dst="${2:-./$1}"
@@ -25,23 +24,19 @@ user-ln()
   ln -sf "$src" "$dst" && return 0 || return 1
 }
 
-py() 
-{
+function py() {
   /usr/bin/env python "$@"
 }
 
-ipy() 
-{
+function ipy() {
   /usr/bin/env ipython "$@"
 }
 
-pip() 
-{
+function pip() {
   /usr/bin/env python -m pip "$@"
 }
 
-find-projects()
-{
+function find-projects() {
   local dir="${1:-./}"
   local depth="${2:-5}"
 
@@ -51,13 +46,11 @@ find-projects()
   fd -d "$depth" -H -i -g "*.PROJECT" "$dir" | sed 's/[.]PROJECT$//'
 }
 
-find-projects-in-home()
-{
+function find-projects-in-home() {
   find-projects "$HOME" "$1"
 }
 
-cd-project()
-{
+function cd-project() {
   local out="$(find-projects "$@" | fzf --prompt "cd project >")"
   if [[ -d "$out" ]]; then
     cd "$out"
@@ -66,8 +59,7 @@ cd-project()
   fi
 }
 
-cd-project-in-home()
-{
+function cd-project-in-home() {
   local out="$(find-projects "$HOME" $1 | fzf --prompt "cd project >")"
   if [[ -d "$out" ]]; then
     cd "$out"
@@ -76,8 +68,7 @@ cd-project-in-home()
   fi
 }
 
-git-clone()
-{
+function git-clone() {
   local repo="$1"
   local dst="$2"
 
@@ -87,18 +78,15 @@ git-clone()
   git clone "$repo" "$dst"
 }
 
-git-ls()
-{
+function git-ls() {
   git ls-files
 }
 
-git-status()
-{
+function git-status() {
   git status -s
 }
 
-mapkey()
-{
+function mapkey() {
   local lhs="$1"
   local func="$2"
 
@@ -108,8 +96,7 @@ mapkey()
   bind -x "\"$lhs\": $func"
 }
 
-cp-template()
-{
+function cp-template() {
   local fname="$1"
   local dst="${2:-}"
   fname="~/Templates/$fname"
@@ -122,16 +109,14 @@ cp-template()
   cp -v "$fname" "$dst"
 }
 
-loconvert()
-{
+function loconvert() {
   [[ -z $1 ]] && echo "No type defined" && return 1
   [[ -z $2 ]] && echo "No filename provided" && return 1
   [[ ! -f $2 ]] && echo "Nonexistent file: $2" && return 1
   libreoffice --convert-to "$1" "$2"
 }
 
-json2nix()
-{
+function json2nix() {
   [[ -z $1 ]] && echo "No JSON file given" && return 1
   [[ ! -f $1 ]] && echo "Nonexistent JSON file: $1" && return 1
 
@@ -139,21 +124,18 @@ json2nix()
   nix eval --impure --expr "builtins.fromJSON (builtins.readFile \"$path\")" | nixfmt -
 }
 
-csv2xlsx()
-{
+function csv2xlsx() {
   local filename="$1"
   [[ ! -f $filename ]] && echo "Invalid filename: $filename" && return 1
   [[ ! $filename =~ csv$ ]] && echo "Not a CSV file: $filename" && return 1
   loconvert xlsx "$filename" 
 }
 
-pdf-merge()
-{
+function pdf-merge() {
   pdfunite "$@"
 }
 
-pdf-split()
-{
+function pdf-split() {
   local src="$1"
   local from="$2"
   local to="$3"
@@ -166,8 +148,7 @@ pdf-split()
   pdfseparate -f $from -l $to "$src" "$dst"
 }
 
-pdf-slice()
-{
+function pdf-slice() {
   local src="$1"
   local from="$2"
   local to="$3"
@@ -180,8 +161,7 @@ pdf-slice()
   qpdf "$src" --pages . "$from"-"$to" -- "$dst"
 }
 
-pdf-ocr()
-{
+function pdf-ocr() {
   local langs="${1:-eng}"
   local src="$2"
   local dst="${2%%.pdf}-ocr.pdf"
@@ -191,24 +171,21 @@ pdf-ocr()
   ocrmypdf -l "$langs" --force-ocr "$src" "$dst"
 }
 
-pdf-ocr-rm()
-{
+function pdf-ocr-rm() {
   local src="$1"
   local dst="${1%%.pdf}-no-ocr.pdf"
   [[ -z $src ]] || [[ ! -f $src ]] && echo "Nonexistent file: $src" && return 1
   ocrmypdf --mode strip "$src" "$dst"
 }
 
-pdf-text()
-{
+function pdf-text() {
   local src="$1"
   [[ -z $src ]] || [[ ! -f $src ]] && echo "Nonexistent file: $src" && return 1
   shift 1
   pdftotext -layout "$src" "$@"
 }
 
-pdf-chunk()
-{
+function pdf-chunk() {
   local src="${1-}"
   [[ -f "$src" ]] || { echo "Nonexistent file: ${src:-<empty>}" >&2; return 1; }
 
