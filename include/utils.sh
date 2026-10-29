@@ -204,7 +204,7 @@ function pdf-chunk() {
 }
 
 function sys-rebuild() {
-  sudo bash -c "cp -vr $ADMIN_DIR/nixos/* /etc/nixos/ && nixos-rebuild switch"
+  sudo bash -c "rm -vr /etc/nixos/*.nix /etc/nixos/*/*.nix && cp -vr $ADMIN_DIR/nixos/* /etc/nixos/ && nixos-rebuild switch"
 }
 
 function sys-reload() {

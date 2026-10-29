@@ -29,7 +29,6 @@
     desktopManager = {
       gnome.enable = true;
       plasma6.enable = false;
-      budgie.enable = false;
     };
     pipewire = {
       enable = true;

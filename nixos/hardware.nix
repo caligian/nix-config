@@ -1,21 +1,19 @@
-{
-  pkgs,
-  ...
-}:
+{ pkgs, ... }:
 {
   hardware = {
     acpilight.enable = true;
     enableRedistributableFirmware = true;
-    amdgpu = {
-      initrd.enable = true;
-      overdrive.enable = true;
-      opencl.enable = true;
-    };
+    cpu.intel.updateMicrocode = true;
     graphics = {
       enable = true;
       enable32Bit = true;
-      extraPackages = with pkgs; [ mesa ];
-      extraPackages32 = with pkgs; [ driversi686Linux.mesa ];
+      extraPackages = with pkgs; [
+        intel-media-driver
+        intel-vaapi-driver
+      ];
+      extraPackages32 = with pkgs; [
+        driversi686Linux.intel-media-driver
+      ];
     };
     bluetooth = {
       enable = true;

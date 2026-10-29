@@ -1,7 +1,4 @@
-{
-  pkgs,
-  ...
-}:
+{ pkgs, ... }:
 {
   boot = {
     loader = {
@@ -12,8 +9,8 @@
       efi.canTouchEfiVariables = true;
     };
     kernelPackages = pkgs.linuxPackages_latest;
+    initrd.kernelModules = [ "i915" ];
     kernelParams = [
-      "amd_pstate=disable"
       "nohibernate"
       "acpi_enforce_resources=lax"
       "usbcore.autosuspend=-1"
@@ -22,6 +19,5 @@
       "usbcore.quirks=36ae:feac:k"
     ];
     extraModprobeConfig = "";
-    initrd.kernelModules = [ ];
   };
 }
