@@ -60,12 +60,12 @@ in
       inherit mako swayosd-server;
       # inherit waybar;
     };
-    sleep.extraConfig = ''
-      AllowSuspend=no
-      AllowHibernation=no
-      AllowHybridSleep=no
-      AllowSuspendThenHibernate=no
-    '';
+    sleep.settings.Sleep = {
+      "AllowSuspend"="no";
+      "AllowHibernation"="no";
+      "AllowHybridSleep"="no";
+      "AllowSuspendThenHibernate"="no";
+      };
     targets = {
       sleep.enable = false;
       suspend.enable = false;

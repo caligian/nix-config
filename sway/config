@@ -164,10 +164,10 @@ bindsym $mod+c exec nwg-clipman -w
 
 # swaybar stuff
 bar {
+    swaybar_command waybar -s ~/.user/sway/waybar/style.css -c ~/.user/sway/waybar/config.jsonc
     height 40
     tray_output *
     position bottom
-    status_command i3status-rs ~/.user/sway/i3status.toml
     binding_mode_indicator yes
     colors {
         statusline #ffffff
@@ -196,6 +196,7 @@ exec wl-paste --type image --watch cliphist store
 exec wl-paste --type text --watch cliphist store
 
 # Rules
+for_window [app_id=".*"] border pixel 3
 for_window [app_id="filebrowser"] floating enable, resize set 1600 1000, move position center
 for_window [app_id="yazi-file-browser"] floating enable, resize set 1300 800, move position center
 for_window [app_id="cmus-music-player"] floating enable, resize set 1300 800, move position center
@@ -225,7 +226,6 @@ for_window [app_id="thunar"] floating enable
 for_window [class="Thunar"] floating enable
 for_window [class="Nautilus"] floating enable
 for_window [shell="xwayland"] border pixel 3
-for_window [app_id=".*"] border pixel 3
 for_window [app_id="nwg-clipman"] floating enable, resize set 800 600, move position center
 for_window [app_id="org.gnome.Calendar"] floating enable
 for_window [app_id="org.gnome.Calculator"] floating enable

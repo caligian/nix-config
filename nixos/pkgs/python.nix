@@ -27,8 +27,8 @@
   lxml
   beautifulsoup4
   ibis-framework
-  opencv4
-  pytesseract
-  pdfplumber
+  # opencv4
+  # pytesseract
+  # pdfplumber
 ])
 ++ [ pkgs.python313 ]

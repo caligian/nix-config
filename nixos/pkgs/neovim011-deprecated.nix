@@ -1,13 +1,50 @@
-{ user, lib, pkgs, ... }:
+{
+  user,
+  lib,
+  pkgs,
+  ...
+}:
 let
   admin = import "/etc/nixos/admin.nix" { inherit user lib pkgs; };
+  myPkgs = pkgs.extend (
+    final: prev: {
+      luajit = prev.luajit.override {
+        version = "2.1.0";
+        src = prev.fetchFromGitHub {
+          owner = "LuaJIT";
+          repo = "LuaJIT";
+          rev = "18b087cd2c";
+          hash = "sha256-+TNzBOb1jUSuCixfiOCpCKmXqOmiXl6lFjfcWLnC0WY=";
+        };
+        packageOverrides = lFinal: lPrev: {
+          luasystem = lPrev.luasystem.overrideAttrs (old: {
+            preConfigure = (old.preConfigure or "") + ''
+              export RT_DIR=${prev.glibc.out}
+            '';
+          });
+        };
+      };
+      luajitPackages = final.luajit.pkgs;
+    }
+  );
+  myLuaPackages = myPkgs.luajitPackages;
+  neovimWithMyLuajit = (myPkgs.neovim-unwrapped.override { });
+  neovimUnwrapped = neovimWithMyLuajit.overrideAttrs (old: rec {
+    version = "0.11.1";
+    src = pkgs.fetchFromGitHub {
+      owner = "neovim";
+      repo = "neovim";
+      tag = "v${version}";
+      hash = "sha256-kJvKyNjpqIKa5aBi62jHTCb1KxQ4YgYtBh/aNYZSeO8=";
+    };
+  });
   myRocks = {
-    luasystem = pkgs.luajitPackages.luasystem.overrideAttrs (old: {
+    luasystem = myLuaPackages.luasystem.overrideAttrs (old: {
       preConfigure = (old.preConfigure or "") + ''
         export RT_DIR=${pkgs.glibc.out}
       '';
     });
-    lpath = pkgs.luajitPackages.buildLuarocksPackage rec {
+    lpath = myLuaPackages.buildLuarocksPackage rec {
       pname = "lpath";
       version = "0.4.0-1";
       src = pkgs.fetchFromGitHub {
@@ -22,7 +59,7 @@ let
           sha256 = "sha256-6lMblY3GkvUE27T8Mx6chWGg5A5c5nq5RfbNZET6Dss=";
         }).outPath;
     };
-    inspect = pkgs.luajitPackages.buildLuaPackage {
+    inspect = myLuaPackages.buildLuaPackage {
       pname = "inspect";
       version = "a8ca312";
       src = pkgs.fetchFromGitHub {
@@ -39,7 +76,7 @@ let
     };
   };
   luaPkgs =
-    (with pkgs.luajitPackages; [
+    (with myLuaPackages; [
       busted
       ldoc
       cjson
@@ -53,11 +90,10 @@ let
       ansicolors
       sqlite
       luaposix
-      inspect
+      luasystem
     ])
     ++ [
       myRocks.inspect
-      myRocks.luasystem
       myRocks.lpath
     ];
   trouble-nvim = pkgs.vimUtils.buildVimPlugin {
@@ -81,13 +117,14 @@ let
   nvimDir = admin.adminEnv.ADMIN_DIR_NVIM;
   initVimFile = "${nvimDir}/configuration.vim";
   luaPath = "${nvimDir}/?.lua;${nvimDir}/?/?.lua;${nvimDir}/?/init.lua";
-  mkNeovim = spec: pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped spec;
+  mkNeovim = spec: pkgs.wrapNeovimUnstable neovimUnwrapped spec;
   myNeovim = mkNeovim {
+    lua = myPkgs.luajit;
     plugins =
       (with pkgs.vimPlugins; [
         conform-nvim
         lazy-nvim
-        fugitive
+        vim-fugitive
         blink-cmp
         blink-ripgrep-nvim
         luasnip
@@ -114,11 +151,22 @@ let
         telescope-frecency-nvim
         telescope-fzf-native-nvim
         telescope-file-browser-nvim
+
         nvim-treesitter
-        nvim-treesitter-sexp
+        nvim-treesitter-parsers.lua
+        nvim-treesitter-parsers.luadoc
+        nvim-treesitter-parsers.python
+        nvim-treesitter-parsers.perl
+        nvim-treesitter-parsers.bash
+        nvim-treesitter-parsers.r
+        nvim-treesitter-parsers.nix
+        nvim-treesitter-parsers.sql
+        # nvim-treesitter-sexp
+
         nvim-treesitter-context
         nvim-treesitter-endwise
         nvim-treesitter-textobjects
+
         vim-suda
         leap-nvim
         vimtex
@@ -126,7 +174,9 @@ let
         nvim-autopairs
         outline-nvim
         nvim-lspconfig
-        nvim-treesitter-textsubjects
+
+        # nvim-treesitter-textsubjects
+
         neomodern-nvim
         nightfox-nvim
         tokyonight-nvim
@@ -139,11 +189,29 @@ let
         lsp-format-nvim
       ])
       ++ [ trouble-nvim ];
-    extraLuaPackages = ps: luaPkgs;
+    extraLuaPackages = ps: [ ];
     extraPackages = with pkgs; [
       gcc
       gnumake
       unzip
+      ripgrep
+      fdfind
+      myLuaPackages.busted
+      myLuaPackages.ldoc
+      myLuaPackages.cjson
+      myLuaPackages.luacheck
+      myLuaPackages.luafilesystem
+      myLuaPackages.luautf8
+      myLuaPackages.luv
+      myLuaPackages.penlight
+      myLuaPackages.lpeg
+      myLuaPackages.lpeg_patterns
+      myLuaPackages.ansicolors
+      myLuaPackages.sqlite
+      myLuaPackages.luaposix
+      myLuaPackages.luasystem
+      myRocks.inspect
+      myRocks.lpath
     ];
     luaRcContent = ''
       if not string.find(package.path, "${luaPath}", 1, true) then
@@ -222,10 +290,7 @@ let
   };
 in
 (with pkgs; [
-  luajit
-  luarocks
   nodejs_22
-  nodePackages.npm
   cargo
   rustc
   nil
@@ -244,5 +309,4 @@ in
   shfmt
   air-formatter
 ])
-++ [myNeovim]
-++ luaPkgs
+++ [ myNeovim ]

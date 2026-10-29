@@ -13,6 +13,7 @@
       RSQLite
       readr
       dbplyr
+      argparse
     ];
   })
 ]

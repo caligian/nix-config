@@ -1,0 +1,106 @@
+#!/usr/bin/env python
+
+import csv
+import os
+import re
+import shutil
+import sys
+import tempfile
+from argparse import ArgumentParser
+from subprocess import DEVNULL
+from subprocess import run as system
+
+Header = list[str]
+Data = list[list[str]]
+HeaderWithData = tuple[Header, Data]
+ChunkedData = dict[str, list[Data]]
+
+
+def read_excel(filename: str) -> HeaderWithData:
+    """Similar to read_csv(). However this converts the file to a tempfile and then parses. This is to prevent odfdo/python-excel bloat and other stuff"""
+    currentdir = os.getcwd()
+    os.chdir("/tmp")
+    csv_file = os.path.basename(re.sub("(xlsx|ods)$", "csv", filename))
+    system(
+        ["libreoffice", "--convert-to", "csv", filename],
+        check=True,
+        stderr=DEVNULL,
+        stdout=DEVNULL,
+    )
+    [header, data] = read_csv(csv_file)
+    os.remove(csv_file)
+    os.chdir(currentdir)
+
+    return (header, data)
+
+
+def read(filename: str) -> HeaderWithData:
+    if re.search("csv$", filename):
+        return read_csv(filename)
+    elif not re.search("(ods|xlsx)$", filename):
+        raise ValueError("Expected ods/xlsx/csv file, got {filename}")
+
+    return read_excel(filename)
+
+
+def read_csv(filename: str) -> HeaderWithData:
+    """Return (header, data)"""
+    with open(filename, "r", encoding="utf-8", errors="ignore") as fh:
+        reader = csv.reader(fh)
+        lines = [line for line in reader]
+        [header, lines] = [lines[0], lines[1:]]
+        return (header, lines)
+
+
+def write_csv(data: Data, dst: str) -> None:
+    with open(dst, "w", encoding="utf-8", errors="ignore") as fh:
+        writer = csv.writer(fh)
+        writer.writerows(data)
+
+
+def chunk(header: Header, lines: Data, n: int) -> ChunkedData:
+    final = {}
+    for i in range(0, len(lines), n):
+        start = i
+        end = i + n
+        final[f"{start+1}-{end+1}"] = [header, *lines[start:end]]
+
+    return final
+
+
+def write(prefix: str, chunked: ChunkedData) -> list[str]:
+    files = []
+    for suffix, data in chunked.items():
+        filename = f"{prefix}-{suffix}.csv"
+        write_csv(data, filename)
+        files.append(filename)
+    return files
+
+
+def main() -> None:
+    parser = ArgumentParser("Chunk spreadsheet files as CSV")
+    on = parser.add_argument
+    on(
+        "src",
+        metavar="{SPREADSHEET}",
+        help="Spreadsheet file (ods/xlsx/csv)",
+    )
+    on(
+        "n",
+        metavar="{N}",
+        type=int,
+        help="Chunk into X CSV files",
+    )
+    args = parser.parse_args()
+
+    assert os.path.isfile(args.src)
+    filename = os.path.abspath(args.src)
+    prefix = filename.rsplit(".")[0]
+    [header, data] = read(filename)
+    chunked = chunk(header, data, args.n)
+
+    for file in write(prefix, chunked):
+        print(file)
+
+
+main()

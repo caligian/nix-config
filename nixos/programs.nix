@@ -7,6 +7,10 @@
 let
   admin = import "/etc/nixos/admin.nix" { inherit user lib pkgs; };
   adminEnv = admin.adminEnv;
+  swayDir = adminEnv.ADMIN_DIR_SWAY;
+  waybarDir = "${swayDir}/waybar";
+  waybarConfig = lib.importJSON "${waybarDir}/config.jsonc";
+  waybarStyle = "${waybarDir}/style.css";
 in
 {
   programs = {
@@ -33,7 +37,6 @@ in
       # askPassword = "${pkgs.kdePackages.ksshaskpass}/bin/ksshaskpass";
     };
     steam.enable = true;
-    adb.enable = true;
     gpaste.enable = true;
     firefox.enable = true;
     chromium.enable = true;
@@ -46,7 +49,7 @@ in
     nix-ld = {
       enable = true;
       libraries = with pkgs; [
-        xorg.libxcb
+        libxcb
       ];
     };
     gamescope = {

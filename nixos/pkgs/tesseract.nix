@@ -11,5 +11,5 @@ let
 in
 [
   tesseract
-  (pkgs.ocrmypdf.override { tesseract = tesseract; })
+  # (pkgs.ocrmypdf.override { tesseract = tesseract; })
 ]

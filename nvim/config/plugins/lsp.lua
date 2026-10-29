@@ -195,7 +195,7 @@ enable('perlnavigator', {
 if not vim.g.loaded_trouble then
   require('trouble').setup {
     win = {
-      position = 'left',
+      position = 'bottom',
       size = 0.3,
     }
   }

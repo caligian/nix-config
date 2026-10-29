@@ -72,14 +72,6 @@ in
         "flakes"
       ];
     };
-    nixPath = [
-      "nixpkgs=${pkgs.path}"
-      "nixos-config=/etc/nixos/configuration.nix"
-      "system=${admin.adminEnv.ADMIN_DIR_NIXOS}"
-      "systemPkgs=${admin.adminEnv.ADMIN_DIR_NIXOS_PKGS}"
-      "admin=${admin.adminEnv.ADMIN_DIR_NIX}"
-      "adminPkgs=${admin.adminEnv.ADMIN_DIR_NIX_PKGS}"
-    ];
   };
 
   # DO NOT TOUCH

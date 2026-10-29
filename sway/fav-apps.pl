@@ -9,19 +9,20 @@ sub foot {
 }
 
 my %fav = (
-  "File browser"         => foot("yazi-file-browser", "yazi"),
-  "Music player"         => foot("cmus-music-player", "cmus"),
-  "Spreadsheet"          => "libreoffice --calc",
-  "Document editor"      => "libreoffice --writer",
-  "Ebook viewer"         => "ebook-viewer",
-  "Browser (new window)" => "chromium --new-window",
-  "Browser"              => "chromium",
-  "Media player"         => "vlc",
-  "Calendar"             => "gnome-calendar",
-  "Calculator"           => "gnome-calculator",
-  "Bluetooth Devices"    => "blueman-manager",
-  "Edit connections"     => "nm-connection-editor",
-  "Networks"             => "nmgui",
+  "Audio control (Pavucontrol)" => "pavucontrol",
+  "File browser (yazi)"         => foot("yazi-file-browser", "yazi"),
+  "Music player (cmus)"         => foot("cmus-music-player", "cmus"),
+  "Spreadsheet (libreoffice-calc)"          => "libreoffice --calc",
+  "Document editor (libreoffice-writer)"    => "libreoffice --writer",
+  "Ebook viewer (ebook-viewer)"             => "ebook-viewer",
+  "Browser (new window) (chromium)"         => "chromium --new-window",
+  "Browser (chromium)"                      => "chromium",
+  "Media player (vlc)"                      => "vlc",
+  "Calendar (gnome-calendar)"               => "gnome-calendar",
+  "Calculator (gnome-calculator)"           => "gnome-calculator",
+  "Bluetooth Devices (blueman-manager)"     => "blueman-manager",
+  "Edit connections (nm-connection-editor)" => "nm-connection-editor",
+  "Networks (nmgui)"                        => "nmgui",
 );
 
 my $apps = join("\n", keys(%fav));

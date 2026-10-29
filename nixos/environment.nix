@@ -30,7 +30,7 @@ let
     perl = import "/etc/nixos/pkgs/perl.nix" { inherit pkgs; };
     lutris = import "/etc/nixos/pkgs/lutris.nix" { inherit pkgs; };
     vim = import "/etc/nixos/pkgs/vim.nix" { inherit pkgs; };
-    neovim = import "/etc/nixos/pkgs/neovim.nix" { inherit user lib pkgs; };
+    neovim = import "/etc/nixos/pkgs/neovim012.nix" { inherit user lib pkgs; };
     tesseract = import "/etc/nixos/pkgs/tesseract.nix" { inherit pkgs; };
     dbus-sway-environment = [dbus-sway-environment];
   };
@@ -60,9 +60,12 @@ in
       TERMINAL = "foot";
       NIXPKGS_ALLOW_UNFREE = "1";
     }
-    // builtins.removeAttrs myEnv [ "ADMIN_DIRS" ];
+    // removeAttrs myEnv [ "ADMIN_DIRS" ];
     systemPackages =
       (with pkgs; [
+        # Audio stuff
+        pavucontrol
+
         # Screenshot stuff
         grim
         slurp
@@ -82,7 +85,7 @@ in
         qt5.qtwayland
 
         # xorg utilities
-        xorg.xprop
+        xprop
 
         # minimal clipboard manager
         cliphist
@@ -113,7 +116,8 @@ in
         fuzzel
         swaybg
         swaylock
-        i3status-rust
+        # i3status-rust
+        waybar
 
         # Network manager
         nmgui
@@ -124,7 +128,6 @@ in
         vlc
         eog
         foliate
-        rstudio
         libreoffice-still
         gedit
 
@@ -151,7 +154,7 @@ in
         yank
         xclip
         wl-clipboard
-        nixfmt-rfc-style
+        nixfmt
         bash-completion
         bash-git-prompt
         bash-snippets
@@ -232,7 +235,7 @@ in
         exfatprogs
 
         # Linux firmware
-        linux_latest
+        linux
         linux-firmware
 
         # Android emulator
@@ -241,8 +244,6 @@ in
         #waydroid-nftables
 
         # Lua stuff
-        luajit
-        luajitPackages.inspect
         lua-language-server
 
         # themes

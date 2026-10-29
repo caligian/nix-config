@@ -1,6 +1,7 @@
 { pkgs, ... }:
 {
   fonts = {
+    enableDefaultPackages = true;
     fontconfig = {
       enable = true;
       defaultFonts = {
@@ -14,6 +15,8 @@
       };
     };
     packages = with pkgs; [
+      cantarell-fonts # GNOME default font
+      dejavu_fonts
       font-awesome
       inconsolata
       inconsolata-lgc

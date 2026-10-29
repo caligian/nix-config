@@ -110,10 +110,10 @@ function cp-template() {
 }
 
 function loconvert() {
-  [[ -z $1 ]] && echo "No type defined" && return 1
-  [[ -z $2 ]] && echo "No filename provided" && return 1
-  [[ ! -f $2 ]] && echo "Nonexistent file: $2" && return 1
-  libreoffice --convert-to "$1" "$2"
+  [[ -z $1 ]] && echo "No filename provided" && return 1
+  [[ ! -f $1 ]] && echo "Nonexistent file: $2" && return 1
+  [[ -z $2 ]] && echo "No type defined" && return 1
+  libreoffice --convert-to "$2" "$1"
 }
 
 function json2nix() {
@@ -201,4 +201,21 @@ function pdf-chunk() {
     pdf-slice "$src" "$from" "$to"
     (( from += size ))
   done
+}
+
+function sys-rebuild() {
+  sudo bash -c "cp -vr $ADMIN_DIR/nixos/* /etc/nixos/ && nixos-rebuild switch"
+}
+
+function sys-reload() {
+  sudo bash -c "nixos-rebuild switch"
+}
+
+function sys-edit() {
+  nvim $ADMIN_DIR/nixos
+}
+
+function wl-cp() {
+  [[ ! -f $1 ]] && echo "No such file exists: $1" && exit 1
+  cat "$1" | wl-copy
 }
