@@ -1,10 +1,10 @@
+require 'lua-utils.definitions'
+
 local lfs = require 'lfs'
 local lpath = require 'path'
 lpath.fs = require 'path.fs'
 lpath.env = require 'path.env'
-local types = require 'lua-utils.type'
-local is = types.is
-local as = types.as
+
 
 ---Common path utilities
 ---When called with arguments, join arguments with '/' and return the path

@@ -14,6 +14,7 @@
       readr
       dbplyr
       argparse
+      writexl
     ];
   })
 ]

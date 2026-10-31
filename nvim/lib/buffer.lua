@@ -930,6 +930,13 @@ function buffer.find_above_and_goto(bufnr, patterns, start_row, nrows)
   return buffer.find_and_goto(bufnr, 'above', patterns, start_row, nrows)
 end
 
+---@param bufnr? integer 
+---@return boolean
+function buffer.is_file(bufnr)
+  bufnr = bufnr or 0
+  return fs.is_file(buffer.get_name(bufnr))
+end
+
 buffer.rm = buffer.wipeout
 buffer.get_filename = buffer.get_name
 buffer.filename = buffer.get_name

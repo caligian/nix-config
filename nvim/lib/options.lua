@@ -1,10 +1,7 @@
 require 'lib.definitions'
 
 local copy = vim.deepcopy
-local types = require 'lua-utils.type'
 local dict = require 'lua-utils.dict'
-local is = types.is
-local as = types.as
 local utils = {}
 local M = { __index = rawget }
 

@@ -18,8 +18,10 @@
       "acpi_enforce_resources=lax"
       "usbcore.autosuspend=-1"
       "iommu=pt"
-      "processor.max_cstate=1"
+      "processor.max_cstate=5"
+      "amdgpu.runpm=0"
       "usbcore.quirks=36ae:feac:k"
+      "acpi=force"
     ];
     extraModprobeConfig = "";
     initrd.kernelModules = [ ];

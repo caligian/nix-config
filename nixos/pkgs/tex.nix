@@ -1,7 +1,6 @@
 { pkgs, ... }:
 [
-  (pkgs.texlive.combine
-  {
+  (pkgs.texlive.combine {
     inherit (pkgs.texlive)
       scheme-medium
       apacite

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+function set_brightness() {
+  echo 1 > "$1/brightness" &>/dev/null
+}
+
+mapfile -t inputs <<< "$(find /sys/class/leds -name "input*scrolllock")"
+for input in ${inputs[@]}
+do
+  set_brightness "$input"
+done
+

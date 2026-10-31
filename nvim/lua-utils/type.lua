@@ -6,10 +6,11 @@ local refself = lib.refself
 local guards = lib.guards
 local utils = {}
 
-local is, as, isa
+is = lib.is
+as = lib.as
+
 local Error, TypeError, CallError, UnwrapError
 local Result, Ok, Err
-local class
 
 ---@alias likeFunction function|callable
 ---@alias guard1 fun(x: any, opts?: is.opts): boolean, string?
@@ -74,10 +75,6 @@ local class
 ---@field initialize nil
 ---@field issubclass nil
 
----@type {[string]: fun(x: any, opts?: is.opts): boolean, string?}
-is = refself({ __index = guards })
-as = refself({})
-
 ---@generic T
 ---@overload fun(name: string, parent?: class, defaults?: table): class<`T`>
 class = refself({})
@@ -122,7 +119,7 @@ end
 ---@return fun(x: any, opts?: is.opts): boolean, string?
 function utils.defguard(key, f)
 	local function fn(x, opts)
-		x = as_value(x)
+		x = as.value(x)
 		opts = opts or {}
 		local opt = opts.optional or opts["?"] or opts.opt
 		local should_dump = opts.dump
@@ -177,7 +174,7 @@ function is.error(x, opts)
 		return true
 	end
 
-	x = as_value(x)
+	x = as.value(x)
 	local cls = x.__class
 
 	while cls do
@@ -222,10 +219,8 @@ is.bool = is.boolean
 is.num = is.number
 is.str = is.string
 is.fun = is["function"]
-is.sequence = sequence
 is.seq = sequence
-is["nil"] = is_nil
-is.na = is_nil
+is["nil"] = is.na
 
 is.pure_table = utils.defguard("pure_table", function(x)
 	local x_type = type(x)
@@ -348,8 +343,8 @@ end)
 ---@param opts? is.opts
 ---@return boolean, string?
 function utils.instanceof(child, parent, opts)
-	child = as_value(child)
-	parent = as_value(parent)
+	child = as.value(child)
+	parent = as.value(parent)
 
 	assert(is.instance(child, { prefix = "<child>", assert = true }))
 	assert(is.class(parent, { prefix = "<parent>", assert = true }))
@@ -387,8 +382,8 @@ end
 ---@param opts? is.opts
 ---@return boolean, string?
 function utils.issubclass(child, parent, opts)
-	child = as_value(child)
-	parent = as_value(parent)
+	child = as.value(child)
+	parent = as.value(parent)
 
 	assert(is.class(child, { prefix = "<child>", assert = true }))
 
@@ -423,7 +418,7 @@ end
 ---@param cls object
 ---@return class
 function class.get_class(cls)
-	cls = as_value(cls)
+	cls = as.value(cls)
 	assert(is.object(cls, { prefix = "<cls>", assert = true }))
 
 	if is.instance(cls) then
@@ -437,7 +432,7 @@ end
 ---@param name string
 ---@return any
 function class.get(cls, name)
-	cls = as_value(cls)
+	cls = as.value(cls)
 	assert(is.class(cls, { prefix = "<cls>", assert = true }))
 	local value = rawget(cls, name)
 
@@ -458,7 +453,7 @@ end
 ---@param name string
 ---@return likeFunction?
 function class.get_method(cls, name)
-	cls = as_value(cls)
+	cls = as.value(cls)
 	local method = class.get(cls, name)
 	if method == nil then
 		return
@@ -485,7 +480,7 @@ end
 ---@param names_only? boolean
 ---@return (class[]|string)?
 function class.get_parents(cls, names_only)
-	cls = as_value(cls)
+	cls = as.value(cls)
 	local parents = {}
 	local parent = rawget(cls, "__class")
 
@@ -509,7 +504,7 @@ end
 ---@param cls object
 ---@return table
 function class.get_attributes(cls)
-	cls = as_value(cls)
+	cls = as.value(cls)
 	assert(is.object(cls, { prefix = "<cls>", assert = true }))
 	local res = {}
 
@@ -525,7 +520,7 @@ end
 ---@param cls object
 ---@return string
 function class.get_name(cls)
-	cls = as_value(cls)
+	cls = as.value(cls)
 	assert(is.object(cls, { prefix = "<cls>", assert = true }))
 	return cls.__name
 end
@@ -533,7 +528,7 @@ end
 ---@param cls object
 ---@return table
 function class.get_meta_attributes(cls)
-	cls = as_value(cls)
+	cls = as.value(cls)
 	assert(is.object(cls, { prefix = "<cls>", assert = true }))
 	local res = {}
 
@@ -551,9 +546,9 @@ end
 ---@param make_guard? boolean
 ---@return class
 function class.create_class(name, parent, make_guard)
-	name = as_value(name)
-	parent = as_value(parent)
-	make_guard = as_value(make_guard)
+	name = as.value(name)
+	parent = as.value(parent)
+	make_guard = as.value(make_guard)
 
 	is.string(name, { prefix = "name", assert = true })
 	is.class(parent, { prefix = "<parent>", assert = true, opt = true })
@@ -660,8 +655,8 @@ Error = class("Error")
 
 function Error:initialize(name, msg, metadata, ...)
 	self.name = name
-	msg = as_value(msg)
-	metadata = as_value(metadata)
+	msg = as.value(msg)
+	metadata = as.value(metadata)
 	self.msg = msg
 	self.metadata = metadata
 	self.args = { ... }
@@ -729,8 +724,8 @@ UnwrapError = class("UnwrapError", Error)
 Result = class("Result")
 
 function Result:initialize(value, metadata)
-	value = as_value(value)
-	metadata = as_value(metadata)
+	value = as.value(value)
+	metadata = as.value(metadata)
 	self.err = is.error(value)
 	self.type = self.err and "Err" or "Ok"
 	self.ok = self.type ~= "Err"
@@ -833,8 +828,8 @@ end
 ---@param opts? is.opts
 ---@return table?
 function utils.match(x, y, opts)
-	x = as_value(x)
-	y = as_value(y)
+	x = as.value(x)
+	y = as.value(y)
 
 	is.table(x, { assert = true, prefix = "<x>" })
 	is.table(y, { assert = true, prefix = "<y>" })
@@ -869,7 +864,7 @@ function utils.match(x, y, opts)
 		for b_key, b_value in pairs(b) do
 			::next::
 
-			b_value = as_value(b_value)
+			b_value = as.value(b_value)
 			local b_key_type = type(b_key)
 			local b_key_is_str = b_key_type == "string"
 
@@ -880,7 +875,7 @@ function utils.match(x, y, opts)
 			local is_opt = b_key_is_str and string.match(b_key, "^opt_")
 			b_key = is_opt and (b_key:gsub("opt_", "")) or b_key
 			b_key = (b_key_is_str and b_key:match("^%d+$") and tonumber(b_key)) or b_key
-			local a_value = as_value(a[b_key])
+			local a_value = as.value(a[b_key])
 			local current_prefix = prefix_msg(prefix, b_key)
 
 			if a_value == nil and is_opt then
@@ -973,16 +968,6 @@ Value conversion stuff
 function as.list(x, force)
 	if force or not is.list(x) then
 		return { x }
-	else
-		return x
-	end
-end
-
----@param x any
----@return any
-function as.value(x)
-	if is_nil(x) then
-		return nil
 	else
 		return x
 	end
@@ -1136,7 +1121,7 @@ end
 
 ---[[Basically is.*(*, {assert = true})]]
 ---@type {[string]: (fun(x: any, opts?: is.opts): boolean, string?)}
-isa = setmetatable({}, {
+setmetatable(lib.isa, {
 	__index = function(_, name)
 		return function(x, opts)
 			opts = copy.copy(opts or {})
@@ -1149,7 +1134,7 @@ isa = setmetatable({}, {
 
 utils.as = as
 utils.is = is
-utils.isa = isa
+utils.isa = lib.isa
 utils.TypeError = TypeError
 utils.CallError = CallError
 utils.UnwrapError = UnwrapError
@@ -1171,8 +1156,6 @@ utils.printf = printf
 utils.sprintf = sprintf
 utils.errorf = errorf
 
-package.user.lib.as = as
-package.user.lib.is = is
 package.user.lib.TypeError = TypeError
 package.user.lib.CallError = CallError
 package.user.lib.UnwrapError = UnwrapError
@@ -1180,53 +1163,9 @@ package.user.lib.Result = Result
 package.user.lib.Err = Err
 package.user.lib.Ok = Ok
 package.user.lib.Error = Error
-package.user.lib.isa = isa
-package.user.lib.callable = callable
-package.user.lib.sequence = sequence
-package.user.lib.bless = bless
-package.user.lib.pack = pack
-package.user.lib.length = length
-package.user.lib.size = size
-package.user.lib.rtostring = rtostring
 package.user.lib.class = class
-package.user.lib.pp = pp
-package.user.lib.dump = dump
-package.user.lib.printf = printf
-package.user.lib.sprintf = sprintf
-package.user.lib.errorf = errorf
 package.user.lib.instanceof = utils.instanceof
 package.user.lib.issubclass = utils.issubclass
 package.user.lib.union = utils.union
 package.user.lib.maybe = utils.maybe
 package.user.lib.type = utils
-
-return {
-	as = as,
-	is = is,
-	TypeError = TypeError,
-	CallError = CallError,
-	UnwrapError = UnwrapError,
-	Result = Result,
-	Err = Err,
-	Ok = Ok,
-	Error = Error,
-	isa = isa,
-	callable = callable,
-	sequence = sequence,
-	bless = bless,
-	pack = pack,
-	length = length,
-	size = size,
-	rtostring = rtostring,
-	class = class,
-	pp = pp,
-	dump = dump,
-	printf = printf,
-	sprintf = sprintf,
-	errorf = errorf,
-	instanceof = utils.instanceof,
-	issubclass = utils.issubclass,
-	union = utils.union,
-	maybe = utils.maybe,
-	utils = utils,
-}

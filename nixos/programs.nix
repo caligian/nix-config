@@ -2,15 +2,20 @@
   user,
   lib,
   pkgs,
+  config,
   ...
 }:
 let
-  admin = import "/etc/nixos/admin.nix" { inherit user lib pkgs; };
-  adminEnv = admin.adminEnv;
-  swayDir = adminEnv.ADMIN_DIR_SWAY;
-  waybarDir = "${swayDir}/waybar";
-  waybarConfig = lib.importJSON "${waybarDir}/config.jsonc";
-  waybarStyle = "${waybarDir}/style.css";
+  admin = import "/etc/nixos/admin.nix" {
+    inherit
+      user
+      lib
+      pkgs
+      config
+      ;
+  };
+  path = admin.path;
+  swayDir = path.dir.sway;
 in
 {
   programs = {
@@ -19,7 +24,7 @@ in
       wrapperFeatures.gtk = true;
       extraOptions = [
         "--config"
-        "${adminEnv.ADMIN_DIR_SWAY}/config"
+        "${swayDir}/config"
       ];
     };
     dconf.profiles.user.databases = [

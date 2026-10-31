@@ -73,5 +73,8 @@
         HandleLidSwitchDocked = "ignore";
       };
     };
+    udev.extraRules = ''
+      ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*scrolllock*", RUN+="/bin/sh -c 'chmod 666 /sys/class/leds/%k/brightness'"
+    '';
   };
 }

@@ -194,6 +194,7 @@ exec pavucontrol
 exec swayosd
 exec wl-paste --type image --watch cliphist store
 exec wl-paste --type text --watch cliphist store
+exec waybar -s ~/.user/sway/waybar/style.css -c ~/.user/sway/waybar/config.jsonc
 
 # Rules
 for_window [app_id=".*"] border pixel 3
