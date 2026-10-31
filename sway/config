@@ -31,7 +31,7 @@ input type:keyboard {
     repeat_rate 50
 }
 
-# Start a terminal
+# Start a terminal bindsym $mod+Return exec $term
 bindsym $mod+Return exec $term
 bindsym $mod+Shift+Return exec neovide
 bindsym $mod+Control+Return exec $term -a yazi-file-browser -e yazi
@@ -194,15 +194,17 @@ exec pavucontrol
 exec swayosd
 exec wl-paste --type image --watch cliphist store
 exec wl-paste --type text --watch cliphist store
+exec waybar -s ~/.user/sway/waybar/style.css -c ~/.user/sway/waybar/config.jsonc
+
 
 # Rules
 for_window [app_id=".*"] border pixel 3
-for_window [app_id="filebrowser"] floating enable, resize set 1600 1000, move position center
-for_window [app_id="yazi-file-browser"] floating enable, resize set 1300 800, move position center
-for_window [app_id="cmus-music-player"] floating enable, resize set 1300 800, move position center
-for_window [class="pcmanfm-qt"] floating enable, resize set 1600 1000, move position center
-for_window [instance="pcmanfm-qt"] floating enable, resize set 1600 1000, move position center
-for_window [class="guake"] floating enable, resize set 1200 800, move position center
+for_window [app_id="filebrowser"] floating enable, resize set 1300 600, move position center
+for_window [app_id="yazi-file-browser"] floating enable, resize set 1100 600, move position center
+for_window [app_id="cmus-music-player"] floating enable, resize set 1100 600, move position center
+for_window [class="pcmanfm-qt"] floating enable, resize set 1300 600, move position center
+for_window [instance="pcmanfm-qt"] floating enable, resize set 1300 600, move position center
+for_window [class="guake"] floating enable, resize set 1000 600, move position center
 for_window [window_role="pop-up"] floating enable
 for_window [window_role="bubble"] floating enable
 for_window [window_role="dialog"] floating enable
