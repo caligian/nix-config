@@ -80,8 +80,8 @@ for key, value in pairs(package.user.config.buf_opts) do
 end
 
 if vim.g.neovide then
-  vim.o.guifont = "Hack Nerd Font Mono:h13"
-  vim.o.linespace = 0
+  vim.o.guifont = "Hack Nerd Font Mono:h12"
+  vim.o.linespace = 2
   vim.g.neovide_scale_factor = 1.0
   vim.g.neovide_padding_top = 0
   vim.g.neovide_padding_bottom = 0
@@ -89,12 +89,13 @@ if vim.g.neovide then
   vim.g.neovide_padding_left = 0
   vim.g.neovide_opacity = 0.98
   vim.g.neovide_normal_opacity = 0.98
-  vim.g.neovide_scroll_animation_length = 0.3
+  vim.g.neovide_scroll_animation_length = 0.2
   vim.g.neovide_theme = 'auto'
   vim.g.neovide_refresh_rate = 60
   vim.g.neovide_cursor_antialiasing = true
   vim.g.neovide_cursor_vfx_mode = "sonicboom"
   vim.g.neovide_cursor_vfx_opacity = 100.0
 end
+
 
 package.user.loaded_nvim_definitions = true

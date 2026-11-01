@@ -1,7 +1,6 @@
 require 'lib.definitions'
+require 'lua-utils.type'
 
-local T = require 'lua-utils.type'
-local class = T.class
 local uv = vim.uv
 
 ---@type {[string]: timer}

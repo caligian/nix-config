@@ -1,6 +1,6 @@
 /* Base Layout & Theme Variables */
 * {
-    border: 2px;
+    border: 1px;
     border-radius: 0;
     font-family: Liberation Sans, "Hack Nerd Font Propo", monospace;
     font-size: 15px;

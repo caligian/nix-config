@@ -20,6 +20,9 @@
       font-awesome
       inconsolata
       inconsolata-lgc
+      nerd-fonts.hack
+      nerd-fonts.liberation
+      nerd-fonts.ubuntu
     ];
   };
 }

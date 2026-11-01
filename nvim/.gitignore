@@ -1,2 +1,8 @@
 .*/*
 lua/nvim-lspconfig/*
+*.swp
+*/*.swp
+*/*/*.swp
+*/*/*/*.swp
+*/*/*/*/*.swp
+*/.*

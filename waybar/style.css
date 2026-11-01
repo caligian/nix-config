@@ -1,0 +1,113 @@
+/* Base Layout & Theme Variables */
+* {
+    border: 2px;
+    border-radius: 0;
+    font-family: Liberation Sans, "Hack Nerd Font Propo", monospace;
+    font-size: 18px;
+    min-height: 0;
+}
+
+window#waybar {
+    background-color: rgba(0, 0, 0, 0.85); /* Semi-transparent native look */
+    color: #c0caf5;
+    transition-property: background-color;
+    transition-duration: .5s;
+}
+
+/* Common block styles to mimic i3status-rs block gaps */
+#workspaces button,
+#window,
+#clock,
+#backlight,
+#pulseaudio,
+#battery,
+#network {
+    padding: 0 12px;
+    background: transparent;
+    border-bottom: 2px solid transparent;
+    margin: 3px 2px;
+    border-radius: 3px;
+}
+
+#network {
+    color: #cba6f7;
+}
+
+#window {
+    color: #7a7a7a
+}
+
+
+/* Sway Workspaces Styling */
+#workspaces button {
+    color: #7aa2f7;
+    background-color: transparent;
+}
+
+#workspaces button.focused {
+    color: #ffffff;
+    background-color: #414868;
+    border-bottom: 2px solid #7aa2f7;
+}
+
+#workspaces button.urgent {
+    color: #ffffff;
+    background-color: #f7768e;
+}
+
+#workspaces button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Focused Window Module */
+#window {
+    background-color: transparent;
+    color: #a9b1d6;
+}
+
+/* Critical & Warning states for system modules */
+#battery.warning {
+    color: #ff4d4d;
+}
+
+#battery.critical:not(.charging) {
+    background-color: #f7768e;
+    color: #f38ba8;
+    animation-name: blink;
+    animation-duration: 0.5s;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+}
+
+#pulseaudio.muted {
+    color: #565f89;
+}
+
+#network.disconnected {
+    color: #f7768e;
+}
+
+#clock {
+    color: #ffffff;
+}
+
+#backlight {
+    color: #ffd700; /* yellow */
+}
+
+#pulseaudio {
+    color: #4fc3f7; /* blue */
+}
+
+#pulseaudio.muted {
+    color: #888888;
+}
+
+/* Animation for crucial events */
+@keyframes blink {
+    to {
+        background-color: #ffffff;
+        color: #f7768e;
+    }
+}

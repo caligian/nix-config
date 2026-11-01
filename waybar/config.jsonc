@@ -1,0 +1,72 @@
+{
+    "layer": "top",
+    "position": "bottom",
+    "height": 40,
+
+    "modules-left": [
+        "sway/workspaces",
+        "sway/window"
+    ],
+    "modules-center": [
+        "clock"
+    ],
+    "modules-right": [
+        "backlight",
+        "pulseaudio",
+        "battery",
+        "network"
+    ],
+
+    "sway/workspaces": {
+        "disable-scroll": true,
+        "all-outputs": true,
+        "format": "{name}"
+    },
+
+    "sway/window": {
+        "format": " <b>{title}</b> ",
+        "max-length": 600,
+        "icon": true,
+        "icon-size": 17
+    },
+
+    "clock": {
+        "interval": 5,
+        "format": "<span font_family='Hack Nerd Font Propo'>󰃭</span> {0:%B %d}  <span font_family='Hack Nerd Font Propo'> 󰅐 </span>{0:%I:%M %p}",
+        "tooltip-format": "<tt>{calendar}</tt>",
+        "on-click": "gnome-calendar"
+    },
+
+    "backlight": {
+        "device": "amdgpu_bl1",
+        "format": "<span font_family='Hack Nerd Font Propo'>󰃟 </span>{percent}%",
+        "scroll-step": 5
+    },
+
+    "pulseaudio": {
+        "format": "<span font_family='Hack Nerd Font Propo'>{icon}</span> {volume}%",
+        "format-muted": "<span font_family='Hack Nerd Font Propo'>󰝟 </span> Muted",
+        "format-icons": {
+            "default": ["󰕿", "󰖀", "󰕾"]
+        },
+        "scroll-step": 5,
+        "on-click": "pavucontrol"
+    },
+
+    "battery": {
+        "interval": 10,
+        "format": "<span font_family='Hack Nerd Font Propo'>{icon}</span> {capacity}%",
+        "format-charging": "<span font_family='Hack Nerd Font Propo'>󰂄 </span> {capacity}%",
+        "format-icons": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹", "󰂃"]
+    },
+
+    "network": {
+        "interval": 5,
+        // "interface": "wlo1",
+        "format-wifi": "<span font_family='Hack Nerd Font Propo'>󰖩 </span> {essid} :: {signalStrength}% ",
+        "format-ethernet": "<span font_family='Hack Nerd Font Propo'>󰈀 </span> Wired ",
+        "format-disconnected": "<span font_family='Hack Nerd Font Propo'>󰖪 </span> Disconnected ",
+        "on-click": "nmgui",
+        "on-click-right": "nm-connection-editor"
+    }
+}

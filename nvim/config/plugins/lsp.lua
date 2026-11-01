@@ -191,34 +191,3 @@ enable('perlnavigator', {
     }
   }
 })
-
-if not vim.g.loaded_trouble then
-  require('trouble').setup {
-    win = {
-      position = 'bottom',
-      size = 0.3,
-    }
-  }
-  vim.g.loaded_trouble = true
-end
-
--- au('LspAttach', {
---   callback = function(args)
---     local client = assert(vim.lsp.get_client_by_id(args.data.client_id))
---     require("lsp-format").on_attach(client, args.buf)
---   end,
--- })
-
-kbd(
-  'n',
-  '<leader>ld',
-  '<cmd>Trouble diagnostics toggle focus=false filter.buf=0<CR>',
-  { desc = 'Show diagnostics' }
-)
-
-kbd(
-  'n',
-  '<leader>lD',
-  '<cmd>Trouble diagnostics toggle focus=false<CR>',
-  { desc = 'Show diagnostics' }
-)

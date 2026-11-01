@@ -6,10 +6,11 @@ local refself = lib.refself
 local guards = lib.guards
 local utils = {}
 
-local is, as, isa
+is = lib.is
+as = lib.as
+
 local Error, TypeError, CallError, UnwrapError
 local Result, Ok, Err
-local class
 
 ---@alias likeFunction function|callable
 ---@alias guard1 fun(x: any, opts?: is.opts): boolean, string?
@@ -46,8 +47,11 @@ local class
 ---@field __id string
 ---@field issubclass fun(self: class<`T`>, other: class, opts?: is.opts): boolean, string?
 
----@class Result<T> : Result.class : instance<`T`>
----@field value? Error|`T`
+---@class Result.class<T,E> : class
+---@field new fun(self: Result<`T`,`E`>, value?: `E`|`T`, metadata?: table): Result<`T`,`E`>
+
+---@class Result<T,E> : Result.class<`T`,`E`> : instance
+---@field value? `E`|`T`
 ---@field metadata? table
 ---@field err boolean
 ---@field ok boolean
@@ -55,8 +59,13 @@ local class
 ---@field new nil
 ---@field initialize nil
 ---@field issubclass nil
+---@field unwrap nil
+---@field thread nil
 
----@class Ok<T> : Ok.class : Result
+---@class Ok.class<T> : Result.class<`T`, nil>
+---@field new fun(self: Ok.class<`T`>, value?: `T`, metadata?: table): Ok<`T`>
+
+---@class Ok<T> : Ok.class<`T`> : instance
 ---@field value `T`
 ---@field err false
 ---@field ok true
@@ -65,7 +74,10 @@ local class
 ---@field initialize nil
 ---@field issubclass nil
 
----@class Err : Err.class : Result
+---@class Err.class<E> : Result.class<nil,`E`>
+---@field new fun(self: Error, msg: string, metadata?: table): Err<`E`>
+
+---@class Err<E> : Err.class<`E`> : instance
 ---@field value Error
 ---@field err true
 ---@field ok false
@@ -73,10 +85,6 @@ local class
 ---@field new nil
 ---@field initialize nil
 ---@field issubclass nil
-
----@type {[string]: fun(x: any, opts?: is.opts): boolean, string?}
-is = refself({ __index = guards })
-as = refself({})
 
 ---@generic T
 ---@overload fun(name: string, parent?: class, defaults?: table): class<`T`>
@@ -122,7 +130,7 @@ end
 ---@return fun(x: any, opts?: is.opts): boolean, string?
 function utils.defguard(key, f)
 	local function fn(x, opts)
-		x = as_value(x)
+		x = as.value(x)
 		opts = opts or {}
 		local opt = opts.optional or opts["?"] or opts.opt
 		local should_dump = opts.dump
@@ -177,7 +185,7 @@ function is.error(x, opts)
 		return true
 	end
 
-	x = as_value(x)
+	x = as.value(x)
 	local cls = x.__class
 
 	while cls do
@@ -222,10 +230,8 @@ is.bool = is.boolean
 is.num = is.number
 is.str = is.string
 is.fun = is["function"]
-is.sequence = sequence
 is.seq = sequence
-is["nil"] = is_nil
-is.na = is_nil
+is["nil"] = is.na
 
 is.pure_table = utils.defguard("pure_table", function(x)
 	local x_type = type(x)
@@ -348,8 +354,8 @@ end)
 ---@param opts? is.opts
 ---@return boolean, string?
 function utils.instanceof(child, parent, opts)
-	child = as_value(child)
-	parent = as_value(parent)
+	child = as.value(child)
+	parent = as.value(parent)
 
 	assert(is.instance(child, { prefix = "<child>", assert = true }))
 	assert(is.class(parent, { prefix = "<parent>", assert = true }))
@@ -387,8 +393,8 @@ end
 ---@param opts? is.opts
 ---@return boolean, string?
 function utils.issubclass(child, parent, opts)
-	child = as_value(child)
-	parent = as_value(parent)
+	child = as.value(child)
+	parent = as.value(parent)
 
 	assert(is.class(child, { prefix = "<child>", assert = true }))
 
@@ -423,7 +429,7 @@ end
 ---@param cls object
 ---@return class
 function class.get_class(cls)
-	cls = as_value(cls)
+	cls = as.value(cls)
 	assert(is.object(cls, { prefix = "<cls>", assert = true }))
 
 	if is.instance(cls) then
@@ -437,7 +443,7 @@ end
 ---@param name string
 ---@return any
 function class.get(cls, name)
-	cls = as_value(cls)
+	cls = as.value(cls)
 	assert(is.class(cls, { prefix = "<cls>", assert = true }))
 	local value = rawget(cls, name)
 
@@ -458,7 +464,7 @@ end
 ---@param name string
 ---@return likeFunction?
 function class.get_method(cls, name)
-	cls = as_value(cls)
+	cls = as.value(cls)
 	local method = class.get(cls, name)
 	if method == nil then
 		return
@@ -485,7 +491,7 @@ end
 ---@param names_only? boolean
 ---@return (class[]|string)?
 function class.get_parents(cls, names_only)
-	cls = as_value(cls)
+	cls = as.value(cls)
 	local parents = {}
 	local parent = rawget(cls, "__class")
 
@@ -509,7 +515,7 @@ end
 ---@param cls object
 ---@return table
 function class.get_attributes(cls)
-	cls = as_value(cls)
+	cls = as.value(cls)
 	assert(is.object(cls, { prefix = "<cls>", assert = true }))
 	local res = {}
 
@@ -525,7 +531,7 @@ end
 ---@param cls object
 ---@return string
 function class.get_name(cls)
-	cls = as_value(cls)
+	cls = as.value(cls)
 	assert(is.object(cls, { prefix = "<cls>", assert = true }))
 	return cls.__name
 end
@@ -533,7 +539,7 @@ end
 ---@param cls object
 ---@return table
 function class.get_meta_attributes(cls)
-	cls = as_value(cls)
+	cls = as.value(cls)
 	assert(is.object(cls, { prefix = "<cls>", assert = true }))
 	local res = {}
 
@@ -549,16 +555,19 @@ end
 ---@param name string
 ---@param parent? class
 ---@param make_guard? boolean
+---@param static? table<string,boolean>
 ---@return class
-function class.create_class(name, parent, make_guard)
-	name = as_value(name)
-	parent = as_value(parent)
-	make_guard = as_value(make_guard)
+function class.create_class(name, parent, make_guard, static)
+	name = as.value(name)
+	parent = as.value(parent)
+	make_guard = as.value(make_guard)
 
 	is.string(name, { prefix = "name", assert = true })
 	is.class(parent, { prefix = "<parent>", assert = true, opt = true })
 
 	local new = {}
+	new.__id = tostring(new):gsub("^table: ", "")
+
 	if parent then
 		for key, value in pairs(parent) do
 			new[key] = value
@@ -566,7 +575,6 @@ function class.create_class(name, parent, make_guard)
 	end
 
 	new.issubclass = utils.issubclass
-	new.__id = tostring(new)
 	new.__name = name
 	new.__class = parent
 	new.__index = parent
@@ -591,7 +599,11 @@ function class.create_class(name, parent, make_guard)
 
 	if make_guard then
 		utils.defguard(name, function(x, opts)
-			return utils.instanceof(x, new, opts)
+      if not is.instance(x) then
+        return 'Expected instance'
+      else
+        return utils.instanceof(x, new, opts)
+      end
 		end)
 	end
 
@@ -601,7 +613,7 @@ function class.create_class(name, parent, make_guard)
 			error(string.format("%s: .initialize() is undefined", tostring(self)))
 		end
 
-		local obj = class.create_instance(self)
+		local obj = class.create_instance(self, static)
 		init(obj, ...)
 
 		local not_ok_msg = self.__validate and self.__validate(obj)
@@ -616,17 +628,20 @@ function class.create_class(name, parent, make_guard)
 end
 
 ---@param cls class
+---@param ignore? table<string,boolean>
 ---@return instance
-function class.create_instance(cls)
+function class.create_instance(cls, ignore)
 	local new = setmetatable({}, cls)
-	local inst_id = tostring(new)
+	local inst_id = tostring(new):gsub("^table: ", "")
+	new.__id = inst_id
 
 	for key, value in pairs(cls) do
-		new[key] = value
+    if key ~= '__id' and not (ignore and ignore[key]) then
+      new[key] = value
+    end
 	end
 
 	---@cast new instance
-	new.__id = inst_id
 	new.__type = "instance"
 	new.__class = cls
 	new.new = nil
@@ -636,15 +651,32 @@ function class.create_instance(cls)
 	return new
 end
 
+---@class class.opts
+---@field include? table<string,any>
+---@field static? string[]
+
 ---@param name string
 ---@param parent? class
 ---@param defaults? table
 ---@return class
-function class:__call(name, parent, defaults)
-	local new = class.create_class(name, parent, true)
-	for key, value in pairs(defaults or {}) do
-		new[key] = value
-	end
+function class:__call(name, parent, opts)
+  opts = opts or {}
+  local ignore = { issubclass = true, new = true, }
+
+  if opts.static then
+    for i=1, #opts.static do
+      ignore[opts.static[i]] = opts.static[i]
+    end
+  end
+
+	local new = class.create_class(name, parent, true, ignore)
+
+  if opts.defaults then
+    for key, value in pairs(opts.defaults) do
+      new[key] = value
+    end
+  end
+	
 	return new
 end
 
@@ -660,8 +692,8 @@ Error = class("Error")
 
 function Error:initialize(name, msg, metadata, ...)
 	self.name = name
-	msg = as_value(msg)
-	metadata = as_value(metadata)
+	msg = as.value(msg)
+	metadata = as.value(metadata)
 	self.msg = msg
 	self.metadata = metadata
 	self.args = { ... }
@@ -724,13 +756,11 @@ CallError = class("CallError", Error)
 UnwrapError = class("UnwrapError", Error)
 
 ---@generic T
----@class Result.class : class
----@field new fun(self: Result, value?: Error | `T`, metadata?: table): Result<`T`>
 Result = class("Result")
 
 function Result:initialize(value, metadata)
-	value = as_value(value)
-	metadata = as_value(metadata)
+	value = as.value(value)
+	metadata = as.value(metadata)
 	self.err = is.error(value)
 	self.type = self.err and "Err" or "Ok"
 	self.ok = self.type ~= "Err"
@@ -752,17 +782,12 @@ function Result:__tostring()
 	return string.format("Result.%s { value = %s, metadata = %s }", self.type, dump(self.value), dump(self.metadata))
 end
 
----@generic T
----@class Ok.class : Result.class
----@field new fun(self: Ok.class, value?: `T`, metadata?: table): Ok<`T`>
 Ok = class("Ok", Result)
 
 function Ok:initialize(value, metadata)
 	return Result.initialize(self, value, metadata)
 end
 
----@class Err.class : Result.class
----@field new fun(self: Error, msg: string, metadata?: table): Err
 Err = class("Err", Result)
 
 function Err:initialize(msg, metadata)
@@ -781,6 +806,17 @@ function utils.rpcall(fn, ...)
 	else
 		return Result:new(msg, mt)
 	end
+end
+
+---@generic T
+---@param fn fun(...): `T`
+---@return ResultCallable<`T`>
+function utils.rwrap(fn)
+  if not is.ResultCallable(fn) then
+    return ResultCallable:new(fn)
+  else
+    return fn
+  end
 end
 
 ---@param x any
@@ -833,8 +869,8 @@ end
 ---@param opts? is.opts
 ---@return table?
 function utils.match(x, y, opts)
-	x = as_value(x)
-	y = as_value(y)
+	x = as.value(x)
+	y = as.value(y)
 
 	is.table(x, { assert = true, prefix = "<x>" })
 	is.table(y, { assert = true, prefix = "<y>" })
@@ -869,7 +905,7 @@ function utils.match(x, y, opts)
 		for b_key, b_value in pairs(b) do
 			::next::
 
-			b_value = as_value(b_value)
+			b_value = as.value(b_value)
 			local b_key_type = type(b_key)
 			local b_key_is_str = b_key_type == "string"
 
@@ -880,7 +916,7 @@ function utils.match(x, y, opts)
 			local is_opt = b_key_is_str and string.match(b_key, "^opt_")
 			b_key = is_opt and (b_key:gsub("opt_", "")) or b_key
 			b_key = (b_key_is_str and b_key:match("^%d+$") and tonumber(b_key)) or b_key
-			local a_value = as_value(a[b_key])
+			local a_value = as.value(a[b_key])
 			local current_prefix = prefix_msg(prefix, b_key)
 
 			if a_value == nil and is_opt then
@@ -973,16 +1009,6 @@ Value conversion stuff
 function as.list(x, force)
 	if force or not is.list(x) then
 		return { x }
-	else
-		return x
-	end
-end
-
----@param x any
----@return any
-function as.value(x)
-	if is_nil(x) then
-		return nil
 	else
 		return x
 	end
@@ -1135,21 +1161,109 @@ function utils.maybe(display, ...)
 end
 
 ---[[Basically is.*(*, {assert = true})]]
----@type {[string]: (fun(x: any, opts?: is.opts): boolean, string?)}
-isa = setmetatable({}, {
+---@type {[string]: fun(x: any, opts?: is.opts)}
+setmetatable(lib.isa, {
 	__index = function(_, name)
 		return function(x, opts)
 			opts = copy.copy(opts or {})
 			opts.assert = true
 			opts.dump = true
-			return is[name](x, opts)
+			is[name](x, opts)
 		end
 	end,
 })
 
+---@class SafeCallable.class<T> : class
+---@field new fun(self, fn: (fun(...): `T`), prefix?: string): SafeCallable<`T`>
+SafeCallable = class("SafeCallable")
+
+---@class SafeCallable<T> : SafeCallable.class<`T`> : instance
+---@field call fun(...): `T`
+---@field safe fun(...): boolean, `T`|string
+---@field __call fun(...): boolean, `T`|string
+
+function SafeCallable:initialize(fn, prefix)
+	self.call = fn
+	self.safe = function(...)
+		local ok, msg = pcall(self.call, ...)
+		if ok then
+			return true, msg
+		elseif msg and prefix then
+			msg = type(msg) == "string" and (prefix .. ": " .. msg)
+			return false, msg
+		elseif msg then
+			return false, msg
+		elseif prefix then
+			return false, string.format("%s: %s() threw an error", prefix, self.call)
+		else
+			return false, msg
+		end
+	end
+end
+
+function SafeCallable:__call(...)
+	return self.safe(...)
+end
+
+---@type fun(x: any, opts?: is.opts): boolean, string?
+is.SafeCallable = is.SafeCallable
+
+---@class ResultCallable.class<T,E> : class
+---@field new fun(self, fn: (fun(...): `T`|`E`), prefix?: string): ResultCallable<`T`,`E`>
+ResultCallable = class("ResultCallable")
+
+---@class ResultCallable<T,E> : ResultCallable.class<`T`,`E`> : instance
+---@field call fun(...): `T`|`E`
+---@field safe fun(...): Ok<`T`> | Err<`E`>
+---@field __call fun(...): Ok<`T`> | Err<`E`> 
+
+function ResultCallable:initialize(fn, prefix)
+	self.call = fn
+	self.safe = function(...)
+		local res = Result:new(pcall(self.call, ...))
+		if res.ok then
+			return res
+		elseif res.metadata and is.table(res.metadata) then
+			res.metadata.prefix = prefix
+		elseif res.metadata and is.string(res.metadata) and prefix then
+			res.metadata = prefix .. ": " .. res.metadata
+		end
+		return res
+	end
+end
+
+function ResultCallable:__call(...)
+  return self.safe(...)
+end
+
+---@type fun(x: any, opts?: is.opts): boolean, string?
+is.ResultCallable = is.ResultCallable
+
+---@generic T
+---@param fn fun(...): T
+---@return SafeCallable<`T`>
+function utils.safe(fn)
+  if is.SafeCallable(fn) then
+    return fn
+  else
+    return SafeCallable:new(fn)
+  end
+end
+
+---@generic T
+---@param fn fun(...): T
+---@return ResultCallable<`T`>
+function utils.rsafe(fn)
+  if is.ResultCallable(fn) then
+    return fn
+  else
+    return ResultCallable:new(fn)
+  end
+end
+
 utils.as = as
 utils.is = is
-utils.isa = isa
+utils.isa = lib.isa
 utils.TypeError = TypeError
 utils.CallError = CallError
 utils.UnwrapError = UnwrapError
@@ -1170,9 +1284,9 @@ utils.dump = dump
 utils.printf = printf
 utils.sprintf = sprintf
 utils.errorf = errorf
+utils.SafeCallable = SafeCallable
+utils.ResultCallable = ResultCallable
 
-package.user.lib.as = as
-package.user.lib.is = is
 package.user.lib.TypeError = TypeError
 package.user.lib.CallError = CallError
 package.user.lib.UnwrapError = UnwrapError
@@ -1180,53 +1294,17 @@ package.user.lib.Result = Result
 package.user.lib.Err = Err
 package.user.lib.Ok = Ok
 package.user.lib.Error = Error
-package.user.lib.isa = isa
-package.user.lib.callable = callable
-package.user.lib.sequence = sequence
-package.user.lib.bless = bless
-package.user.lib.pack = pack
-package.user.lib.length = length
-package.user.lib.size = size
-package.user.lib.rtostring = rtostring
 package.user.lib.class = class
-package.user.lib.pp = pp
-package.user.lib.dump = dump
-package.user.lib.printf = printf
-package.user.lib.sprintf = sprintf
-package.user.lib.errorf = errorf
 package.user.lib.instanceof = utils.instanceof
 package.user.lib.issubclass = utils.issubclass
 package.user.lib.union = utils.union
 package.user.lib.maybe = utils.maybe
 package.user.lib.type = utils
-
-return {
-	as = as,
-	is = is,
-	TypeError = TypeError,
-	CallError = CallError,
-	UnwrapError = UnwrapError,
-	Result = Result,
-	Err = Err,
-	Ok = Ok,
-	Error = Error,
-	isa = isa,
-	callable = callable,
-	sequence = sequence,
-	bless = bless,
-	pack = pack,
-	length = length,
-	size = size,
-	rtostring = rtostring,
-	class = class,
-	pp = pp,
-	dump = dump,
-	printf = printf,
-	sprintf = sprintf,
-	errorf = errorf,
-	instanceof = utils.instanceof,
-	issubclass = utils.issubclass,
-	union = utils.union,
-	maybe = utils.maybe,
-	utils = utils,
-}
+package.user.lib.defguard = utils.defguard
+package.user.lib.rwrap = Result.wrap
+package.user.lib.rthread = Result.rthread
+package.user.lib.rpcall = Result.rthread
+package.user.lib.ResultCallable = ResultCallable
+package.user.lib.SafeCallable = SafeCallable
+package.user.lib.safe = utils.safe
+package.user.lib.rsafe = utils.rsafe

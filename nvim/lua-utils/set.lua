@@ -162,7 +162,7 @@ function set.map(x, f, safe)
   for value, _ in pairs(x) do
     if safe then
       local ok
-      value = as_value(value)
+      value = as.value(value)
       ok, value = pcall(f, value)
       if ok then res[value] = true end
     else
@@ -184,7 +184,7 @@ function set.filter(x, f, safe)
   local res = set.new {}
   for value, _ in pairs(x) do
     if safe then
-      value = as_value(value)
+      value = as.value(value)
       local ok, check = pcall(f, value)
       if ok and check then res[value] = true end
     elseif f(value) then
@@ -233,8 +233,8 @@ end
 function set.sort(x, fn)
   if fn then
     table.sort(x, function(a, b)
-      a = as_value(a)
-      b = as_value(b)
+      a = as.value(a)
+      b = as.value(b)
       return fn(a, b)
     end)
   else

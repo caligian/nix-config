@@ -1,18 +1,18 @@
 {
-  user,
-  lib,
+  path,
   pkgs,
   ...
 }:
 let
-  admin = import "/etc/nixos/admin.nix" { inherit user lib pkgs; };
-  patchedLuasystem = pkgs.luajitPackages.luasystem.overrideAttrs (old: {
+  luajitPackages = pkgs.luajitPackages;
+  buildLuarock = luajitPackages.buildLuarocksPackage;
+  patchedLuasystem = luajitPackages.luasystem.overrideAttrs (old: {
     preConfigure = (old.preConfigure or "") + ''
       export RT_DIR=${pkgs.glibc.out}
     '';
   });
   myRocks = {
-    lpath = pkgs.luajitPackages.buildLuarocksPackage rec {
+    lpath = buildLuarock rec {
       pname = "lpath";
       version = "0.4.0-1";
       src = pkgs.fetchFromGitHub {
@@ -43,7 +43,6 @@ let
       '';
     };
   };
-
   luaPkgs =
     (with pkgs.luajitPackages; [
       busted
@@ -65,100 +64,80 @@ let
       myRocks.inspect
       myRocks.lpath
     ];
+  nvimPlugins = (
+    with pkgs.vimPlugins;
+    [
+      conform-nvim
+      lazy-nvim
+      vim-fugitive
+      blink-cmp
+      blink-ripgrep-nvim
+      luasnip
+      LuaSnip-snippets-nvim
+      nvim-surround
+      friendly-snippets
+      comment-nvim
+      blink-pairs
+      blink-indent
+      blink-cmp-spell
+      outline-nvim
+      lualine-nvim
+      blink-cmp-latex
+      blink-cmp-dictionary
+      gitsigns-nvim
+      gitignore-nvim
+      lazygit-nvim
+      neo-tree-nvim
+      nui-nvim
+      themery-nvim
 
-#  trouble-nvim = pkgs.vimUtils.buildVimPlugin {
-#    pname = "trouble.nvim";
-#    version = "6f380b8";
-#    postInstall = "echo 'return {}' > $out/lua/trouble/docs.lua";
-#    src = pkgs.fetchFromGitHub {
-#      owner = "folke";
-#      repo = "trouble.nvim";
-#      rev = "6f380b8826fb819c752c8fd7daaee9ef96d4c689";
-#      sha256 = "sha256-Y+BOA4tjefvFHs3A2LtfEVy4Ai1Op64UQROKQJTsYYM=";
-#    };
-#    dependencies = (
-#      with pkgs.vimPlugins;
-#      [
-#        lazy-nvim
-#        snacks-nvim
-#      ]
-#    );
-#  };
+      telescope-nvim
+      telescope-project-nvim
+      telescope-frecency-nvim
+      telescope-fzf-native-nvim
+      telescope-file-browser-nvim
 
-  nvimDir = admin.adminEnv.ADMIN_DIR_NVIM;
+      nvim-treesitter
+      nvim-treesitter-parsers.lua
+      nvim-treesitter-parsers.luadoc
+      nvim-treesitter-parsers.python
+      nvim-treesitter-parsers.perl
+      nvim-treesitter-parsers.bash
+      nvim-treesitter-parsers.r
+      nvim-treesitter-parsers.nix
+      nvim-treesitter-parsers.sql
+      nvim-treesitter-endwise
+      nvim-treesitter-textobjects
+
+      vim-suda
+      leap-nvim
+      vimtex
+      which-key-nvim
+      nvim-autopairs
+      nvim-lspconfig
+
+      neomodern-nvim
+      nightfox-nvim
+      tokyonight-nvim
+      catppuccin-nvim
+      nvim-lsp-file-operations
+      nvim-web-devicons
+      tagbar
+      undotree
+      base16-vim
+      lsp-format-nvim
+    ]
+  );
+  nvimDir = path.dir.nvim;
   initVimFile = "${nvimDir}/configuration.vim";
   luaPath = "${nvimDir}/?.lua;${nvimDir}/?/?.lua;${nvimDir}/?/init.lua";
-
   mkNeovim = spec: pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped spec;
-
+  join = builtins.concatStringsSep;
+  packagePaths = join ";" (map (p: "${p}/share/lua/5.1/?.lua;${p}/share/lua/5.1/?/init.lua") luaPkgs);
+  packageCPaths = join ";" (map (p: "${p}/lib/lua/5.1/?.so") luaPkgs);
   myNeovim = mkNeovim {
     lua = pkgs.luajit;
-    plugins =
-      (with pkgs.vimPlugins; [
-        conform-nvim
-        lazy-nvim
-        vim-fugitive
-        blink-cmp
-        blink-ripgrep-nvim
-        luasnip
-        LuaSnip-snippets-nvim
-        nvim-surround
-        friendly-snippets
-        comment-nvim
-        blink-pairs
-        blink-indent
-        blink-cmp-spell
-        outline-nvim
-        lualine-nvim
-        blink-cmp-latex
-        blink-cmp-dictionary
-        gitsigns-nvim
-        gitignore-nvim
-        lazygit-nvim
-        neo-tree-nvim
-        nui-nvim
-        themery-nvim
-        snacks-nvim
-        telescope-nvim
-        telescope-project-nvim
-        telescope-frecency-nvim
-        telescope-fzf-native-nvim
-        telescope-file-browser-nvim
-
-        trouble-nvim
-
-        nvim-treesitter
-        nvim-treesitter-parsers.lua
-        nvim-treesitter-parsers.luadoc
-        nvim-treesitter-parsers.python
-        nvim-treesitter-parsers.perl
-        nvim-treesitter-parsers.bash
-        nvim-treesitter-parsers.r
-        nvim-treesitter-parsers.nix
-        nvim-treesitter-parsers.sql
-
-        nvim-treesitter-context
-        nvim-treesitter-endwise
-        nvim-treesitter-textobjects
-
-        vim-suda
-        leap-nvim
-        vimtex
-        which-key-nvim
-        nvim-autopairs
-        nvim-lspconfig
-
-        neomodern-nvim
-        nightfox-nvim
-        tokyonight-nvim
-        catppuccin-nvim
-        nvim-lsp-file-operations
-        nvim-web-devicons
-        tagbar
-        undotree
-        base16-vim
-        lsp-format-nvim
-      ]);
+    plugins = nvimPlugins;
     extraLuaPackages = ps: [ ];
     extraPackages =
       (with pkgs; [
@@ -174,20 +153,10 @@ let
         package.path = package.path .. ';' .. "${luaPath}"
       end
 
-      package.path = "${
-        builtins.concatStringsSep ";" (
-          map (p: "${p}/share/lua/5.1/?.lua;${p}/share/lua/5.1/?/init.lua") luaPkgs
-        )
-      };" .. package.path
-
-      package.cpath = "${
-        builtins.concatStringsSep ";" (map (p: "${p}/lib/lua/5.1/?.so") luaPkgs)
-      };" .. package.cpath
+      package.path = "${packagePaths};" .. package.path
+      package.cpath = "${packageCPaths};" .. package.cpath
 
       vim.g.tagbar_ctags_bin = "${pkgs.ctags}/bin/ctags"
-      vim.g.user_home = "${admin.adminEnv.ADMIN_HOME}"
-      vim.g.user_dir = "${admin.adminEnv.ADMIN_DIR}"
-      vim.g.user_configuration_dir = "${admin.adminEnv.ADMIN_DIR_NVIM}"
 
       require('conform').setup {
         formatters_by_ft = {
@@ -199,8 +168,8 @@ let
         format_on_save = false,
       }
 
-      local nvim_dir  = vim.g.user_configuration_dir
-      local user_root = vim.g.user_dir
+      local nvim_dir  = "${path.dir.nvim}"
+      local user_root = "${path.dir.root}"
 
       if vim.fn.isdirectory(nvim_dir) == 0 then
         vim.notify("Bootstrapping " .. nvim_dir .. " ...", vim.log.levels.INFO)
