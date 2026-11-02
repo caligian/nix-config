@@ -1,4 +1,4 @@
-require("lib.neotree-filesystem")
+-- require("lib.neotree-filesystem")
 require("lib.keymap")
 require("lib.project")
 require("lib.buffer")
@@ -165,3 +165,7 @@ map("n", "<leader>dd", diagnostics.toggle("d"), { desc = "Show diagnostics for b
 map("n", "<leader>dp", diagnostics.toggle("p"), { desc = "Show diagnostics for buffer project" })
 map("n", "<leader>dk", diagnostics.disable, { desc = "Disable diagnostics for buffer" })
 map("n", "<leader>de", diagnostics.enable, { desc = "Enable diagnostics for buffer" })
+
+--- Directory discovery
+map("n", "<leader>.", buffer.fdp, {desc = "Find files in buffer project"})
+map("n", "<leader>>", buffer.fd, {desc = "Find files in buffer directory"})

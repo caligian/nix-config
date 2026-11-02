@@ -13,7 +13,7 @@ vim.g.clipboard = {
 
 vim.g.loaded_clipboard_provider = nil
 vim.cmd("runtime autoload/provider/clipboard.vim")
-vim.opt.clipboard = "unnamedplus"
+vim.opt.clipboard = "unnamed,unnamedplus"
 
 require('lib')
 package.user.lib.setup.setup()

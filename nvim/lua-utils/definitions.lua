@@ -580,12 +580,7 @@ end
 function package.user.lib.dump(x)
 	local tp = type(x)
 	if tp == "table" then
-		local mt = getmetatable(x)
-		if mt and mt.__tostring then
-			return mt.__tostring(x)
-		else
-			return inspect(x, { indent = "  " })
-		end
+	  return inspect(x, { indent = "  " })
 	else
 		return tostring(x)
 	end
@@ -595,6 +590,7 @@ end
 ---@return string
 function package.user.lib.pp(x)
 	local s = package.user.lib.dump(x)
+  print(dump(s))
 	return s
 end
 
