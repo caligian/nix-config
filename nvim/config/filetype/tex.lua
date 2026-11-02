@@ -1,8 +1,10 @@
 local lib = package.user.lib
 local is = lib.is
 local fs = lib.fs
-local buffer = require 'lib.buffer'
-local nvim = require 'lib.nvim'
+require 'lib.buffer'
+require 'lib.nvim'
+local buffer = lib.buffer
+local nvim = lib.nvim
 local lpeg = vim.lpeg
 local P = lpeg.P
 local section_pattern = P("\\") * (P("sub") ^ 0) * P("section") * (P("*") ^ -1)

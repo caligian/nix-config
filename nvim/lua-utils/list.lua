@@ -1,6 +1,5 @@
-require("lua-utils.type")
-require("lua-utils.copy")
 require("lua-utils.tuple")
+require("lua-utils.type")
 
 local lib = package.user.lib
 local copy = lib.copy
@@ -12,6 +11,49 @@ local as_list = function(x, force)
 		return x
 	end
 end
+
+---@alias Filter (fun(i: int, value: any): boolean)|(fun(value: any): boolean)
+---@alias Map (fun(i: int, value: any): any)|(fun(value: any): any)
+---@alias Each (fun(i: int, value: any))|(fun(value: any))
+
+---@class list.get.opts
+---@field raise? boolean
+---@field throw? boolean
+
+---@class list.foreach.opts
+---@field each? Each
+---@field raise? boolean
+---@field throw? boolean
+---@field return_on_error? boolean
+---@field skip_errors? boolean
+---@field stop? Filter
+---@field collect? boolean
+---@field index? boolean
+---@field pass_index? boolean
+---@field map? Map
+---@field filter? Filter
+
+---@class IndexError.class : Error.class : class
+---@field new fun(self: IndexError.class, key: str, metadata: table): IndexError
+IndexError = class("IndexError", Error)
+package.user.lib.IndexError = IndexError
+
+---@class IndexError : IndexError.class : instance
+---@field index any
+---@field metadata table
+---@overload fun(index: any, metadata?: table)
+
+function IndexError:__call()
+	errorf("Nonexistent index: %s\nmetadata: %s", self.index, self.metadata)
+end
+
+function IndexError:initialize(index, metadata)
+	Error.initialize(self, "IndexError", index, metadata or {})
+	self.index = index
+end
+
+---@overload fun(x: any, opts?: is.opts): boolean, string?
+is.IndexError = is.IndexError
 
 ---@class list.opts
 ---@field default? (fun(): any)
@@ -117,6 +159,9 @@ end
 ---@return table
 function list.lextend(x, ...)
 	local lextend = function(a, b)
+		a = as.value(a)
+		b = as.value(b)
+
 		if type(b) == "table" then
 			list.unpush(a, unpack(b))
 		else
@@ -124,9 +169,10 @@ function list.lextend(x, ...)
 		end
 	end
 
-	for _, arg in ipairs({ ... }) do
-		lextend(x, arg)
-	end
+	list.each({ ... }, function(value)
+		value = as.value(value)
+		lextend(x, value)
+	end)
 
 	return x
 end
@@ -136,16 +182,16 @@ end
 ---@param ... any
 ---@return table
 function list.extend(x, ...)
-	for _, arg in ipairs({ ... }) do
-		if type(arg) == "table" then
-			for i = 1, #arg do
-				list.append(x, arg[i])
+	list.each({ ... }, function(value)
+		value = as.value(value)
+		if is.list(value) then
+			for i = 1, #value do
+				list.append(x, value[i])
 			end
 		else
-			list.append(x, arg)
+			list.append(x, value)
 		end
-	end
-
+	end)
 	return x
 end
 
@@ -205,59 +251,6 @@ function list.take(x, n)
 	for i = 1, n do
 		res[i] = x[i]
 	end
-	return res
-end
-
----Filter list elements
----@param x table
----@param f function
----@param pass_index? boolean
----@param map? (fun(any): any)
----@return table
-function list.filter(x, f, pass_index, map)
-	local out = {}
-
-	for i = 1, #x do
-		local v = x[i]
-
-		if pass_index then
-			ok = f(i, v)
-		else
-			ok = f(v)
-		end
-
-		if ok then
-			if map then
-				if pass_index then
-					list.push(out, map(i, v))
-				else
-					list.push(out, map(v))
-				end
-			else
-				list.push(out, v)
-			end
-		end
-	end
-
-	return out
-end
-
----Map list elements
----@param x table
----@param f (fun(e: any): boolean) | (fun(i: number, e: any): boolean)
----@param pass_index? boolean Pass index along with the element
----@return table
-function list.map(x, f, pass_index)
-	local res = {}
-
-	for i = 1, #x do
-		if pass_index then
-			res[i] = f(i, x[i])
-		else
-			res[i] = f(x[i])
-		end
-	end
-
 	return res
 end
 
@@ -564,18 +557,184 @@ end
 
 ---Apply function to each element
 ---@param x table
----@param f (fun(number, any) | fun(any))
----@param pass_index? boolean
-function list.each(x, f, pass_index)
+---@param opts? list.foreach.opts|fun(v: any)
+---@return table?
+function list.foreach(x, opts)
+	if is.Callable(opts) then
+		---@cast opts fun(v: any)
+		return list.each(x, { each = opts })
+	end
+
+	opts = opts or {}
+	local each = opts.each
+	local map = opts.map
+	local filter = opts.filter
+	local stop = opts.stop
+	local collect = opts.collect
+	local ret_on_err = opts.return_on_error
+	local throw = opts.raise or opts.throw
+	local skip_errors = opts.skip_errors
+	local pass_index = opts.index or opts.pass_index
+
+	if map then
+		collect = true
+	end
+
+	if each and collect then
+		error("Cannot pass both opts.each and opts.collect")
+	end
+
+	if not skip_errors then
+		throw = true
+	end
+
+	local res = collect and {}
+
 	for i = 1, #x do
 		local v = as.value(x[i])
-		if pass_index then
-			f(i, v)
-		else
-			f(v)
+		local skip = false
+
+		if is.error(v) then
+			---@cast v Error
+			if ret_on_err then
+				---@cast res table?
+				return res
+			elseif throw then
+				v:throw()
+			elseif skip_errors then
+				skip = true
+			end
+		end
+
+		if not skip then
+			if pass_index then
+				if stop and stop(i, v) then
+					---@cast res table?
+					return res
+				elseif filter then
+          if filter(i, v) then
+            if collect then
+              res[#res+1] = map and map(i, v) or v
+            elseif each then
+              each(i, v)
+            end
+          end
+        elseif collect then
+          v = map and map(i, v) or v
+					res[#res + 1] = v
+				elseif each then
+					each(i, v)
+				end
+			elseif stop and stop(v) then
+				---@cast res table?
+				return res
+			elseif filter then
+        if filter(v) then
+          if collect then
+            res[#res+1] = map and map(v) or v
+          elseif each then
+            each(v)
+          end
+        end
+			elseif collect then
+				res[#res + 1] = map and map(v) or v
+			elseif each then
+				each(v)
+			end
 		end
 	end
+
+	---@cast res table
+	return res
 end
+
+---@param x table
+---@param f Each
+---@param opts? list.foreach.opts
+---@return table?
+function list.each(x, f, opts)
+	opts = copy(opts or {})
+	opts.each = f
+	opts.collect = false
+	opts.map = nil
+
+	return list.foreach(x, opts)
+end
+
+---@param x table
+---@param f Map
+---@param opts? list.foreach.opts
+---@return table?
+function list.map(x, f, opts)
+	opts = copy(opts or {})
+	opts.each = nil
+	opts.collect = false
+	opts.map = f
+
+	return list.foreach(x, opts)
+end
+
+---@param x table
+---@param f Filter
+---@param opts? list.foreach.opts
+---@return table?
+function list.filter(x, f, opts)
+	opts = copy(opts or {})
+	opts.each = nil
+	opts.collect = true
+	opts.filter = f
+
+	return list.foreach(x, opts)
+end
+
+
+---@param x table
+---@param f Each
+---@param opts? list.foreach.opts
+---@return table?
+function list.ieach(x, f, opts)
+	opts = copy(opts or {})
+	opts.each = f
+	opts.collect = false
+	opts.map = nil
+	opts.index = true
+
+	return list.foreach(x, opts)
+end
+
+list.each_with_index = list.ieach
+
+---@param x table
+---@param f Map
+---@param opts? list.foreach.opts
+---@return table?
+function list.imap(x, f, opts)
+	opts = copy(opts or {})
+	opts.each = nil
+	opts.collect = false
+	opts.map = f
+	opts.index = true
+
+	return list.foreach(x, opts)
+end
+
+list.map_with_index = list.imap
+
+---@param x table
+---@param f Filter
+---@param opts? list.foreach.opts
+---@return table?
+function list.ifilter(x, f, opts)
+	opts = copy(opts or {})
+	opts.each = nil
+	opts.collect = true
+	opts.filter = f
+	opts.index = true
+
+	return list.foreach(x, opts)
+end
+
+list.filter_with_index = list.ifilter
 
 ---Zip two lists
 ---@param x table
@@ -1333,5 +1492,3 @@ list.append = list.push
 list.size = list.length
 
 package.user.lib.list = list
-
-return list

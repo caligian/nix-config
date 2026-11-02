@@ -7,25 +7,63 @@ local copy = vim.deepcopy
 local fs = lib.fs
 local list = lib.list
 
-local repl = require("lib.repl")
-local project = require("lib.project")
-local buffer = require("lib.buffer")
-local keymap = require("lib.keymap")
-local autocmd = require("lib.autocmd")
-local config_dir = vim.env.ADMIN_DIR .. "/nvim"
+require("lib.project")
+require("lib.buffer")
+require("lib.keymap")
+require("lib.autocmd")
+
+local project = lib.project
+local buffer = lib.buffer
+local keymap = lib.kbd
+local autocmd = lib.autocmd
+local config_dir = vim.env.ADMIN_DIR .. "/nvim/config/filetype"
 local filetypes = package.user.config.filetype
 
 ---@class filetype.state
 ---@field autocmd integer[]
 
----@class filetype
+---@class filetype.config
+---@field keymap table
+---@field autocmd table
+---@field buffer {opts: table, var: table}
+---@field keymap table
+---@field repl table
+---@field workspace table
+---@field lsp table
+
+---@class filetype.class
+---@field new fun(self: filetype.class, name: string): filetype
+
+---@class filetype : filetype.class : instance
 ---@field name string
----@field config table
 ---@field augroup integer
 ---@field augroup_name string
----@field state.autocmd integer[]
----@overload fun(name: string): filetype
-local filetype = class("filetype")
+---@field state filetype.state
+---@field config filetype.config
+---@field from_file nil
+---@field load_config nil
+---@field list_configs nil
+---@field require_config nil
+---@field load_all_configs nil
+---@field require_all_configs nil
+---@field setup nil
+
+---@type filetype.class
+local filetype = class("filetype", nil, {
+	static = {
+		"from_file",
+		"load_config",
+		"list_configs",
+		"require_config",
+		"load_all_configs",
+		"require_all_configs",
+		"setup",
+		"V",
+		"O",
+		"R",
+		"L",
+	},
+})
 
 function filetype:initialize(name)
 	self.name = name
@@ -125,7 +163,7 @@ function filetype:set_repl_config(cmd, opts)
 		end
 
 		local buf = buffer.current()
-		local proj = project.find_by_buffer(buf, opts.root or {})
+		local proj = project.buf_find(buf, opts.root or {})
 		local dir = fs.dirname(vim.api.nvim_buf_get_name(buf))
 		return cmd(buf, { project = proj, dir = dir, workspace = proj })
 	end
@@ -137,12 +175,9 @@ function filetype:set_repl_config(cmd, opts)
 	}
 end
 
-local utils = {}
-utils.filetype = filetype
-
 ---@param name string
 ---@return filetype
-function utils.new(name)
+function filetype.from_file(name)
 	if string.match(name, "%.lua$") then
 		name = fs.basename(name)
 		name = string.gsub(name, "%.lua$", "")
@@ -152,10 +187,10 @@ end
 
 ---@param name string
 ---@return filetype?
-function utils.load_config(name)
+function filetype.load_config(name)
 	local p = name
 	if not string.match(name, "%.lua") then
-		p = fs.join(vim.env.MY_NVIM_DIR, "config", "filetype", name .. ".lua")
+		p = fs.join(vim.env.ADMIN_NVIM_DIR, "config", "filetype", name .. ".lua")
 	end
 
 	if fs.is_file(p) then
@@ -164,14 +199,14 @@ function utils.load_config(name)
 			return
 		else
 			local setup = ok()
-			local ft = utils.new(name)
+			local ft = filetype.from_file(name)
 			setup(ft)
 			return ft
 		end
 	end
 end
 
-function utils.list_configs()
+function filetype.list_configs()
 	local files = fs.list_files(config_dir, true)
 	return list.filter(files, function(x)
 		return x:match("%.lua$")
@@ -180,26 +215,26 @@ end
 
 ---@param name string
 ---@return filetype?
-function utils.require_config(name)
+function filetype.require_config(name)
 	local ok, msg = pcall(require, "config.filetype." .. name)
 	if not ok then
 		return
 	else
 		local setup = msg
-		local ft = utils.new(name)
+		local ft = filetype.from_file(name)
 		setup(ft)
 		return ft
 	end
 end
 
 ---@return {[string]: filetype}
-function utils.load_all_configs()
+function filetype.load_all_configs()
 	local res = {}
-	local files = utils.list_configs()
+	local files = filetype.list_configs()
 
 	for _, file in ipairs(files) do
 		local ft = string.gsub(fs.basename(file), "%.lua$", "")
-		local out = utils.load_config(file)
+		local out = filetype.load_config(file)
 
 		if out then
 			res[ft] = out
@@ -208,15 +243,17 @@ function utils.load_all_configs()
 
 	return res
 end
+
+filetype.load_all_configs()
 
 ---@return {[string]: filetype}
-function utils.require_all_configs()
+function filetype.require_all_configs()
 	local res = {}
-	local files = utils.list_configs()
+	local files = filetype.list_configs()
 
 	for _, file in ipairs(files) do
 		local ft = string.gsub(fs.basename(file), "%.lua$", "")
-		local out = utils.require_config(ft)
+		local out = filetype.require_config(ft)
 
 		if out then
 			res[ft] = out
@@ -226,14 +263,10 @@ function utils.require_all_configs()
 	return res
 end
 
-filetype.R = filetype.set_repl_config
+filetype.setup = filetype.require_all_configs
 filetype.V = filetype.set_vars
 filetype.O = filetype.set_opts
+filetype.R = filetype.set_repl_config
 filetype.L = filetype.set_lsp_config
 
-utils.setup = utils.require_all_configs
-package.user.lib.ft = filetype
-package.user.lib.ft.utils = utils
-package.user.lib.filetype = package.user.lib.ft
-
-return utils
+package.user.lib.filetype = filetype

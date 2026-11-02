@@ -1,12 +1,14 @@
 require("lib.definitions")
+require("lib.autocmd")
+require("lib.command")
 
 local getbufnr = vim.fn.bufnr
 local lib = package.user.lib
 local str = lib.str
 local fs = lib.fs
 local is = lib.is
-local autocmd = require("lib.autocmd")
-local command = require("lib.command")
+local autocmd = lib.autocmd
+local command = lib.command
 local getbufname = vim.api.nvim_buf_get_name
 local state = package.user.state.workspace
 local project = {}
@@ -397,5 +399,3 @@ end
 
 project.bfind = project.buf_find
 package.user.lib.project = project
-
-return project

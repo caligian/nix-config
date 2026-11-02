@@ -19,6 +19,22 @@ local function insert_tab()
 	feedkeys(tab, "n", false)
 end
 
+local function touch(dir)
+	vim.ui.input({
+		prompt = "Enter new filename % ",
+		scope = "buffer",
+	}, function(str)
+		if #str == 0 then
+			return
+		else
+			local new_file = fs.join(dir, str)
+			local new_buf = vim.fn.bufadd(new_file)
+			buffer.set_opt(new_buf, "buflisted", true)
+			vim.cmd(":e " .. new_file)
+		end
+	end)
+end
+
 --- Emacs mappings
 map("n", "<C-y>", '"+p', { desc = "Paste from clipboard" })
 map("n", "<M-q>", "gqq", { desc = "Wrap lines" })
@@ -167,5 +183,52 @@ map("n", "<leader>dk", diagnostics.disable, { desc = "Disable diagnostics for bu
 map("n", "<leader>de", diagnostics.enable, { desc = "Enable diagnostics for buffer" })
 
 --- Directory discovery
-map("n", "<leader>.", buffer.fdp, {desc = "Find files in buffer project"})
-map("n", "<leader>>", buffer.fd, {desc = "Find files in buffer directory"})
+local T = require("telescope.builtin")
+local Tbuffers = T.buffers
+local Topts = package.user.config.plugins.telescope.defaults
+local make_opts = function(overrides)
+	return lib.dict.merge(overrides, Topts)
+end
+
+map("n", "<leader>>", buffer.fd, { desc = "Find files in buffer directory" })
+map("n", "<C-x>d/", buffer.live_grep_d, { desc = "Live grep in buffer directory" })
+map("n", "<C-x>dd", buffer.find_files_d, { desc = "Find files in buffer directory" })
+map("n", "<C-x>db", function()
+	local buf = buffer.current()
+	if buffer.is_file(buf) then
+    local dir = buffer.dirname(buf)
+    Tbuffers(make_opts {cwd = dir})
+	end
+end, { desc = "Select buffers in buffer directory" })
+map("n", "<C-x>da", function()
+	local buf = buffer.current()
+	if buffer.is_file(buf) then
+		touch(buffer.dirname(buf))
+	end
+end, { desc = "Create a file at buffer directory" })
+
+map("n", "<leader>.", buffer.fdp, { desc = "Find files in buffer project" })
+map("n", "<C-x>p/", buffer.live_grep_p, { desc = "Live grep in buffer project directory" })
+map("n", "<C-x>pp", buffer.fdp, { desc = "Find files in buffer project" })
+map("n", "<C-x>pb", function()
+	local buf = buffer.current()
+	if buffer.is_file(buf) then
+    local dir = buffer.find_project_dir(buf)
+    if dir then
+      Tbuffers(make_opts {cwd = dir})
+    end
+	end
+end, { desc = "Select buffers in buffer directory" })
+map("n", "<C-x>pa", function()
+	local buf = buffer.current()
+	if not buffer.is_file(buf) then
+		return
+	end
+
+	local proj = vim.fs.root(0, { { ".PROJECT" }, ".git" })
+	if not proj then
+		return
+	else
+		touch(proj)
+	end
+end, { desc = "Create a file at buffer directory" })

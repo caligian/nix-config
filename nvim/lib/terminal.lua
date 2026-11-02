@@ -4,9 +4,14 @@ local lib = package.user.lib
 local is = lib.is
 local class = lib.class
 local path = lib.path
-local project = require("lib.project")
-local nvim = require("lib.nvim")
-local buffer = require("lib.buffer")
+
+require("lib.project")
+require("lib.nvim")
+require("lib.buffer")
+
+local project = lib.project
+local nvim = lib.nvim
+local buffer = lib.buffer
 local bufcall = vim.api.nvim_buf_call
 local wipeout = function(buf)
 	vim.api.nvim_buf_delete(buf, { force = true })
@@ -263,7 +268,7 @@ function terminal:make_cmd()
 	if nix_cmd then
 		return nix_cmd
 	else
-		return 'bash'
+		return "bash"
 	end
 end
 
@@ -344,21 +349,18 @@ function terminal:open()
 		self:stop()
 	end, { desc = "Kill terminal and delete buffer", buffer = termbufnr })
 
-	if is.callable(cmd) then
+	if is.Callable(cmd) then
 		local buf = vim.fn.bufnr()
 		local filename = buffer.filename(buf)
 		local dir = path.dirname(filename)
-		local proj = project.find_by_buffer(buf)
+		local proj = project.buf_find(buf)
 		cmd = cmd({ buf = buf, project = proj, file = filename, dir = dir })
 	end
 
 	self.id = id
 	self.buffer = termbufnr
 	self.pid = pid
-
-  print(cmd, is.callable(cmd))
-
-  self:send(cmd)
+	self:send(cmd)
 
 	if cmd then
 		printf("Started terminal [%s] in workspace %s", cmd, self.display_cwd)
@@ -462,7 +464,7 @@ function terminal:cd_buffer_workspace(bufnr)
 	if not self:is_running() then
 		return false
 	else
-		local proj = project.find_by_buffer(bufnr)
+		local proj = project.buf_find(bufnr)
 		if not proj then
 			return false
 		end
@@ -490,5 +492,3 @@ end
 
 terminal.show = terminal.split
 package.user.lib.terminal = terminal
-
-return terminal

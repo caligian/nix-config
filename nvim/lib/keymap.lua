@@ -1,4 +1,6 @@
 require("lib.definitions")
+require 'lib.options'
+require 'lib.project'
 
 local lib = package.user.lib
 local state = package.user.state.keymap
@@ -8,8 +10,8 @@ local dict = lib.dict
 local union = lib.union
 local is = lib.is
 local as = lib.as
-local options = require("lib.options")
-local project = require("lib.project")
+local options = lib.options
+local project = lib.project
 local kbd = {
 	validator = {
 		union(is.string, is.list),
@@ -163,5 +165,4 @@ kbd.pdefine = kbd.project_define
 kbd.new = kbd.map
 
 package.user.lib.kbd = kbd
-
-return kbd
+package.user.lib.keymap = kbd

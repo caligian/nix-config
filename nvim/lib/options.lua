@@ -2,7 +2,7 @@ require 'lib.definitions'
 
 local copy = vim.deepcopy
 local dict = require 'lua-utils.dict'
-local utils = {}
+local options = {}
 local M = { __index = rawget }
 
 local function check_pattern(str, patterns)
@@ -13,7 +13,7 @@ local function check_pattern(str, patterns)
 
     if is.string(pattern) then
       ok = string.match(str, pattern) ~= nil
-    elseif is.fun(pattern) then
+    elseif is.Callable(pattern) then
       ok = pattern(str)
     end
 
@@ -29,7 +29,7 @@ end
 ---@return table
 function M:__sub(keys)
   local mt = getmetatable(self)
-  local res = utils.new({}, mt.include, mt.exclude)
+  local res = options.new({}, mt.include, mt.exclude)
 
   for key, value in pairs(self) do
     res[key] = value
@@ -60,7 +60,7 @@ function M:__div(test_spec)
   local mt = getmetatable(self)
   local function test(config, spec, res)
     for key, value in pairs(spec) do
-      if is.fun(value) then
+      if is.Callable(value) then
         if value(config[key]) then
           res[key] = config[key]
         end
@@ -73,7 +73,7 @@ function M:__div(test_spec)
     end
   end
 
-  local res = utils.new({}, mt.include, mt.exclude)
+  local res = options.new({}, mt.include, mt.exclude)
   test(self, test_spec, res)
   return res
 end
@@ -91,7 +91,7 @@ function M:__mul(other)
     end
   end
 
-  local res = utils.new({}, mt.include, mt.exclude)
+  local res = options.new({}, mt.include, mt.exclude)
   merge(self, other, res)
   return res
 end
@@ -108,10 +108,10 @@ function M:__mod(ks)
   end
 
   local mt = getmetatable(self)
-  return utils.new(res, mt.include, mt.exclude)
+  return options.new(res, mt.include, mt.exclude)
 end
 
-function utils.new(x, include, exclude)
+function options.new(x, include, exclude)
   local mt = copy(M)
   include = include and as.list(include)
   exclude = exclude and as.list(exclude)
@@ -138,10 +138,10 @@ end
 
 ---@param x table
 ---@return table
-function utils.as_table(x)
+function options.as_table(x)
   x = copy(x)
   setmetatable(x, nil)
   return x
 end
 
-return utils
+package.user.lib.options = options

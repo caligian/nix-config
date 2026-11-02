@@ -40,8 +40,8 @@ end
 ---@return boolean, any
 function utils.load_config(name)
 	local filename = myconfig .. "/" .. name .. ".lua"
-	if not fs.is_file(name) then
-		return false, string.format("Nonexistent filename %s", name)
+	if not fs.is_file(filename) then
+		return false, string.format("Nonexistent filename %s", filename)
 	end
 
 	local chunk, msg = loadfile(filename)
@@ -57,8 +57,8 @@ end
 ---@return boolean, any
 function utils.load_lib(name)
 	local filename = mylib .. "/" .. name .. ".lua"
-	if not fs.is_file(name) then
-		return false, string.format("Nonexistent filename %s", name)
+	if not fs.is_file(filename) then
+		return false, string.format("Nonexistent filename %s", filename)
 	end
 
 	local chunk, msg = loadfile(filename)
@@ -296,7 +296,7 @@ function utils.setup(opts)
 	lib.project.setup()
 	lib.shell.setup()
 	lib.repl.setup()
-	lib.ft.utils.setup()
+	lib.filetype.setup()
 	lib.neotree.setup()
 
 	require("themery").setup({

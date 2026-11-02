@@ -1,11 +1,18 @@
+require 'lib.terminal'
+require 'lib.buffer'
+require 'lib.project'
+require 'lib.keymap'
+require 'lib.timer'
+require 'lib.nvim'
+
 local lib = package.user.lib
 local is = lib.is
-local terminal = require 'lib.terminal'
-local buffer = require 'lib.buffer'
-local project = require 'lib.project'
-local kbd = require 'lib.keymap'
-local timer = require 'lib.timer'
-local nvim = require 'lib.nvim'
+local terminal = lib.terminal
+local buffer = lib.buffer
+local project = lib.project
+local kbd = lib.kbd
+local timer = lib.timer
+local nvim = lib.nvim
 local fs = lib.fs
 local shell = {}
 
@@ -45,7 +52,7 @@ function shell.getcwd(bufnr, root)
   end
 
   root = root or package.user.config.workspace
-  return project.find_by_buffer(bufnr, {
+  return project.buf_find(bufnr, {
     default = buffer.dirname,
     check_depth = root.check_depth,
   })
@@ -75,7 +82,7 @@ function shell.new(bufnr, opts)
   if opts.cwd then
     if is.string(opts.cwd) then
       cwd = opts.cwd
-    elseif is.callable(opts.cwd) then
+    elseif is.Callable(opts.cwd) then
       cwd = opts.cwd(bufnr)
     else
       cwd = os.getenv "HOME"
@@ -91,7 +98,7 @@ function shell.new(bufnr, opts)
   if opts.cmd then
     if is.string(opts.cmd) then
       cmd = opts.cmd
-    elseif is.callable(opts.cmd) then
+    elseif is.Callable(opts.cmd) then
       cmd = opts.cmd(bufnr, cwd)
     else
       cmd = ''
@@ -405,7 +412,7 @@ function shell.setup_keymaps()
   nmap('xv', 'split_right', { desc = 'Split below' })
   nmap('xd', function()
     local buf = buffer.current()
-    local dir = project.find_by_buffer(buf)
+    local dir = project.buf_find(buf)
 
     if fs.is_dir(dir) then
       global_shell:cd_buffer_dir(buffer.current())
@@ -427,6 +434,5 @@ end
 
 shell.getbufnr = normalize_buf
 shell.normalize_buf = normalize_buf
-package.user.lib.shell = shell
 
-return shell
+package.user.lib.shell = shell

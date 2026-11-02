@@ -11,7 +11,7 @@ local state = package.user.state.command
 ---@class command.utils
 local command = {
   __index = rawget,
-  validator = { is.string, is.callable, is.table }
+  validator = { is.string, is.Callable, is.table }
 }
 setmetatable(command, command)
 

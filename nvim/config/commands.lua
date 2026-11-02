@@ -1,8 +1,14 @@
 local lib = package.user.lib
 local fs = lib.fs
-local project = require 'lib.project'
-local command = require 'lib.command'
-local buffer = require 'lib.buffer'
+
+require 'lib.project'
+require 'lib.command'
+require 'lib.buffer'
+
+local project = lib.project
+local command = lib.command
+local buffer = lib.buffer
+
 local neotree = function(dir)
   vim.cmd(string.format(":Neotree bottom %s", dir))
 end
@@ -24,7 +30,7 @@ local buffer_opts = {
 command.new(
   'BufferProjectBrowse',
   function(buf)
-    local proj = project.find_by_buffer(buf)
+    local proj = project.buf_find(buf)
     if proj then
       neotree(proj)
     end

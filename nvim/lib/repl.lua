@@ -7,22 +7,29 @@ local dict = lib.dict
 local fs = lib.fs
 local copy = require 'lua-utils.copy'
 
-local terminal = require 'lib.terminal'
-local buffer = require 'lib.buffer'
-local project = require 'lib.project'
-local kbd = require 'lib.keymap'
-local timer = require 'lib.timer'
-local nvim = require 'lib.nvim'
-local shell = require 'lib.shell'
+require 'lib.terminal'
+require 'lib.buffer'
+require 'lib.project'
+require 'lib.keymap'
+require 'lib.timer'
+require 'lib.nvim'
+require 'lib.shell'
+
+local terminal = lib.terminal
+local kbd = lib.kbd
+local timer = lib.timer
+local nvim = lib.nvim
+local project = lib.project
+local buffer = lib.buffer
+local shell = lib.shell
 local filetypes = package.user.config.filetype
 local state = package.user.state.repl or {}
-
 local repl = {
   validator = {
     cmd = union('string', 'callable'),
     opt_opts = {
       opt_input = {
-        opt_map = is.callable,
+        opt_map = is.Callable,
         opt_file = {
           opt_use = is.boolean,
           opt_format = is.string,
@@ -71,7 +78,7 @@ function repl.new(bufnr)
     return
   end
 
-  local proj = project.find_by_buffer(bufnr, config.root)
+  local proj = project.buf_find(bufnr, config.root)
   proj = proj or buffer.get_dirname(bufnr)
 
   if not fs.is_dir(proj) then
@@ -91,11 +98,16 @@ end
 function repl.get(bufnr)
   bufnr = shell.getbufnr(bufnr)
   local root = repl.get_config(bufnr, 'root')
-  local proj = project.find_by_buffer(bufnr, root)
+  local proj = project.buf_find(bufnr, root)
   local ft = buffer.filetype(bufnr)
 
   if proj and ft then
-    return dict.get(state, { ft, proj })
+    local err = dict.get(state, { ft, proj }, nil, {})
+    if not is.error(err) then
+      return err
+    else
+      return
+    end
   elseif ft == '' or vim.fn.bufname(bufnr) == '' then
     printf("Cannot run REPL for an unnamed buffer")
   elseif not proj then
@@ -317,5 +329,6 @@ function repl.setup()
 end
 
 package.user.lib.repl = repl
+package.user.state.repl.lua = nil
 
 return repl

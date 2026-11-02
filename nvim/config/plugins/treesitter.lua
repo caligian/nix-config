@@ -1,15 +1,15 @@
 local kbd = vim.keymap.set
 
-require('nvim-treesitter-textsubjects').configure({
-  prev_selection = ',',
-  keymaps = {
-    ['.'] = 'textsubjects-smart',
-    [';'] = 'textsubjects-container-outer',
-    ['i;'] = 'textsubjects-container-inner',
-  },
-})
+-- require('nvim-treesitter-textsubjects').configure({
+--   prev_selection = ',',
+--   keymaps = {
+--     ['.'] = 'textsubjects-smart',
+--     [';'] = 'textsubjects-container-outer',
+--     ['i;'] = 'textsubjects-container-inner',
+--   },
+-- })
 
-require('nvim-treesitter.configs').setup {
+require('nvim-treesitter').setup {
   sync_install = false,
   auto_install = false,
   ignore_install = { 'tex', 'nix', 'bash', 'r', 'lua', 'python', 'erlang', 'elixir', 'perl' },

@@ -16,4 +16,5 @@ vim.cmd("runtime autoload/provider/clipboard.vim")
 vim.opt.clipboard = "unnamed,unnamedplus"
 
 require('lib')
-package.user.lib.setup.setup()
+local setup = package.user.lib.setup.setup
+setup()

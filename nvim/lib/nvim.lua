@@ -288,5 +288,3 @@ package.user.lib.load_file = nvim.loadfile
 package.user.lib.load_string = nvim.loadstring
 package.user.lib.load = { file = nvim.loadfile, string = nvim.loadstring }
 package.user.lib.eval = { string = nvim.eval, region = nvim.eval_region }
-
-return nvim

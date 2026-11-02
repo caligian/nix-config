@@ -12,6 +12,11 @@ local workspaces = package.user.state.workspace
 local telescope = require("telescope")
 local telescope_config = package.user.config.plugins.telescope.defaults
 local find_files = telescope.extensions.file_browser.file_browser
+local live_grep = require("telescope.builtin").live_grep
+
+local function make_telescope_opts(overrides)
+	return dict.merge(copy(overrides), telescope_config)
+end
 
 ---Get current buffer
 ---@return number
@@ -1005,6 +1010,36 @@ function buffer.is_file(bufnr)
 	return fs.is_file(buffer.get_name(bufnr))
 end
 
+---@param bufnr int?
+---@param wd? "d"|"p" (default: "d")
+---@return boolean
+function buffer.live_grep(bufnr, wd)
+	bufnr = bufnr or 0
+	if not buffer.is_file(bufnr) then
+		return false
+	end
+
+	wd = wd or "d"
+	wd = wd == "d" and buffer.dirname(bufnr) or buffer.find_project_dir(bufnr)
+	live_grep(make_telescope_opts({ cwd = wd }))
+
+	return true
+end
+
+---@param bufnr? int
+---@return boolean
+function buffer.live_grep_dir(bufnr)
+	return buffer.live_grep(bufnr, "d")
+end
+
+---@param bufnr? int
+---@return boolean
+function buffer.live_grep_project_dir(bufnr)
+	return buffer.live_grep(bufnr, "p")
+end
+
+buffer.live_grep_d = buffer.live_grep_dir
+buffer.live_grep_p = buffer.live_grep_project_dir
 buffer.rm = buffer.wipeout
 buffer.get_filename = buffer.get_name
 buffer.filename = buffer.get_name
@@ -1021,6 +1056,5 @@ buffer.filetype = buffer.get_filetype
 buffer.workspace = buffer.get_root_dir
 buffer.get_workspace = buffer.get_root_dir
 buffer.get_line_count = vim.api.nvim_buf_line_count
-package.user.lib.buffer = buffer
 
-return buffer
+package.user.lib.buffer = buffer

@@ -1,5 +1,6 @@
 { pkgs, ... }:
 (with pkgs; [
+  ulauncher
   firefox
   chromium
   vlc
@@ -12,4 +13,5 @@
   anydesk
   texstudio
   zoom-us
+  pavucontrol
 ])

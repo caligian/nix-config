@@ -153,6 +153,8 @@ function path.find_project_dir(p, default)
 	return root
 end
 
+path.findp = path.find_project_dir
+
 function path.gid(p)
 	local attrs = path.stat(p)
 	if attrs then
@@ -810,4 +812,49 @@ function package.user.lib.as.file(buf)
 	end
 end
 
+---@param buf int
+---@return string?
+function package.user.lib.as.dir(buf)
+	local f = vim.api.nvim_buf_get_name(buf)
+	if path.is_file(f) then
+		return path.dirname(f)
+	end
+end
+
 as = package.user.lib.as
+abspath = path.abspath
+dirname = path.dirname
+find_files = path.find
+list_files = path.ls
+slurp = path.slurp
+spit = path.spit
+chdir = path.chdir
+rmdir = path.rmdir
+touch = path.touch
+mkdir = path.mkdir
+
+package.user.lib.abspath = path.abspath
+package.user.lib.dirname = path.dirname
+package.user.lib.find_files = path.find
+package.user.lib.list_files = path.ls
+package.user.lib.slurp = path.slurp
+package.user.lib.spit = path.spit
+package.user.lib.chdir = path.chdir
+package.user.lib.rmdir = path.rmdir
+package.user.lib.touch = path.touch
+package.user.lib.mkdir = path.mkdir
+
+global({
+	abspath = abspath,
+	dirname = dirname,
+	find_files = find_files,
+	list_files = path.ls,
+	slurp = slurp,
+	spit = spit,
+	chdir = chdir,
+	rmdir = rmdir,
+	mkdir = mkdir,
+	touch = touch,
+})
+
+unfreeze_globals()
