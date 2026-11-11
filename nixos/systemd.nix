@@ -61,19 +61,25 @@ in
       # inherit waybar;
     };
     sleep.settings.Sleep = {
-      "AllowSuspend"="no";
-      "AllowHibernation"="no";
-      "AllowHybridSleep"="no";
-      "AllowSuspendThenHibernate"="no";
-      };
+      "AllowSuspend" = "no";
+      "AllowHibernation" = "no";
+      "AllowHybridSleep" = "no";
+      "AllowSuspendThenHibernate" = "no";
+    };
     targets = {
       sleep.enable = false;
       suspend.enable = false;
       hibernate.enable = false;
       hybrid-sleep.enable = false;
     };
+
     tmpfiles.rules = [
       "L+    /opt/rocm   -    -    -     -    ${pkgs.rocmPackages.clr}"
+      # "L+ /var/lib/gdm/seat0/config/monitors.xml - gdm gdm - ${pkgs.writeText "gdm-monitors.xml" ''
+      #   <monitors version="2">
+      #     
+      #   </monitors>
+      # ''}"
     ];
   };
 }

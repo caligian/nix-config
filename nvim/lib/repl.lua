@@ -5,7 +5,7 @@ local union = lib.union
 local is = lib.is
 local dict = lib.dict
 local fs = lib.fs
-local copy = require 'lua-utils.copy'
+local copy = lib.copy
 
 require 'lib.terminal'
 require 'lib.buffer'

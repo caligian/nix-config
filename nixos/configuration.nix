@@ -75,6 +75,11 @@ in
 
   # Nix settings
   nix = {
+    gc = {
+      automatic = true;
+      dates = "weekly";
+      options = "--delete-older-than 4d";
+    };
     settings = {
       experimental-features = [
         "nix-command"

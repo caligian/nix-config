@@ -1,4 +1,5 @@
 require 'lua-utils.definitions'
+local lib = package.user.lib
 
 ---Get string length
 string.length = string.len
@@ -173,16 +174,30 @@ function string.contains(s, pattern, init, plain)
   return string.find(s, pattern, init, true)
 end
 
-package.user.lib.titlecase = string.title
-package.user.lib.trim = string.trim
-package.user.lib.ltrim = string.ltrim
-package.user.lib.rtrim = string.rtrim
-package.user.lib.strip = string.trim
-package.user.lib.lstrip = string.ltrim
-package.user.lib.rstrip = string.rtrim
-package.user.lib.startswith = string.startswith
-package.user.lib.endswith = string.endswith
-package.user.lib.findall = string.findall
-package.user.lib.split = string.split
+lib.titlecase = string.title
+lib.trim = string.trim
+lib.ltrim = string.ltrim
+lib.rtrim = string.rtrim
+lib.strip = string.trim
+lib.lstrip = string.ltrim
+lib.rstrip = string.rtrim
+lib.startswith = string.startswith
+lib.endswith = string.endswith
+lib.findall = string.findall
+lib.split = string.split
+lib.str = string
+lib.string = lib.str
 
-return string
+globals {
+  titlecase = string.title,
+  trim = string.trim,
+  ltrim = string.ltrim,
+  rtrim = string.rtrim,
+  strip = string.trim,
+  lstrip = string.ltrim,
+  rstrip = string.rtrim,
+  startswith = string.startswith,
+  endswith = string.endswith,
+  findall = string.findall,
+  split = string.split,
+}

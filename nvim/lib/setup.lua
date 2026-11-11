@@ -26,6 +26,7 @@ function utils.clear_gutter_bg()
 		"FoldColumn",
 		"EndOfBuffer",
 	}
+
 	for _, name in ipairs(groups) do
 		vim.o.background = "dark"
 		local hl = vim.api.nvim_get_hl(0, { name = name, link = false })
@@ -320,5 +321,4 @@ function utils.setup(opts)
 end
 
 package.user.lib.setup = utils
-
 return utils

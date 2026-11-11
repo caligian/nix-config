@@ -44,8 +44,8 @@ local filetypes = package.user.config.filetype
 ---@field load_config nil
 ---@field list_configs nil
 ---@field require_config nil
----@field load_all_configs nil
----@field require_all_configs nil
+---@field load_configs nil
+---@field require_configs nil
 ---@field setup nil
 
 ---@type filetype.class
@@ -55,8 +55,8 @@ local filetype = class("filetype", nil, {
 		"load_config",
 		"list_configs",
 		"require_config",
-		"load_all_configs",
-		"require_all_configs",
+		"load_configs",
+		"require_configs",
 		"setup",
 		"V",
 		"O",
@@ -228,7 +228,7 @@ function filetype.require_config(name)
 end
 
 ---@return {[string]: filetype}
-function filetype.load_all_configs()
+function filetype.load_configs()
 	local res = {}
 	local files = filetype.list_configs()
 
@@ -244,10 +244,8 @@ function filetype.load_all_configs()
 	return res
 end
 
-filetype.load_all_configs()
-
 ---@return {[string]: filetype}
-function filetype.require_all_configs()
+function filetype.require_configs()
 	local res = {}
 	local files = filetype.list_configs()
 
@@ -263,7 +261,7 @@ function filetype.require_all_configs()
 	return res
 end
 
-filetype.setup = filetype.require_all_configs
+filetype.setup = filetype.require_configs
 filetype.V = filetype.set_vars
 filetype.O = filetype.set_opts
 filetype.R = filetype.set_repl_config

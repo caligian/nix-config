@@ -1,3 +1,8 @@
+if vim.g.loaded_lua_utils_dict then
+  return
+end
+
+vim.g.loaded_lua_utils_dict = true
 require("lua-utils.list")
 
 local lib = package.user.lib
@@ -7,7 +12,7 @@ local NIL = lib.NIL
 
 ---@class KeyError.class : Error.class : class
 ---@field new fun(self: KeyError.class, key: str, metadata: table): KeyError
-KeyError = class("KeyError", Error)
+local KeyError = class("KeyError", Error)
 package.user.lib.KeyError = KeyError
 
 ---@class KeyError : KeyError.class : instance
@@ -584,4 +589,5 @@ function dict.pop(x, ks, opts)
 	return res, x
 end
 
+global('KeyError', KeyError)
 package.user.lib.dict = dict

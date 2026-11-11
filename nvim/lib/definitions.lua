@@ -1,9 +1,8 @@
 require('lua-utils')
 
-if package.user.loaded_nvim_definitions then
+if vim.g.loaded_nvim_utils_definitions then
   return
 end
-
 
 ---@class user.state
 package.user.state.workspace = package.user.state.workspace or {}
@@ -24,7 +23,7 @@ package.user.config.workspace = package.user.config.workspace or { check_depth =
 package.user.config.plugins = package.user.config.plugins or {}
 package.user.config.plugins.telescope = package.user.config.plugins.telescope or {
   defaults = {
-    layout_config = { height = 0.3 },
+    layout_config = { height = 0.4 },
     layout_strategy = 'bottom_pane',
     previewer = false,
   },
@@ -75,7 +74,7 @@ package.user.config.buf_opts = {
   clipboard = 'unnamedplus',
 }
 
-for key, value in pairs(package.user.config.buf_opts) do
+for key, value in pairs(package.user.config.buf_opts or {}) do
   vim.o[key] = value
 end
 
@@ -97,5 +96,4 @@ if vim.g.neovide then
   vim.g.neovide_cursor_vfx_opacity = 100.0
 end
 
-package.user.loaded_nvim_definitions = true
-
+vim.g.loaded_nvim_utils_definitions = true

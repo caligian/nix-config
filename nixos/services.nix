@@ -10,8 +10,12 @@
         layout = "us";
         options = "caps:escape";
       };
+      desktopManager.cinnamon.enable = false;
       displayManager.lightdm.enable = false;
       videoDrivers = [ "amdgpu" ];
+      deviceSection = ''
+      Option "VariableRefresh" "false"
+      '';
     };
     gnome = {
       gnome-keyring.enable = true;
@@ -28,7 +32,6 @@
     };
     desktopManager = {
       gnome.enable = true;
-      plasma6.enable = false;
       budgie.enable = false;
     };
     pipewire = {

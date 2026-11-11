@@ -411,6 +411,8 @@ function terminal:split(direction, resize)
 	elseif self.buffer then
 		buffer.split(vim.fn.bufnr(), direction)
 		vim.cmd("b " .. self.buffer)
+    vim.wo.relativenumber = false
+    vim.wo.number = false
 
 		if resize then
 			buffer.resize(self.buffer, direction, resize)

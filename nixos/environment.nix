@@ -59,12 +59,14 @@ let
       "nix"
       "themes"
       "qt"
+      "gnome"
     ]
   );
 in
 {
   environment = {
     variables = {
+      WLR_DRM_NO_DIRECT_SCANOUT = "1";
       GIT_SSL_CAINFO = "/etc/ssl/certs/ca-bundle.crt";
       CURL_CA_BUNDLE = "/etc/ssl/certs/ca-bundle.crt";
       OPENSSL_X509_CERT_FILE = "/etc/ssl/certs/ca-bundle.crt";
@@ -79,6 +81,7 @@ in
     sessionVariables =
       myEnv
       // {
+        GSK_RENDERER = "opengl";
         XDG_DATA_DIRS = lib.mkAfter [ "${pkgs.neovim-unwrapped}/share" ];
         QT_QPA_PLATFORM = "wayland";
         QT_QPA_PLATFORMTHEME = "qt5ct";

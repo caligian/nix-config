@@ -3,9 +3,6 @@ require("lib.definitions")
 local lib = package.user.lib
 local dict = lib.dict
 local fs = lib.fs
-local as = lib.as
-local is = lib.is
-local copy = vim.deepcopy
 local buffer = {}
 local curbuf = vim.fn.bufnr
 local workspaces = package.user.state.workspace

@@ -2,8 +2,6 @@ require("lua-utils.definitions")
 require("lua-utils.type")
 
 local lib = package.user.lib
-local as = lib.as
-local is = lib.is
 
 ---@class Set
 

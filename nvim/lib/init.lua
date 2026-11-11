@@ -1,4 +1,4 @@
-if package.user.lib.loaded_nvim then
+if vim.g.loaded_nvim_utils then
   return
 end
 
@@ -16,4 +16,5 @@ require('lib.buffer')
 require('lib.setup')
 require('lib.command')
 
-package.user.lib.loaded_nvim = true
+package.user.lib.setup.setup()
+vim.g.loaded_nvim_utils = true

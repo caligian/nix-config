@@ -1,7 +1,6 @@
 require 'lib.definitions'
 
 local lib = package.user.lib
-local is = lib.is
 local copy = vim.deepcopy
 local make_command = vim.api.nvim_create_user_command
 local make_buffer_command = vim.api.nvim_buf_create_user_command
@@ -9,10 +8,7 @@ local make_autocmd = vim.api.nvim_create_autocmd
 local state = package.user.state.command
 
 ---@class command.utils
-local command = {
-  __index = rawget,
-  validator = { is.string, is.Callable, is.table }
-}
+local command = { __index = rawget, }
 setmetatable(command, command)
 
 ---@class command.valid_completion
@@ -116,6 +112,7 @@ function command.new(name, callback, opts)
   local should_pcall = opts.pcall
   local _args = { name, callback, opts }
   local cmd_opts = { bang = bang, desc = desc, force = force, nargs = nargs }
+
   local run = function(args)
     local process_arg = function(arg)
       if arg == '' then
@@ -134,6 +131,7 @@ function command.new(name, callback, opts)
         return arg
       end
     end
+
     local collect_args = function(fargs)
       local res = {}
       for i = 1, #fargs do
@@ -142,6 +140,7 @@ function command.new(name, callback, opts)
       end
       return res
     end
+
     local call = function(use_args, rest_args)
       if should_pcall then
         return pcall(callback, use_args, rest_args)
@@ -200,13 +199,5 @@ function command:__call(name, callback, opts)
   return command.new(name, callback, opts)
 end
 
----@param spec command.spec
----@return boolean
-function command.isa_config(spec)
-  lib.assert.spec(spec, command.validator)
-  return true
-end
-
 package.user.lib.command = command
-
 return command

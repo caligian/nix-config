@@ -21,5 +21,9 @@
       enable = true;
       powerOnBoot = false;
     };
+    display = {
+      edid.linuxhw."VX2457" = ["VX2457" "2020" "Digital" ];
+      outputs."HDMI-A-0".mode = "e";
+    };
   };
 }

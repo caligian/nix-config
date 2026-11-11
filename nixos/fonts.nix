@@ -4,6 +4,16 @@
     enableDefaultPackages = true;
     fontconfig = {
       enable = true;
+      antialias = true;
+      subpixel = {
+        rgba = "rgb";
+        lcdfilter = "default";
+      };
+      hinting = {
+        enable = true;
+        style = "slight";
+        autohint = false;
+      };
       defaultFonts = {
         monospace = [
           "UbuntuMono Nerd Font"

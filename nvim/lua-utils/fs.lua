@@ -1,4 +1,4 @@
-require("lua-utils.definitions")
+require("lua-utils.type")
 
 local lib = package.user.lib
 local lfs = require("lfs")
@@ -233,6 +233,8 @@ function path.has_mode(p, mode)
 	local a = path.stat(p)
 	if a then
 		return a.mode == mode
+  else
+    return false
 	end
 end
 
@@ -240,6 +242,8 @@ function path.is_link(p)
 	local a = path.stat(p)
 	if a then
 		return a.mode == "link"
+  else
+    return false
 	end
 end
 
@@ -249,6 +253,8 @@ function path.is_file(p)
 	local a = path.stat(p)
 	if a then
 		return a.mode == "file"
+  else
+    return false
 	end
 end
 
@@ -256,6 +262,8 @@ function path.is_dir(p)
 	local a = path.stat(p)
 	if a then
 		return a.mode == "directory"
+  else
+    return false
 	end
 end
 
@@ -263,6 +271,8 @@ function path.is_mount(p)
 	local a = path.stat(p)
 	if a then
 		return a.mode == "mount"
+  else
+    return false
 	end
 end
 
@@ -719,93 +729,20 @@ end
 
 setmetatable(path, path)
 
-path.find_git_dirs = path.git_dirs
-path.find_up = path.search_parents
-path.find_down = path.search_children
-
-package.user.lib.cd = path.cd
-package.user.lib.chdir = path.chdir
-package.user.lib.getcwd = path.getcwd
-package.user.lib.lock = path.lock
-package.user.lib.mkdir = path.mkdir
-package.user.lib.rmdir = path.rmdir
-package.user.lib.touch = path.touch
-package.user.lib.unlock = path.unlock
-package.user.lib.lockdir = path.lockdir
-package.user.lib.abspath = path.abspath
-package.user.lib.rmtree = path.rmtree
-package.user.lib.rm = path.rm
-package.user.lib.cp = path.cp
-package.user.lib.ln = path.ln
-package.user.lib.symlink = path.symlink
-package.user.lib.getenv = path.getenv
-package.user.lib.basename = path.basename
-package.user.lib.dirname = path.dirname
-package.user.lib.cp = path.cp
-package.user.lib.symlink = path.symlink
-package.user.lib.mtime = path.mtime
-package.user.lib.ctime = path.ctime
-package.user.lib.fstat = path.stat
-package.user.lib.fsize = path.size
-package.user.lib.fmode = path.mode
-package.user.lib.filetype = path.type
-package.user.lib.ftype = path.type
-package.user.lib.blksize = path.blksize
-package.user.lib.atime = path.atime
-package.user.lib.list_files = path.list_files
-package.user.lib.glob = path.glob
-package.user.lib.fsplit = path.split
-package.user.lib.extension = path.extension
-package.user.lib.strip_extension = path.strip_extension
-package.user.lib.ls = path.ls
-package.user.lib.git_dirs = path.git_dirs
-package.user.lib.find_git_dirs = path.git_dirs
-package.user.lib.slurp = path.slurp
-package.user.lib.spit = path.spit
-package.user.lib.path = path
-package.user.lib.fs = path
-package.user.lib.path.is = {
-	link = path.is_link,
-	symlink = path.is_symlink,
-	file = path.is_file,
-	dir = path.is_dir,
-	mount = path.is_mount,
-	git = path.is_git_dir,
+lib.guard.from_table {
+  link = { path.is_link, { expected = 'SYMLINK' }},
+  symlink = { path.is_link, { expected = 'SYMLINK' }},
+  file = { path.is_file, { expected = 'FILE' }},
+  dir = { path.is_dir, { expected = 'DIR' }},
+  mount = { path.is_mount, { expected = 'MOUNT_DIR' }},
+  git = { path.is_git_dir, { expected = 'GIT_DIR' }},
+  path = { path.exists, { expected = 'PATH' }},
+  project = { path.is_project_dir, { expected = 'PROJECT_DIR' }},
 }
-package.user.lib.is.link = path.is_link
-package.user.lib.is.symlink = path.is_symlink
-package.user.lib.is.file = path.is_file
-package.user.lib.is.dir = path.is_dir
-package.user.lib.is.mount = path.is_mount
-package.user.lib.is.git = path.is_git_dir
-package.user.lib.is.path = path.exists
-package.user.lib.is.project = path.is_project_dir
-
-lib.defguard("project", function(p)
-	if not path.is_project_dir(p) then
-		return string.format("Expected project directory, got %s", p)
-	end
-end)
-
-for _, fn in ipairs({ "link", "file", "dir", "mount", "git" }) do
-	lib.defguard(fn, function(p)
-		if not path["is_" .. fn](p) then
-			return string.format("Expected %s, got %s", fn, p)
-		end
-	end)
-end
-
-lib.defguard("path", function(p)
-	if not path.exists(p) then
-		return string.format("Expected valid path, got %s", p)
-	end
-end)
-
-is = package.user.lib.is
 
 ---@param buf int
 ---@return string?
-function package.user.lib.as.file(buf)
+function as.file(buf)
 	local f = vim.api.nvim_buf_get_name(buf)
 	if path.is_file(f) then
 		return f
@@ -814,47 +751,77 @@ end
 
 ---@param buf int
 ---@return string?
-function package.user.lib.as.dir(buf)
+function as.dir(buf)
 	local f = vim.api.nvim_buf_get_name(buf)
 	if path.is_file(f) then
 		return path.dirname(f)
 	end
 end
 
-as = package.user.lib.as
-abspath = path.abspath
+lib.abspath = path.abspath
+lib.dirname = path.dirname
+lib.find_files = path.find
+lib.list_files = path.ls
+lib.slurp = path.slurp
+lib.spit = path.spit
+lib.chdir = path.chdir
+lib.rmdir = path.rmdir
+lib.touch = path.touch
+lib.mkdir = path.mkdir
+lib.path = path
+lib.cd = path.cd
+lib.chdir = path.chdir
+lib.getcwd = path.getcwd
+lib.lock = path.lock
+lib.mkdir = path.mkdir
+lib.rmdir = path.rmdir
+lib.touch = path.touch
+lib.unlock = path.unlock
+lib.lockdir = path.lockdir
+lib.abspath = path.abspath
+lib.rmtree = path.rmtree
+lib.rm = path.rm
+lib.cp = path.cp
+lib.ln = path.ln
+lib.symlink = path.symlink
+lib.getenv = path.getenv
+lib.basename = path.basename
+lib.dirname = path.dirname
+lib.cp = path.cp
+lib.symlink = path.symlink
+lib.mtime = path.mtime
+lib.ctime = path.ctime
+lib.fstat = path.stat
+lib.fsize = path.size
+lib.fmode = path.mode
+lib.filetype = path.type
+lib.ftype = path.type
+lib.blksize = path.blksize
+lib.atime = path.atime
+lib.list_files = path.list_files
+lib.glob = path.glob
+lib.fsplit = path.split
+lib.extension = path.extension
+lib.strip_extension = path.strip_extension
+lib.ls = path.ls
+lib.git_dirs = path.git_dirs
+lib.find_git_dirs = path.git_dirs
+lib.slurp = path.slurp
+lib.spit = path.spit
+lib.find_git_dirs = path.git_dirs
+lib.find_down = path.search_children
+lib.find_up = path.search_parents
+lib.path = path
+lib.fs = path
+
 dirname = path.dirname
 find_files = path.find
 list_files = path.ls
-slurp = path.slurp
-spit = path.spit
 chdir = path.chdir
 rmdir = path.rmdir
 touch = path.touch
 mkdir = path.mkdir
+abspath = path.abspath
+getcwd = path.getcwd
 
-package.user.lib.abspath = path.abspath
-package.user.lib.dirname = path.dirname
-package.user.lib.find_files = path.find
-package.user.lib.list_files = path.ls
-package.user.lib.slurp = path.slurp
-package.user.lib.spit = path.spit
-package.user.lib.chdir = path.chdir
-package.user.lib.rmdir = path.rmdir
-package.user.lib.touch = path.touch
-package.user.lib.mkdir = path.mkdir
-
-global({
-	abspath = abspath,
-	dirname = dirname,
-	find_files = find_files,
-	list_files = path.ls,
-	slurp = slurp,
-	spit = spit,
-	chdir = chdir,
-	rmdir = rmdir,
-	mkdir = mkdir,
-	touch = touch,
-})
-
-unfreeze_globals()
+return path

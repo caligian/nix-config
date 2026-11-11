@@ -1,4 +1,3 @@
-require 'lua-utils.copy'
 require 'lua-utils.string'
 require 'lua-utils.type'
 

@@ -21,21 +21,23 @@ let
       waybar -s "${waybarStyleCss}" -c "${waybarConfig}"
     '';
   };
+  packages =
+    (with pkgs; [
+      wofi
+      rofi
+      swayosd
+      networkmanagerapplet
+      upower
+      dbus
+      mako
+      fuzzel
+      swaybg
+      swaylock
+      waybar
+    ])
+    ++ [
+      dbus-sway-environment
+      sway-waybar
+    ];
 in
-(with pkgs; [
-  wofi
-  rofi
-  swayosd
-  networkmanagerapplet
-  upower
-  dbus
-  mako
-  fuzzel
-  swaybg
-  swaylock
-  waybar
-])
-++ [
-  dbus-sway-environment
-  sway-waybar
-]
+packages

@@ -1,27 +1,93 @@
-require 'lua-utils.definitions'
+if vim.g.loaded_lua_utils_type then
+	return
+end
 
+require("lua-utils.definitions")
 
+vim.g.loaded_lua_utils_type = true
 local lib = package.user.lib
+
+---@alias PredicateCallable fun(x: any): string?
+---@alias GuardCallable fun(x: any, opts?: is.opts): boolean, string?
+---@alias Predicate.Callable fun(...): (Ok<`T`> | Err<Error> | boolean)?, string?
+---@alias UnionSignature class|instance|Union|Predicate|Callable|string|fun(x: any): string?
 local copy = lib.copy
-local refself = lib.refself
-local guards = lib.guards
-local utils = {}
-local base_class = { __type = "class", __name = "base" }
+local base_class = setmetatable({
+	__type = "class",
+	__name = "base",
+}, { __type = "class" })
 
+lib.format = string.format
+lib.repr = lib.sprintf
+lib.replace = string.gsub
+lib.substr = string.sub
 
-is = lib.is
-as = lib.as
+---@class Predicate.opts
+---@field pcall? boolean
+---@field safe? boolean
+---@field throw? boolean
+---@field raise? boolean
+---@field unwrap? boolean
 
-local Error, TypeError, CallError, UnwrapError
-local Result, Ok, Err
+---@class Predicate<T> : Predicate.class : instance
+---@field call fun(...): string?
+---@field safe? boolean
+---@field message? string
+---@field prefix? string
+---@overload fun(...): Ok<T> | Err<CallError>
 
----@alias guard1 fun(x: any, opts?: is.opts): boolean, string?
----@alias guard2 fun(x: any, y: any, opts?: is.opts): boolean, string?
----@alias guard guard1 | guard2
+---@class Union : Union.class : instance
+---@field signature UnionSignature|UnionSignature[]
+---@field display string
+---@field opts Predicate.opts | is.opts
+---@field any_of nil
+---@field all_of nil
+---@field validate_signature nil
+---@field predicate fun(x: any): string?
+---@overload fun(x: any, opts?: is.opts): boolean, string?
 
----@class TypeError : Error
----@class CallError : Error
----@class UnwrapError : Error
+---@class Result<T> : Result.class<T> : instance
+---@field value? Error|T
+---@field metadata? table
+---@field err boolean
+---@field ok boolean
+---@field type "Err" | "Ok"
+---@field new nil
+---@field initialize nil
+---@field issubclass nil
+---@field thread nil
+
+---@class Err<E> : Err.class<E> : Result
+---@field value Error
+---@field err true
+---@field ok false
+---@field type "Err"
+---@field new nil
+---@field initialize nil
+---@field issubclass nil
+
+---@class Ok<T> : Ok.class<T> : Result<T>
+---@field value T
+---@field err false
+---@field ok true
+---@field type "Ok"
+---@field new nil
+---@field initialize nil
+---@field issubclass nil
+
+---@class CallError : CallError.class : Error
+---@field fun Callable
+---@field args any[]
+
+---@class TypeError : TypeError.class : Error
+---@field value any
+
+---@class Error : Error.class : instance
+---@field message string
+---@field args any[]
+---@field new nil
+---@field initialize nil
+---@field issubclass nil
 
 ---@class is.opts
 ---@field optional? boolean
@@ -36,78 +102,417 @@ local Result, Ok, Err
 ---@field __class? class
 ---@field new nil
 ---@field initialize nil
----@field instanceof fun(self: instance<`T`>, other: class, opts?: is.opts): boolean, string?
+---@field instanceof fun(self: instance<T>, other: class, opts?: is.opts): boolean, string?
 
 ---@class class<T>
----@field new fun(self: `T`, ...): instance<`T`>
----@field initialize fun(self: `T`, ...)
+---@field new fun(self: T, ...): instance<T>
+---@field initialize fun(self: T, ...)
 ---@field __name string?
 ---@field __type "class"
 ---@field __class? class
 ---@field __tostring function
 ---@field __index? class
 ---@field __id string
----@field issubclass fun(self: class<`T`>, other: class, opts?: is.opts): boolean, string?
+---@field issubclass fun(self: class<T>, other: class, opts?: is.opts): boolean, string?
 
----@class Result.class<T,E> : class
----@field new fun(self: Result<`T`,`E`>, value?: `E`|`T`, metadata?: table): Result<`T`,`E`>
-
----@class Result<T,E> : Result.class<`T`,`E`> : instance
----@field value? `E`|`T`
----@field metadata? table
----@field err boolean
----@field ok boolean
----@field type "Err" | "Ok"
----@field new nil
----@field initialize nil
----@field issubclass nil
----@field unwrap nil
----@field thread nil
-
----@class Ok.class<T> : Result.class<`T`, nil>
----@field new fun(self: Ok.class<`T`>, value?: `T`, metadata?: table): Ok<`T`>
-
----@class Ok<T> : Ok.class<`T`> : instance
----@field value `T`
----@field err false
----@field ok true
----@field type "Ok"
----@field new nil
----@field initialize nil
----@field issubclass nil
-
----@class Err.class<E> : Result.class<nil,`E`>
----@field new fun(self: Error, msg: string, metadata?: table): Err<`E`>
-
----@class Err<E> : Err.class<`E`> : instance
----@field value Error
----@field err true
----@field ok false
----@field type "Err"
----@field new nil
----@field initialize nil
----@field issubclass nil
-
----@generic T
----@overload fun(name: string, parent?: class, opts?: class.opts): class<`T`>
-class = refself({})
-
-local function expected_type_msg(obj, prefix, msg)
-	local got = string.format("%s. Got [%s] %s", msg, type(obj), dump(obj))
-	if prefix then
-		return prefix .. ": " .. got
-	else
-		return got
-	end
-end
+---@class predicate.opts
+---@field expected string|(fun(x: any): string)
+---@field got? fun(x: any): string
+---@field format string (default: Expected {expected}, got [{got}] {value})
 
 ---@class is.opts
 ---@field assert? boolean
 ---@field dump? boolean
 ---@field prefix? string
----@return fun(x: any, opts?: is.opts): boolean, string?
-function utils.defguard(key, f)
-	local function fn(x, opts)
+
+--[[
+Value conversion stuff
+--]]
+
+---@param x any
+---@return integer?
+function as.integer(x)
+	if type(x) == "string" and string.match(x, "^%d+$") then
+		return tonumber(x)
+	end
+end
+
+as.int = as.integer
+
+---@param x any
+---@return number?
+function as.number(x)
+	return tonumber(x)
+end
+
+as.num = as.number
+
+---@param x any
+---@return function
+function as.fun(x)
+	if is.callable(x) then
+		return function(...)
+			return x.__call(x, ...)
+		end
+	elseif is.fun(x) then
+		return x
+	else
+		return function()
+			return x
+		end
+	end
+end
+
+---@generic T
+---@param x `T`
+---@return `T`?
+function as.NIL(x)
+	if x == nil then
+		return package.user.lib.NIL
+	else
+		return x
+	end
+end
+
+as.na = as.NIL
+
+---@param x any
+---@return boolean
+function as.boolean(x)
+	if x then
+		return true
+	else
+		return false
+	end
+end
+
+as.bool = as.boolean
+
+---@param x any
+---@return string
+function as.string(x)
+	if type(x) == "table" and x.__tostring then
+		return tostring(x)
+	else
+		return lib.dump(x)
+	end
+end
+
+as.str = as.string
+
+function lib.substitute(msg, subs)
+	for key, value in pairs(subs) do
+		local pattern = "%%{" .. key .. "%}"
+		msg = lib.replace(msg, pattern, lib.dump(value))
+	end
+	return msg
+end
+
+function lib.callable(x)
+	if type(x) == "table" then
+		local mt = getmetatable(x)
+		return mt and mt.__call ~= nil
+	else
+		return false
+	end
+end
+
+function lib.Callable(x)
+	return lib.callable(x) or type(x) == "function"
+end
+
+function lib.call(fn, ...)
+	return fn(...)
+end
+
+function lib.partial(fn, ...)
+	local outer = { ... }
+	return function(...)
+		local all_args = { unpack(outer) }
+		for _, arg in ipairs({ ... }) do
+			all_args[#all_args + 1] = arg
+		end
+		return fn(unpack(all_args))
+	end
+end
+
+function lib.paste0(...)
+	local res = { ... }
+	return table.concat(res, "")
+end
+
+lib.concat = table.concat
+lib.join = table.concat
+lib.sort = table.sort
+
+---@class prefixed.opts
+---@field key? int | str
+---@field message? string
+
+---@param prefix? string
+---@param opts? prefixed.opts
+function lib.make_message(prefix, opts)
+	opts = opts or {}
+	local message = opts.message
+	local key = opts.key
+	local key_str = key
+		and lib.call(function()
+			if is.integer(key) then
+				return lib.format("[%d]", key)
+			elseif is.string(key) then
+				if key:match("^[a-zA-Z0-9_]+$") then
+					return key
+				else
+					return lib.format('["%s"]', key)
+				end
+			else
+				return lib.format('["%s"]', tostring(key))
+			end
+		end)
+
+	if prefix and key_str then
+		key_str = key_str:sub(1, 1) ~= "[" and lib.paste0(".", key_str) or key_str
+		if message then
+			return lib.paste0(prefix, key_str, ": ", message)
+		else
+			return lib.paste0(prefix, key_str)
+		end
+	elseif key_str then
+		if message then
+			return lib.paste0(key_str, ": ", message)
+		else
+			return key_str
+		end
+	elseif prefix then
+		if message then
+			return lib.paste0(prefix, ": ", message)
+		else
+			return prefix
+		end
+	elseif message then
+		return message
+	else
+		error("Not implemented")
+	end
+end
+
+--[[
+Predicate making functions
+--]]
+
+lib.predicate = lib.bless({
+	---@type table<string,PredicateCallable>
+	predicate = {},
+})
+
+---@param fn PredicateCallable
+---@param opts? predicate.opts
+---@return fun(x: any): string?
+function lib.predicate:__call(fn, opts)
+	opts = opts or {}
+	local expected = opts.expected
+	local got = opts.got
+	local format = opts.format or "Expected %{expected}, got [%{got}] {%{value}}"
+
+	return function(x)
+		if fn(x) then
+			return
+		end
+
+		return lib.substitute(format, {
+			expected = lib.Callable(expected) and expected(x) or expected,
+			got = lib.Callable(got) and got(x) or type(x),
+			value = x,
+		})
+	end
+end
+
+---@param fn Callable
+---@param opts? predicate.opts
+---@return PredicateCallable
+function lib.predicate.add(name, fn, opts)
+	local pred
+	if is.class(fn) then
+		pred = lib.predicate.class(fn, opts)
+	else
+		pred = lib.predicate(fn, opts)
+	end
+	lib.predicate.predicate[name] = pred
+	return pred
+end
+
+---@param cls class
+---@return PredicateCallable
+function lib.predicate.class(cls)
+	is.class(cls, { assert = true, prefix = "cls" })
+	local opts = {
+		expected = function()
+			return "class." .. cls.__name
+		end,
+		got = function(x)
+			return "instance." .. x.__name
+		end,
+	}
+
+	return lib.predicate.add(cls.__name, function(x)
+		if not is.instance(x) then
+			return false
+		elseif lib.instanceof(x, cls) then
+			return true
+		else
+			return false
+		end
+	end, opts)
+end
+
+---@param predicates table<string,{[1]: PredicateCallable, [2]: predicate.opts}>
+---@return table<string,PredicateCallable>
+function lib.predicate.from_table(predicates)
+	local res = {}
+	for name, spec in pairs(predicates) do
+		local this_specs, opts = unpack(spec)
+		res[name] = lib.predicate.add(name, this_specs, opts)
+	end
+	return res
+end
+
+function lib.predicate.setup()
+	local pred = lib.predicate.predicate
+
+	for _, tp in ipairs(package.user.lib.types.builtin) do
+		pred[tp] = lib.predicate(function(x)
+			return type(x) == tp
+		end, { expected = tp })
+	end
+
+	pred.Callable = lib.predicate(function(x)
+		local tp = type(x)
+		if tp == "function" then
+			return true
+		elseif tp ~= "table" then
+			return false
+		end
+
+		local mt = getmetatable(x)
+		return mt and mt.__call
+	end, { expected = "Callable" })
+
+	pred.callable = lib.predicate(function(x)
+		if type(x) ~= "table" then
+			return false
+		end
+
+		local mt = getmetatable(x)
+		return mt and mt.__call ~= nil
+	end, { expected = "callable" })
+
+	pred.list = lib.predicate(function(x)
+		if not pred.pure(x) then
+			return false
+		end
+
+		local n = #x
+		local actual = 0
+
+		for _, _ in pairs(x) do
+			actual = actual + 1
+		end
+
+		return n == actual
+	end, { expected = "list" })
+
+	pred.dict = lib.predicate(function(x)
+		return pred.pure(x) ~= nil and pred.list(x) ~= nil
+	end, { expected = "dict" })
+
+	pred.class = lib.predicate(function(x)
+		if pred.table(x) ~= nil then
+			return false
+		elseif pred.impure(x) ~= nil then
+			return false
+		else
+			return x.__type == "class"
+		end
+	end, { expected = "class" })
+
+	pred.instance = lib.predicate(function(x)
+		if pred.table(x) ~= nil then
+			return false
+		elseif pred.impure(x) ~= nil then
+			return false
+		else
+			return x.__type == "instance"
+		end
+	end, { expected = "instance" })
+
+	pred.pure = lib.predicate(function(x)
+		if type(x) ~= "table" then
+			return false
+		elseif getmetatable(x) then
+			return false
+		else
+			return true
+		end
+	end, { expected = "pure table" })
+
+	pred.impure = lib.predicate(function(x)
+		if type(x) ~= "table" then
+			return false
+		elseif getmetatable(x) then
+			return true
+		else
+			return false
+		end
+	end, { expected = "table with metatable" })
+
+	pred.object = lib.predicate(function(x)
+		return is.na(pred.class(x)) or is.na(pred.instance(x))
+	end, { expected = "class|instance" })
+
+	pred.integer = lib.predicate(function(x)
+		if tonumber(x) and tostring(x):match("^%d+$") then
+			return true
+		else
+			return false
+		end
+	end, { expected = "integer" })
+
+	pred.num = pred.number
+	pred.int = pred.integer
+	pred.na = pred["nil"]
+	pred.NIL = pred.na
+	pred.fun = pred["function"]
+end
+
+lib.predicate.setup()
+
+--[[
+Guard function utilities. These are the same as predicates 
+However they can be plugged into assert and other boolean, string? 
+return shape
+--]]
+
+lib.guard = lib.bless({})
+
+---@type table<string,GuardCallable>
+lib.guard.guard = {}
+lib.is.__index = lib.guard.guard
+
+---@param name string?
+---@param fn PredicateCallable
+---@param opts? predicate.opts
+---@return GuardCallable
+function lib.guard:__call(name, fn, opts)
+	local pred = lib.predicate.add(name, fn, opts)
+	return lib.guard.from_predicate(name, pred)
+end
+
+---IMPORTANT: This predicate function must be produced with lib.predicate()
+---@param name string?
+---@param pred PredicateCallable
+---@return GuardCallable
+function lib.guard.from_predicate(name, pred)
+	local f = function(x, opts)
 		x = as.value(x)
 		opts = opts or {}
 		local opt = opts.optional or opts["?"] or opts.opt
@@ -115,251 +520,82 @@ function utils.defguard(key, f)
 		local prefix = opts.prefix
 		local throw = opts.assert
 
+		if prefix or assert then
+			should_dump = true
+		end
+
 		if opt and x == nil then
 			return true
 		end
 
-		local msg = f(x)
+		local msg = pred(x)
 		if not msg then
 			return true
 		elseif throw or should_dump then
-			local _msg = expected_type_msg(x, prefix, msg)
+			local _msg = lib.make_message(prefix, {
+				message = msg,
+			})
 			if throw then
 				error(_msg)
+			else
+				return false, _msg
 			end
-			return false, _msg
 		elseif should_dump then
-			return false, expected_type_msg(x, prefix, msg)
+			return false, lib.make_message(prefix, {
+				message = msg,
+			})
 		else
-			return false
+			return false, nil
 		end
 	end
 
-	rawset(is, key, fn)
-	guards[key] = fn
-
-	return fn
+	lib.guard.guard[name] = f
+	is[name] = f
+	return f
 end
 
----@param x any
----@param opts? is.opts
----@return boolean, string?
-function is.error(x, opts)
-	opts = opts or {}
-	local throw = opts.assert
-	local prefix = opts.prefix
-	local should_dump = opts.dump
-
-	if not is.instance(x) then
-		local msg = expected_type_msg(x, prefix, "Expected {instance.Error}")
-		if throw then
-			error(msg)
-		elseif should_dump then
-			return false, msg
-		else
-			return false
-		end
-	elseif x.__name == "Error" then
-		return true
+---@param predicates table<string,PredicateCallable>
+---@return table<string,GuardCallable>
+function lib.guard.from_predicates(predicates)
+	local res = {}
+	for name, pred in pairs(predicates or {}) do
+		res[name] = lib.guard.from_predicate(name, pred)
 	end
-
-	x = as.value(x)
-	local cls = x.__class
-
-	while cls do
-		if cls.__name == "Error" then
-			return true
-		else
-			cls = cls.__class
-		end
-	end
-
-	if should_dump or throw then
-		local msg = expected_type_msg(x, prefix, "Expected {instance.Error}")
-		if throw then
-			error(msg)
-		end
-		return false, msg
-	end
-
-	return false
+	return res
 end
 
----@param tp string
----@return fun(x: any, opts?: is.opts): boolean, string?
-local function mkguard(tp)
-	return utils.defguard(tp, function(x)
-		local x_tp = type(x)
-		if x_tp ~= tp then
-			return string.format("Expected {%s}", tp)
-		end
-	end)
+---@param functions table<string,{[1]: PredicateCallable, [2]: predicate.opts}>
+---@return table<string,GuardCallable>
+function lib.guard.from_table(functions)
+	local res = {}
+	for name, spec in pairs(functions or {}) do
+		local pred = lib.predicate.add(unpack(spec))
+		res[name] = lib.guard.from_predicate(name, pred)
+		res[name] = lib.guard.guard[name]
+	end
+	return res
 end
 
-is.boolean = mkguard("boolean")
-is.string = mkguard("string")
-is.number = mkguard("number")
-is.userdata = mkguard("userdata")
-is["function"] = mkguard("function")
-is.userdata = mkguard("userdata")
-is.thread = mkguard("thread")
-is.table = mkguard("table")
-is.bool = is.boolean
-is.num = is.number
-is.str = is.string
-is.fun = is["function"]
-is.seq = sequence
-is["nil"] = is.na
-
-is.pure_table = utils.defguard("pure_table", function(x)
-	local x_type = type(x)
-	local mt = x_type == "table" and getmetatable(x)
-
-	if x_type ~= "table" or mt then
-		return "Expected {table} without a metatable"
+function lib.guard.setup()
+	for name, pred in pairs(lib.predicate.predicate) do
+		lib.guard.guard[name] = lib.guard.from_predicate(name, pred)
 	end
-end)
+end
 
-is.ptable = is.pure_table
+lib.guard.setup()
 
-is.list = utils.defguard("list", function(x)
-	local x_type = type(x)
-	local mt = x_type == "table" and getmetatable(x)
-
-	if x_type ~= "table" or mt then
-		return "Expected {list} without a metatable"
-	elseif size(x) ~= #x then
-		return "Expected {list} got {dict}"
-	end
-end)
-
-is.dict = utils.defguard("dict", function(x)
-	local x_type = type(x)
-	local mt = x_type == "table" and getmetatable(x)
-
-	if x_type ~= "table" or mt then
-		return "Expected {dict} without a metatable"
-	elseif size(x) == #x then
-		return "Expected {dict} got {list}"
-	end
-end)
-
-is.Callable = utils.defguard("Callable", function(x)
-	local x_type = type(x)
-	if x_type == "function" then
-		return
-	elseif x_type == "table" then
-		local mt = getmetatable(x)
-		if mt and mt.__call then
-			return
-		else
-			return "Expected {table.__call|function}"
-		end
-	else
-		return "Expected {table.__call|function}"
-	end
-end)
-
-is.na = utils.defguard("na", function(x)
-	if as.value(x) ~= nil then
-		return "Expected nil value"
-	end
-end)
-
-is.defined = utils.defguard("defined", function(x)
-	if as.value(x) == nil then
-		return "Expected value, got nil"
-	end
-end)
-
-is.undefined = is.na
-is.undef = is.na
-is.def = is.defined
-
-is.callable = utils.defguard("callable", function(x)
-	if type(x) ~= "table" then
-		return "Expected table.__call"
-	else
-		return is.Callable(x)
-	end
-end)
-
-is.class = utils.defguard("class", function(x)
-	if not is.table(x) or x.__type ~= "class" then
-		return "Expected {class}"
-	end
-end)
-
-is.C = is.class
-
-is.instance = utils.defguard("instance", function(x)
-	if not is.table(x) or x.__type ~= "instance" then
-		return "Expected {instance}"
-	end
-end)
-
-is.I = is.instance
-
-is.object = utils.defguard("object", function(x)
-	if not is.class(x) and not is.instance(x) then
-		return "Expected {class|instance}"
-	end
-end)
-
-is.O = is.object
-
-is.multimethod = utils.defguard("multimethod", function(x)
-	if not is.instance(x) or x.__type ~= "multimethod" then
-		return "Expected {multimethod}"
-	end
-end)
-
-is.M = is.multimethod
-
-is.template = utils.defguard("template", function(x)
-	if not is.instance(x) or x.__type ~= "template" then
-		return "Expected {template}"
-	end
-end)
-
-is.T = is.template
-is.F = is.Callable
-
-is.integer = utils.defguard("integer", function(x)
-	if tonumber(x) and tostring(x):match("^%d+$") then
-		return
-	else
-		return "Expected {integer}"
-	end
-end)
-
-is.int = is.integer
-
-is.result = utils.defguard("result", function(x)
-	if not utils.instanceof(x, Result) then
-		return "Expected instance.Result | instance.Ok | instance.Err"
-	end
-end)
-
-is.res = is.result
-
-is.ok = utils.defguard("ok", function(x)
-	if not is.Result(x, Result) and not x.ok then
-		return "Expected instance.Ok"
-	end
-end)
-
-is.err = utils.defguard("err", function(x)
-	if not utils.instanceof(x, Result) or x.ok then
-		return "Expected instance.Err"
-	end
-end)
+---@param name string
+---@param cond fun(x): boolean
+---@param opts? predicate.opts
+function lib.mkguard(name, cond, opts)
+	return lib.guard(name, cond, opts)
+end
 
 ---@param child instance
 ---@param parent class
 ---@param opts? is.opts
 ---@return boolean, string?
-function utils.instanceof(child, parent, opts)
+function lib.instanceof(child, parent, opts)
 	child = as.value(child)
 	parent = as.value(parent)
 
@@ -385,7 +621,10 @@ function utils.instanceof(child, parent, opts)
 	local throw = opts.assert
 
 	if throw or should_dump then
-		local msg = expected_type_msg(child, prefix, string.format("Expected instance.%s", parent.__name))
+		local msg = lib.make_message(prefix, {
+			message = lib.format("Expected instance.%s", parent.__name),
+		})
+
 		if throw then
 			error(msg)
 		end
@@ -395,14 +634,20 @@ function utils.instanceof(child, parent, opts)
 	end
 end
 
+lib.isa = lib.instanceof
+
 ---@param child table
 ---@param parent table
 ---@param opts? is.opts
 ---@return boolean, string?
-function utils.issubclass(child, parent, opts)
+function lib.issubclass(child, parent, opts)
 	child = as.value(child)
 	parent = as.value(parent)
-	assert(is.class(child, { prefix = "<child>", assert = true }))
+
+	is.class(child, {
+		prefix = "<child>",
+		assert = true,
+	})
 
 	if child.__class == parent then
 		return true
@@ -422,19 +667,33 @@ function utils.issubclass(child, parent, opts)
 	local throw = opts.assert
 
 	if throw or should_dump then
-		local msg = expected_type_msg(child, prefix, string.format("Expected subclass of class.%s", parent.__name))
+		local msg = lib.format("Expected subclass of class.%s", parent.__name)
+		local err_msg = lib.make_message(prefix, {
+			message = msg,
+		})
+
 		if throw then
-			error(msg)
+			error(err_msg)
+		else
+			return false, err_msg
 		end
-		return false, msg
 	else
 		return false
 	end
 end
 
+--[[
+Class utilities
+--]]
+
+---@generic T
+---@overload fun(name: string, parent?: class, opts?: class.opts): class<`T`>
+lib.class = lib.bless({})
+class = lib.class
+
 ---@param cls object
 ---@return class
-function class.get_class(cls)
+function class.class(cls)
 	cls = as.value(cls)
 	assert(is.object(cls, { prefix = "<cls>", assert = true }))
 
@@ -469,34 +728,23 @@ end
 ---@param cls object
 ---@param name string
 ---@return Callable?
-function class.get_method(cls, name)
+function class.method(cls, name)
 	cls = as.value(cls)
 	local method = class.get(cls, name)
 	if method == nil then
 		return
 	end
 
-	local prefix = string.format("%s.%s", cls.__name, tostring(name))
+	local prefix = lib.format("%s.%s", cls.__name, tostring(name))
 	is.callable(method, { prefix = prefix, assert = true })
 
 	return method
 end
 
 ---@param cls object
----@param name string
----@param ... any
----@return any
-function class.get_method_and_apply(cls, name, ...)
-	local fn = class.get_method(cls, name)
-	if fn then
-		return fn(...)
-	end
-end
-
----@param cls object
 ---@param names_only? boolean
 ---@return (class[]|string)?
-function class.get_parents(cls, names_only)
+function class.parents(cls, names_only)
 	cls = as.value(cls)
 	local parents = {}
 	local parent = rawget(cls, "__class")
@@ -520,7 +768,7 @@ end
 
 ---@param cls object
 ---@return table
-function class.get_attributes(cls)
+function class.A(cls)
 	cls = as.value(cls)
 	assert(is.object(cls, { prefix = "<cls>", assert = true }))
 	local res = {}
@@ -536,7 +784,7 @@ end
 
 ---@param cls object
 ---@return string
-function class.get_name(cls)
+function class.name(cls)
 	cls = as.value(cls)
 	assert(is.object(cls, { prefix = "<cls>", assert = true }))
 	return cls.__name
@@ -544,7 +792,7 @@ end
 
 ---@param cls object
 ---@return table
-function class.get_meta_attributes(cls)
+function class.M(cls)
 	cls = as.value(cls)
 	assert(is.object(cls, { prefix = "<cls>", assert = true }))
 	local res = {}
@@ -562,7 +810,7 @@ end
 ---@param parent? class
 ---@param static? table<string,boolean>
 ---@return class
-function class.create_class(name, parent, static)
+function class.new(name, parent, static)
 	name = as.value(name)
 	parent = as.value(parent)
 	parent = parent or base_class
@@ -572,7 +820,7 @@ function class.create_class(name, parent, static)
 
 	local new = {}
 	new.__id = tostring(new):gsub("^table: ", "")
-	new.issubclass = utils.issubclass
+	new.issubclass = lib.issubclass
 	new.__name = name
 	new.__class = parent
 	new.__index = parent
@@ -586,14 +834,12 @@ function class.create_class(name, parent, static)
 				end
 			end
 
-			return string.format("%s.%s [%s] { %s }", self.__type, self.__name, self.__id, table.concat(attribs, ", "))
+			return lib.format("%s.%s [%s] { %s }", self.__type, self.__name, self.__id, table.concat(attribs, ", "))
 		end
 
-	is[name] = utils.defguard(name, function(x)
-		if not is.instance(x) or not utils.instanceof(x, new) then
-			return "Expected instance of class." .. new.__name
-		end
-	end)
+	lib.mkguard(name, function(x)
+		return is.instance(x) and lib.isa(x, new)
+	end, { expected = lib.paste0("instance.", new.__name) })
 
 	for key, value in pairs(parent) do
 		if is.na(new[key]) then
@@ -604,15 +850,15 @@ function class.create_class(name, parent, static)
 	new.new = function(self, ...)
 		local init = rawget(self, "initialize") or parent and parent.initialize
 		if not init then
-			error(string.format("%s: .initialize() is undefined", tostring(self)))
+			error(lib.format("%s: .initialize() is undefined", tostring(self)))
 		end
 
-		local obj = class.create_instance(self, static)
+		local obj = class.new_instance(self, static)
 		init(obj, ...)
 
 		local not_ok_msg = self.__validate and self.__validate(obj)
 		if not_ok_msg then
-			error(string.format("%s: Validation failure:\n%s", tostring(self), not_ok_msg))
+			error(lib.format("%s: Validation failure:\n%s", tostring(self), not_ok_msg))
 		end
 
 		return obj
@@ -624,7 +870,7 @@ end
 ---@param cls class
 ---@param ignore? table<string,boolean>
 ---@return instance
-function class.create_instance(cls, ignore)
+function class.new_instance(cls, ignore)
 	local new = setmetatable({}, cls)
 	local inst_id = tostring(new):gsub("^table: ", "")
 	new.__id = inst_id
@@ -640,7 +886,7 @@ function class.create_instance(cls, ignore)
 	new.__class = cls
 	new.new = nil
 	new.issubclass = nil
-	new.instanceof = utils.instanceof
+	new.instanceof = lib.instanceof
 
 	return new
 end
@@ -662,7 +908,7 @@ function class:__call(name, parent, opts)
 		end
 	end
 
-	local new = class.create_class(name, parent, ignore)
+	local new = class.new(name, parent, ignore)
 
 	if opts.include then
 		for key, value in pairs(opts.include) do
@@ -673,22 +919,18 @@ function class:__call(name, parent, opts)
 	return new
 end
 
----@class Error : Error.class : instance
----@field msg? any
----@field metadata? table
----@field args any[]
----@field new fun(self: Error, name: string, msg: string, metadata?: table, ...: any): Error
-
 ---@class Error.class : class
----@field new fun(self: Error.class, name: string, msg?: string, metadata?: table): Error
+---@field new fun(self: Error.class, msg: string, ...: any): Error
 Error = class("Error")
+lib.Error = lib.Error
+is.error = is.Error
 
-function Error:initialize(name, msg, metadata, ...)
+function Error:initialize(name, msg, ...)
+	is.str(name, { assert = true, prefix = "name" })
+	is.str(msg, { assert = true, prefix = "message" })
+
 	self.name = name
-	msg = as.value(msg)
-	metadata = as.value(metadata)
-	self.msg = msg
-	self.metadata = metadata
+	self.message = as.value(msg)
 	self.args = { ... }
 end
 
@@ -697,59 +939,41 @@ function Error:throw()
 	error(self:__tostring(self))
 end
 
----Throw error if condition is falsy
----@param cond boolean
----@return boolean
-function Error:throw_unless(cond)
-	if not cond then
-		return cond
-	else
-		error(tostring(self))
-	end
-end
-
----Throw error if condition is truthy
----@param cond boolean
----@return boolean
-function Error:throw_when(cond)
-	if cond then
-		return cond
-	else
-		error(tostring(self))
-	end
-end
-
 function Error:__tostring()
-	local parents = class.get_parents(self, true)
+	local parents = class.parents(self, true)
 	local name = table.concat(parents, ".")
-	local mt = self.metadata
 	local args = self.args
-
-	if mt and args then
-		return string.format("%s: %s\nmetadata: %s\n\nargs: %s", name, self.msg or "error!", dump(mt), dump(args))
-	elseif args then
-		return string.format("%s: %s\nargs: %s", name, self.msg or "error!", dump(args))
-	elseif mt then
-		return string.format("%s: %s\nmetadata: %s", name, self.msg or "error!", dump(mt))
-	end
-
-	return string.format("%s: error!", name)
+	local msg = self.message or "error!"
+	return lib.format("%s: %s\nargs: %s", name, msg, lib.dump(args))
 end
 
 ---@class TypeError.class : Error.class
----@field new fun(self: Error.class, msg?: string, metadata?: table): TypeError
+---@field new fun(self: TypeError.class, msg: string, value: any): TypeError
 TypeError = class("TypeError", Error)
+lib.TypeError = TypeError
+
+function TypeError:initialize(message, value)
+	lib.Error.initialize(self, message, value)
+	self.value = value
+end
 
 ---@class CallError.class : Error.class
----@field new fun(self: Error.class, msg?: string, metadata?: table): CallError
+---@field new fun(self: CallError.class, msg: string, fun: Callable, args: any[]): CallError
 CallError = class("CallError", Error)
+lib.CallError = CallError
 
----@class UnwrapError.class : Error.class
----@field new fun(self: Error.class, msg?: string, metadata?: table): UnwrapError
-UnwrapError = class("UnwrapError", Error)
+function CallError:initialize(message, fun, args)
+	lib.Error.initialize(self, message, fun, args)
+	self.fun = fun
+	self.args = args
+end
 
----@generic T
+---@class Result.class<T,E> : class
+---@field new fun(self: Result<T,E>, value?: E|T, metadata?: table): Result<T,E>
 Result = class("Result")
+lib.Result = Result
+is.result = is.Result
+is.res = is.Result
 
 function Result:initialize(value, metadata)
 	value = as.value(value)
@@ -761,54 +985,122 @@ function Result:initialize(value, metadata)
 	self.metadata = metadata
 end
 
+---@generic T
+---@return `T`|Error
 function Result:unwrap()
+	local value = self.value
 	if self.err then
-		---@type Error
-		self.value:throw()
-	else
-		---@type Ok
-		return self.value
+		---@cast value Error
+		value:throw()
 	end
+
+	---@cast value `T`
+	return value
 end
 
 function Result:__tostring()
-	return string.format("Result.%s { value = %s, metadata = %s }", self.type, dump(self.value), dump(self.metadata))
+	return lib.format(
+		"Result.%s { value = %s, metadata = %s }",
+		self.type,
+		lib.dump(self.value),
+		lib.dump(self.metadata)
+	)
 end
 
+---@class Ok.class<T> : Result.class<T,nil>
+---@field new fun(self: Ok.class<T>, value?: T, metadata?: table): Ok<T>
 Ok = class("Ok", Result)
+lib.Ok = Ok
+is.ok = is.Ok
 
 function Ok:initialize(value, metadata)
 	return Result.initialize(self, value, metadata)
 end
 
+---@class Err.class<E> : Result.class<nil,E>
+---@field new fun(self: Err.class<E>, msg: string, metadata?: table): Err<E>
 Err = class("Err", Result)
+lib.Err = Err
+is.err = is.Err
 
 function Err:initialize(msg, metadata)
-	return Result.initialize(self, UnwrapError(msg), metadata)
-end
-
----@param fn function
----@param ... any
----@return Ok|Err
-function utils.rpcall(fn, ...)
-	local ok, msg = pcall(fn, ...)
-	local mt = { fun = fn, args = { ... } }
-
-	if not ok then
-		return Result:new(CallError(msg, mt))
-	else
-		return Result:new(msg, mt)
-	end
+	return Result.initialize(self, lib.Error:new(msg), metadata)
 end
 
 ---@generic T
 ---@param fn fun(...): `T`
----@return ResultCallable<`T`>
-function utils.rwrap(fn)
-	if not is.ResultCallable(fn) then
-		return ResultCallable:new(fn)
+---@param ... any
+---@return Ok<`T`> | Err<CallError>
+function lib.rpcall(fn, ...)
+	local ok, msg = pcall(fn, ...)
+	if not ok then
+		return Err:new(lib.CallError:new(msg, fn, { ... }))
 	else
-		return fn
+		return Ok:new(msg)
+	end
+end
+
+---@param fn PredicateCallable
+---@return fun(x): Result
+lib.rpredicatewrap = function(fn)
+	---@param ... any
+	---@return Result
+	return function(...)
+		local msg = fn(...)
+		if is.str(msg) then
+			return lib.Err:new(lib.CallError:new(msg, fn, { ... }))
+		else
+			return lib.Ok:new(true)
+		end
+	end
+end
+
+---@param fn PredicateCallable
+---@return fun(x): Result
+lib.rsafewrap = function(fn)
+	---@param ... any
+	---@return Result
+	return function(...)
+		local ok, msg = pcall(fn, ...)
+		if not ok then
+			msg = as.NIL(msg)
+			return lib.Err:new(lib.CallError:new(msg, fn, { ... }))
+		else
+			return lib.Ok:new(msg)
+		end
+	end
+end
+
+---@param fn PredicateCallable
+---@return fun(x): Result
+lib.rguardwrap = function(fn)
+	---@param ... any
+	---@return Result
+	return function(...)
+		local ok, msg = fn(...)
+		if not ok then
+			msg = as.NIL(msg)
+			return lib.Err:new(lib.CallError:new(msg, fn, { ... }))
+		else
+			return lib.Ok:new(msg)
+		end
+	end
+end
+
+---@param fn PredicateCallable
+---@return fun(x): Result
+lib.rwrap = function(fn)
+	---@param ... any
+	---@return Result
+	return function(...)
+		local res = fn(...)
+		if is.Result(res) then
+			return res --[[@as Result]]
+		elseif is.str(res) then
+			return lib.Err:new(lib.CallError:new(res, fn, { ... }))
+		else
+			return lib.Ok:new(true)
+		end
 	end
 end
 
@@ -816,7 +1108,7 @@ end
 ---@param funs (fun(x: any): Result)[]
 ---@param throw_on_err? boolean
 ---@return Ok|Err
-function utils.rthread(x, funs, throw_on_err)
+function lib.rthread(x, funs, throw_on_err)
 	local last = x
 	if is.result(last) then
 		last = last:unwrap()
@@ -824,10 +1116,11 @@ function utils.rthread(x, funs, throw_on_err)
 
 	for i = 1, #funs do
 		local f = funs[i]
-		is.callable(f, { prefix = string.format("<functions>[%d]", i), assert = true })
+		is.Callable(f, { prefix = lib.format("<functions>[%d]", i), assert = true })
 
-		local res = utils.rpcall(f, last)
+		local res = lib.rpcall(f, last)
 		if is.err(res) then
+			---@cast res Err
 			res.metadata = res.metadata or {}
 			res.metadata.index = i
 			res.metadata.fun = f
@@ -848,7 +1141,7 @@ function utils.rthread(x, funs, throw_on_err)
 		---@type Err
 		local res = Err:new(last)
 		return res
-	elseif is.result(last) then
+	elseif is.res(last) then
 		---@type Ok
 		return last
 	else
@@ -861,7 +1154,7 @@ end
 ---@param y table
 ---@param opts? is.opts
 ---@return table?
-function utils.match(x, y, opts)
+function lib.match(x, y, opts)
 	x = as.value(x)
 	y = as.value(y)
 
@@ -892,16 +1185,16 @@ function utils.match(x, y, opts)
 
 	local function prefix_msg(prefix, key, msg, ...)
 		if type(key) == "number" then
-			key = prefix .. string.format("[%d]", key)
+			key = prefix .. lib.format("[%d]", key)
 		else
 			key = prefix .. "." .. key
 		end
 
 		if not msg then
-			return string.format("%s", key)
+			return lib.format("%s", key)
 		else
-			msg = string.format(msg, ...)
-			return string.format("%s: %s", key, msg)
+			msg = lib.format(msg, ...)
+			return lib.format("%s: %s", key, msg)
 		end
 	end
 
@@ -919,8 +1212,8 @@ function utils.match(x, y, opts)
 			local current_prefix = prefix_msg(prefix, b_key)
 
 			if (is.na(a_value) and is_opt) or dunder then
-			elseif is.pure_table(b_value) then
-				local ok, msg = is.pure_table(a_value, {
+			elseif is.pure(b_value) then
+				local ok, msg = is.pure(a_value, {
 					dump = should_dump,
 					assert = throw,
 					prefix = current_prefix,
@@ -937,13 +1230,13 @@ function utils.match(x, y, opts)
 				if ok then
 					recurse(a_value, b_value, state and state[b_key], current_prefix)
 				end
-			elseif is.Union(b_value) or is.UnionPredicate(b_value) then
+			elseif is.union(b_value) or is.pred(b_value) then
 				---@cast b_value Union
 				local ok, msg = b_value(a_value, {
-          dump = should_dump,
-          prefix = current_prefix,
-          assert = throw
-        })
+					dump = should_dump,
+					prefix = current_prefix,
+					assert = throw,
+				})
 
 				if throw then
 					error(msg)
@@ -966,7 +1259,7 @@ function utils.match(x, y, opts)
 						state[b_key] = err(a, b_key, a_value, msg or false)
 					end
 				else
-					ok, msg = utils.instanceof(a_value, b_value, {
+					ok, msg = lib.isa(a_value, b_value, {
 						dump = should_dump,
 						assert = throw,
 						prefix = current_prefix,
@@ -999,7 +1292,7 @@ function utils.match(x, y, opts)
 				local msg = (
 					not ok
 					and (should_dump or throw)
-					and string.format("Expected literal value {%s}", tostring(b_value))
+					and lib.format("Expected literal value {%s}", tostring(b_value))
 				)
 				msg = msg and prefix_msg(current_prefix, b_key, msg)
 
@@ -1026,160 +1319,73 @@ function utils.match(x, y, opts)
 	return res
 end
 
---[[
-Value conversion stuff
---]]
+---@generic T
+---@class Predicate.class : class
+---@field new fun(self: Predicate.class, fn: (fun(...): (string|Result)?), opts?: Predicate.opts): Predicate
+Predicate = class("Predicate", nil, {
+	static = { "predicate" },
+})
+lib.Predicate = Predicate
+---@type table<string,Predicate>
+lib.Predicate.predicate = {}
+is.pred = is.Predicate
+is.predicate = is.Predicate
 
----@param x any
----@return integer?
-function as.integer(x)
-	if type(x) == "string" and string.match(x, "^%d+$") then
-		return tonumber(x)
-	end
+---@class Predicate.opts
+---@field safe? boolean
+---@field message? string
+---@field prefix? string
+
+---@param fn GuardCallable
+---@param opts? Predicate.opts
+function Predicate:initialize(fn, opts)
+	is.Callable(fn, { prefix = "fn", assert = true })
+	opts = opts or {}
+	self.fun = fn
+	self.call = opts.safe and lib.rsafewrap(fn) or lib.rguardwrap(fn)
+	self.safe = opts.safe
+	self.message = opts.message or lib.paste0(tostring(fn), ": Assertion failure")
+	self.prefix = opts.prefix
 end
 
----@param x any
----@return number?
-function as.number(x)
-	return tonumber(x)
+function Predicate:__call(...)
+	return self.call(...)
 end
 
----@param x any
----@return function
-function as.fun(x)
-	if is.callable(x) then
-		return function(...)
-			return x.__call(x, ...)
-		end
-	elseif is.fun(x) then
-		return x
-	else
-		return function()
+function Predicate:assert(x)
+	local prefix = self.prefix
+	local message = self.message
+	local res = self.call(x)
+
+	if is.result(res) then
+		if is.ok(res) then
 			return x
-		end
-	end
-end
+		else
+			local err = res.value --@as Error
+			local msg = message or tostring(err)
 
----@param x any
----@return boolean
-function as.boolean(x)
-	if x then
-		return true
-	else
-		return false
-	end
-end
-
----@param x any
----@return string
-function as.string(x)
-	if type(x) == "table" and x.__tostring then
-		return tostring(x)
-	else
-		return dump(x)
-	end
-end
-
----@param sig string|Callable|class
----@param i int
----@return function
-local function normalize(sig, i)
-	if is.string(sig) then
-		return is[sig]
-	elseif is.Callable(sig) then
-		---@type function
-		return sig
-	elseif is.class(sig) then
-		return function(obj)
-			if is.instance(obj) then
-				return utils.instanceof(obj, sig)
-			elseif is.class(obj) then
-				return utils.issubclass(obj, sig)
-			else
-				return false
+			if prefix then
+				error(lib.make_message(prefix, {
+					message = msg,
+				}))
 			end
 		end
-	else
-		error(string.format("signature[%d]: Expected string|callable|class, got {%s}", i, dump(sig)))
 	end
 end
-
----@alias UnionSignature class|instance|Union|UnionPredicate|Callable|string|fun(x: any): string?
 
 ---@class Union.class : class
 ---@field new fun(self: Union, display: string?, signature: UnionSignature|UnionSignature[], throw?: boolean): Union
-local Union = class("Union", nil, {
+lib.Union = class("Union", nil, {
 	static = {
-		"Predicate",
 		"all_of",
 		"any_of",
 		"pred",
+		"validate_signature",
+		"pred",
 	},
 })
-
----@class UnionPredicate.opts
----@field assert? boolean
----@field prefix? string
-
----@class UnionPredicate.class : class
----@field new fun(self: UnionPredicate.class, fn: Callable): UnionPredicate
-local UnionPredicate = class("UnionPredicate")
-
----@class UnionPredicate : UnionPredicate.class : instance
----@field assert? boolean
----@field opts UnionPredicate.opts
----@field new nil
----@overload fun(x: any): boolean, string?
-
----@overload fun(x: any, opts?: is.opts): boolean, string?
-is.UnionPredicate = is.UnionPredicate
-
----@class Union : Union.class : instance
----@field signature UnionSignature|UnionSignature[]
----@field display string
----@field opts UnionPredicate.opts | is.opts
----@field any_of nil
----@field all_of nil
----@field validate_signature nil
----@field predicate fun(x: any): string?
----@overload fun(x: any, opts?: is.opts): boolean, string?
-
----@overload fun(x: any, opts?: is.opts): boolean, string
-is.Union = is.Union
-
-function UnionPredicate:initialize(fn)
-	is.Callable(fn, { prefix = "fn", assert = true })
-	self.predicate = fn
-end
-
----@param x any
----@param opts? UnionPredicate.opts
----@return boolean, string?
-function UnionPredicate:run(x, opts)
-	opts = opts or {}
-	local msg = self.predicate(x)
-
-	if not msg then
-		return true
-	end
-
-	msg = msg or "Predicate failure"
-	if opts.prefix then
-		msg = opts.prefix .. ": " .. msg
-	end
-
-	if opts.assert then
-		error(msg)
-	else
-		return false, msg
-	end
-end
-
-UnionPredicate.__call = UnionPredicate.run
-
-function UnionPredicate:assert(x, opts)
-	return self:run(x, opts)
-end
+Union = lib.Union
+is.union = is.Union
 
 ---@param signature any[]
 function Union.validate_signature(signature)
@@ -1187,16 +1393,15 @@ function Union.validate_signature(signature)
 	for i = 1, #signature do
 		local sig = signature[i]
 		local ok = (
-			is.Union(sig)
-			or is.UnionPredicate(sig)
+			(is.instance(sig) and (is.Union(sig) or is.Predicate(sig)))
 			or is.object(sig)
 			or is.Callable(sig)
-			or (is.string(sig) and is[sig])
+			or (is.string(sig) and is[sig] ~= nil)
 		)
 
 		if not ok then
 			errorf(
-				"signature[%d]: Expected Union|UnionPredicate|instance|class|Callable<fun(x: any, opts?: is.opts): boolean, string?>|is[<string>], got %s",
+				"signature[%d]: Expected Union|Predicate|instance|class|Callable<fun(x: any, opts?: is.opts): boolean, string?>|is[<string>], got %s",
 				i,
 				sig
 			)
@@ -1205,20 +1410,25 @@ function Union.validate_signature(signature)
 end
 
 ---@param fn fun(x: any): string?
----@return UnionPredicate
-function Union.pred(fn)
-	return UnionPredicate:new(fn)
+---@param opts? predicate.opts
+---@return Predicate
+function Union.pred(fn, opts)
+	return Predicate:new(fn, opts)
 end
 
 function Union:initialize(display, signature, opts)
+	assert(display, "No union string provided")
+	assert(signature, "No signature provided")
+
 	self.display = display
 	self.signature = signature
 	self.opts = opts
+
 	Union.validate_signature(self.signature)
 end
 
 ---@param x any
----@param opts? is.opts|UnionPredicate.opts
+---@param opts? is.opts|Predicate.opts
 ---@return boolean, string?
 function Union:__call(x, opts)
 	opts = opts or self.opts
@@ -1236,24 +1446,31 @@ function Union:__call(x, opts)
 			if ok then
 				return true
 			end
-		elseif is.UnionPredicate(sig) then --[[@cast sig UnionPredicate]]
-			if sig:run(x, opts) then
+		elseif is.Predicate(sig) then
+			---@cast sig Predicate
+			if sig(x, opts) then
 				return true
 			end
 		elseif is.object(sig) then
 			sig = is.instance(sig) and sig.__class or sig
-			if is.instance(x) and utils.instanceof(x, sig) then
+			if is.instance(x) and lib.instanceof(x, sig) then
 				return true
 			end
-		elseif is[sig] and is[sig](x) then
-			return true
+		elseif is[sig] then
+			if is[sig](x) then
+				return true
+			end
+		elseif predicate.predicate[sig] then
+			if predicate.predicate[sig](x) then
+				return true
+			end
 		elseif is.Callable(sig) and sig(x) then
 			return true
 		end
 	end
 
 	if opts.assert or opts.dump or opts.prefix then
-		local msg = "Expected " .. self.display .. sprintf(", got [%s] %s", type(x), x or "NIL")
+		local msg = lib.paste0("Expected ", self.display, sprintf(", got [%s] %s", type(x), x or "NIL"))
 		msg = opts.prefix and (opts.prefix .. ": " .. msg) or msg
 
 		if opts.assert then
@@ -1268,7 +1485,7 @@ end
 
 ---@param display? string|int
 ---@param signature UnionSignature|UnionSignature[]
----@param opts? UnionPredicate.opts?
+---@param opts? Predicate.opts?
 ---@return Union
 function Union.assert(display, signature, opts)
 	opts = copy(opts)
@@ -1278,7 +1495,7 @@ end
 
 ---@param display? string|int
 ---@param signature UnionSignature|UnionSignature[]
----@param opts? UnionPredicate.opts?
+---@param opts? Predicate.opts?
 ---@return Union
 function Union.any_of(display, signature, opts)
 	opts = copy(opts or {})
@@ -1296,164 +1513,67 @@ end
 Basic union type checking
 --]]
 --
-utils.union = Union.any_of
-utils.maybe = Union.maybe
-utils.pred = Union.pred
+lib.union = Union.any_of
+lib.maybe = Union.maybe
+lib.pred = Union.pred
+lib.defguard = lib.mkguard
 
-is.maybe = utils.defguard("maybe", function(x)
+is.maybe = lib.defguard("maybe", function(x)
 	return is.Union(x) and x.opts.optional
 end)
 
 is.union = is.Union
 
----@param display string
----@return fun(...): (fun(x: any, opts?: is.opts): boolean, string?)
-function utils.maybe(display, ...)
+---@generic T
+---@param fn fun(...): boolean, `T`|string?
+---@return fun(...): Ok<`T`> | Err<CallError>
+function lib.safe(fn)
 	return function(...)
-		local signature = { ... }
-		return function(x, opts)
-			opts = opts or {}
-			opts.optional = true
-			local check = is.union(display)(unpack(signature))
-			return check(x, opts)
-		end
-	end
-end
-
----[[Basically is.*(*, {assert = true})]]
----@type {[string]: fun(x: any, opts?: is.opts)}
-setmetatable(lib.isa, {
-	__index = function(_, name)
-		return function(x, opts)
-			opts = copy.copy(opts or {})
-			opts.assert = true
-			opts.dump = true
-			is[name](x, opts)
-		end
-	end,
-})
-
----@class SafeCallable.class<T> : class
----@field new fun(self, fn: (fun(...): `T`), prefix?: string): SafeCallable<`T`>
-SafeCallable = class("SafeCallable")
-
----@class SafeCallable<T> : SafeCallable.class<`T`> : instance
----@field call fun(...): `T`
----@field safe fun(...): boolean, `T`|string
----@field __call fun(...): boolean, `T`|string
-
-function SafeCallable:initialize(fn, prefix)
-	self.call = fn
-	self.safe = function(...)
-		local ok, msg = pcall(self.call, ...)
-		if ok then
-			return true, msg
-		elseif msg and prefix then
-			msg = type(msg) == "string" and (prefix .. ": " .. msg)
-			return false, msg
-		elseif msg then
-			return false, msg
-		elseif prefix then
-			return false, string.format("%s: %s() threw an error", prefix, self.call)
+		local ok, msg = pcall(fn, ...)
+		if not ok then
+			msg = msg or ("Error from " .. tostring(fn))
+			local err = CallError:new(msg, fn, { ... })
+			return Err:new(err)
 		else
-			return false, msg
+			return Ok:new(msg)
 		end
 	end
 end
 
-function SafeCallable:__call(...)
-	return self.safe(...)
-end
-
----@type fun(x: any, opts?: is.opts): boolean, string?
-is.SafeCallable = is.SafeCallable
-
----@class ResultCallable.class<T,E> : class
----@field new fun(self, fn: (fun(...): `T`|`E`), prefix?: string): ResultCallable<`T`,`E`>
-ResultCallable = class("ResultCallable")
-
----@class ResultCallable<T,E> : ResultCallable.class<`T`,`E`> : instance
----@field call fun(...): `T`|`E`
----@field safe fun(...): Ok<`T`> | Err<`E`>
----@field __call fun(...): Ok<`T`> | Err<`E`>
-
-function ResultCallable:initialize(fn, prefix)
-	self.call = fn
-	self.safe = function(...)
-		local res = Result:new(pcall(self.call, ...))
-		---@cast res Result
-		if res.ok then
-			return res
-		elseif res.metadata and is.table(res.metadata) then
-			res.metadata.prefix = prefix
-		elseif res.metadata and is.string(res.metadata) and prefix then
-			res.metadata = prefix .. ": " .. res.metadata
-		end
-		return res
-	end
-end
-
-function ResultCallable:__call(...)
-	return self.safe(...)
-end
-
----@type fun(x: any, opts?: is.opts): boolean, string?
-is.ResultCallable = is.ResultCallable
-
----@generic T
----@param fn fun(...): T
----@return SafeCallable<`T`>
-function utils.safe(fn)
-	if is.SafeCallable(fn) then
-		return fn
-	else
-		return SafeCallable:new(fn)
-	end
-end
-
----@generic T
----@param fn fun(...): T
----@return ResultCallable<`T`>
-function utils.rsafe(fn)
-	if is.ResultCallable(fn) then
-		return fn
-	else
-		return ResultCallable:new(fn)
-	end
-end
-
----@class Spec.class : class
----@field new fun(self: Spec.class, name: string): Spec
-local Spec = class("Spec")
+---@class Specification.class : class
+---@field new fun(self: Specification.class, name: string): Specification
+Specification = class("Specification")
 
 ---@overload fun(x: any, opts?: is.opts): boolean, string
-is.Spec = is.Spec
+is.Specification = is.Specification
+is.spec = is.Specification
+is.Spec = is.spec
 
----@class Spec : Spec.class : instance
+---@class Specification : Specification.class : instance
 ---@field name string
 ---@field spec table
 ---@field from_table nil
 ---@overload fun(x: table): table
 
-function Spec:initialize(name)
+function Specification:initialize(name)
 	self.name = name
 	self.spec = {}
 end
 
----@param fn Union|UnionPredicate|class|instance
+---@param fn Union|Predicate|class|instance
 ---@param prefix? string
 ---@return boolean, string?
-function Spec.is_valid_signature(fn, prefix)
-	local valid = { Union, UnionPredicate, is.class, is.instance }
-	local check = utils.union("Union|UnionPredicate|class|instance", valid)
+function Specification.is_valid_signature(fn, prefix)
+	local valid = { Union, Predicate, is.class, is.instance }
+	local check = lib.union("Union|Predicate|class|instance", valid)
 	return check(fn, { dump = true, prefix = prefix })
 end
 
----@param fn Union|UnionPredicate|class|instance
+---@param fn Union|Predicate|class|instance
 ---@param prefix? string
----@return Union|UnionPredicate|class|instance
-function Spec.assert_is_valid_signature(fn, prefix)
-	local ok, msg = Spec.is_valid_signature(fn, prefix)
+---@return Union|Predicate|class|instance
+function Specification.assert_is_valid_signature(fn, prefix)
+	local ok, msg = Specification.is_valid_signature(fn, prefix)
 	if not ok then
 		error(msg)
 	else
@@ -1462,10 +1582,10 @@ function Spec.assert_is_valid_signature(fn, prefix)
 end
 
 ---@param ks string|int
----@param fn Union|UnionPredicate|class|instance
+---@param fn Union|Predicate|class|instance
 ---@param prefix? string
-function Spec:set(ks, fn, prefix)
-	local ok, msg = Spec.is_valid_signature(fn)
+function Specification:set(ks, fn, prefix)
+	local ok, msg = Specification.is_valid_signature(fn)
 	if not ok then
 		local _ks = {}
 		ks = as.list(ks)
@@ -1483,7 +1603,7 @@ function Spec:set(ks, fn, prefix)
 	local x = self.spec
 
 	for i = 1, #ks - 1 do
-		x[ks[i]] = not is.pure_table(x[ks[i]]) and {} or x[ks[i]]
+		x[ks[i]] = not is.pure(x[ks[i]]) and {} or x[ks[i]]
 		x = x[ks[i]]
 	end
 
@@ -1492,162 +1612,125 @@ end
 
 ---@param x table
 ---@return table
-function Spec:test(x)
+function Specification:test(x)
 	x = as.value(x)
 	is.table(x, { assert = true, prefix = "x" })
-	local res = utils.match(x, self.spec, { dump = true, prefix = self.name })
+	local res = lib.match(x, self.spec, { dump = true, prefix = self.name })
 	---@cast res table
 	return res
 end
 
 ---@param x table
 ---@return table
-function Spec:assert(x)
+function Specification:assert(x)
 	x = as.value(x)
 	is.table(x, { assert = true, prefix = "x" })
-	local res = utils.match(x, self.spec, { 
-    dump = true,
-    assert = true,
-    prefix = self.name,
-  })
+	local res = lib.match(x, self.spec, {
+		dump = true,
+		assert = true,
+		prefix = self.name,
+	})
 	---@cast res table
 	return res
 end
 
 ---@param name string
 ---@param spec table
----@return Spec
-function Spec.from_table(name, spec)
-  local function fullkey(last_key, key)
-    if is.int(key) then
-      return string.format("%s[%d]", last_key, key)
-    else
-      return string.format("%s.%s", last_key, key)
-    end
-  end
-	local function check_signature(key, value, last_key)
-    local prefix = fullkey(last_key, key)
-    local ok, msg = Spec.is_valid_signature(value, prefix)
-    if not ok and msg then
-      error(msg)
-    end
+---@return Specification
+function Specification.from_table(name, spec)
+	local function fullkey(last_key, key)
+		if is.int(key) then
+			return lib.format("%s[%d]", last_key, key)
+		else
+			return lib.format("%s.%s", last_key, key)
+		end
 	end
-  local function recurse(got, last_key, res)
-    for key, value in pairs(got) do
-      if is.pure_table(value) then
-        res[key] = res[key] or {}
-        recurse(value, fullkey(last_key, key), res[key])
-      else
-        check_signature(key, value, last_key)
-        res[key] = value
-      end
-    end
-  end
+
+	local function check_signature(key, value, last_key)
+		local prefix = fullkey(last_key, key)
+		local ok, msg = Specification.is_valid_signature(value, prefix)
+		if not ok and msg then
+			error(msg)
+		end
+	end
+
+	local function recurse(got, last_key, res)
+		for key, value in pairs(got) do
+			if is.pure(value) then
+				res[key] = res[key] or {}
+				recurse(value, fullkey(last_key, key), res[key])
+			else
+				check_signature(key, value, last_key)
+				res[key] = value
+			end
+		end
+	end
 
 	is.table(spec, { assert = true, prefix = "spec" })
-	local res = Spec:new(name)
-  recurse(spec, '<specification>', res.spec)
-  res.spec = spec
+	local res = Specification:new(name)
+	recurse(spec, "<specification>", res.spec)
+	res.spec = spec
 
-  return res
+	return res
 end
 
-utils.as = as
-utils.is = is
-utils.isa = lib.isa
-utils.TypeError = TypeError
-utils.CallError = CallError
-utils.UnwrapError = UnwrapError
-utils.Result = Result
-utils.Err = Err
-utils.Ok = Ok
-utils.Error = Error
-utils.callable = callable
-utils.sequence = sequence
-utils.bless = bless
-utils.pack = pack
-utils.length = length
-utils.size = size
-utils.rtostring = rtostring
-utils.class = class
-utils.pp = pp
-utils.dump = dump
-utils.printf = printf
-utils.sprintf = sprintf
-utils.errorf = errorf
-utils.SafeCallable = SafeCallable
-utils.ResultCallable = ResultCallable
-utils.Union = Union
-utils.UnionPredicate = UnionPredicate
-utils.Spec = Spec
+---@param functions table<string, function>
+function lib.from_table(functions)
+	for key, value in pairs(functions) do
+		package.user.lib[key] = value
+	end
+end
 
-package.user.lib.Spec = Spec
-package.user.lib.TypeError = TypeError
-package.user.lib.CallError = CallError
-package.user.lib.UnwrapError = UnwrapError
-package.user.lib.Result = Result
-package.user.lib.Err = Err
-package.user.lib.Ok = Ok
-package.user.lib.Error = Error
-package.user.lib.class = class
-package.user.lib.instanceof = utils.instanceof
-package.user.lib.issubclass = utils.issubclass
-package.user.lib.union = utils.union
-package.user.lib.maybe = utils.maybe
-package.user.lib.type = utils
-package.user.lib.defguard = utils.defguard
-package.user.lib.rwrap = utils.rwrap
-package.user.lib.rthread = utils.rthread
-package.user.lib.rpcall = utils.rpcall
-package.user.lib.ResultCallable = ResultCallable
-package.user.lib.SafeCallable = SafeCallable
-package.user.lib.safe = utils.safe
-package.user.lib.rsafe = utils.rsafe
-package.user.lib.Union = Union
-package.user.lib.UnionPredicate = UnionPredicate
-package.user.lib.result = {
-	Result = Result,
-	Ok = Ok,
-	Err = Err,
-	UnwrapError = UnwrapError,
-	pcall = utils.rpcall,
-	wrap = utils.rwrap,
-	thread = utils.rthread,
-}
+function lib.paste(sep, ...)
+	sep = sep or " "
+	local strs = { ... }
+	return lib.join(strs, ...)
+end
 
-global({
-	TypeError = TypeError,
-	CallError = CallError,
-	UnwrapError = UnwrapError,
-	Result = Result,
-	Err = Err,
-	Ok = Ok,
-	Error = Error,
+function lib.joinlines(...)
+	return lib.join("\n", ...)
+end
+
+copy = copy
+class = class
+Spec = Specification
+Specification = Specification
+Predicate = Predicate
+union = lib.union
+maybe = lib.maybe
+format = lib.format
+substr = lib.substr
+replace = lib.replace
+Ok = Ok
+Err = Err
+rthread = lib.rthread
+rpcall = lib.rpcall
+rwrap = lib.rwrap
+partial = lib.partial
+predicate = lib.predicate
+paste0 = lib.paste0
+concat = lib.concat
+joinlines = lib.joinlines
+
+globals({
+	copy = copy,
 	class = class,
-	instanceof = utils.instanceof,
-	issubclass = utils.issubclass,
-	union = utils.union,
-	maybe = utils.maybe,
-	defguard = utils.defguard,
-	rwrap = utils.rwrap,
-	rthread = utils.rthread,
-	rpcall = utils.rpcall,
-	ResultCallable = ResultCallable,
-	SafeCallable = SafeCallable,
-	safe = utils.safe,
-	rsafe = utils.rsafe,
-	is = is,
-	as = as,
-	Union = Union,
-	UnionPredicate = UnionPredicate,
-	Spec = Spec,
+	Spec = Specification,
+	Specification = Specification,
+	Predicate = Predicate,
+	union = lib.union,
+	maybe = lib.maybe,
+	format = lib.format,
+	substr = lib.substr,
+	replace = lib.replace,
+	Ok = lib.Ok,
+	Err = lib.Err,
+	rthread = lib.rthread,
+	rpcall = lib.rpcall,
+	rwrap = lib.rwrap,
+	partial = lib.partial,
+	predicate = lib.predicate,
+	paste0 = lib.paste0,
+	concat = lib.concat,
+	joinlines = lib.joinlines,
 })
-
-local spec = Spec.from_table('NeovimConfig', {
-  a = utils.pred(function(x) if not is.int(x) then return 'Expected int' end end),
-  b = utils.pred(function(x) if not is.int(x) then return 'Expected int' end end)
-})
-
--- spec:assert {a={1}}
-
-unfreeze_globals()

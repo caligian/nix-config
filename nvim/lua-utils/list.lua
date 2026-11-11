@@ -555,96 +555,108 @@ function list.flatten(x, res)
 	return res
 end
 
+---opts.on_error will always take precedence and error values WILL be propagated to other functions unless opts.skip_errors is true
 ---Apply function to each element
 ---@param x table
 ---@param opts? list.foreach.opts|fun(v: any)
 ---@return table?
 function list.foreach(x, opts)
+	opts = opts or {}
 	if is.Callable(opts) then
 		---@cast opts fun(v: any)
-		return list.each(x, { each = opts })
+		return list.foreach(x, { each = opts })
 	end
 
-	opts = opts or {}
+	opts = copy(opts)
 	local each = opts.each
 	local map = opts.map
 	local filter = opts.filter
+	local error_filter = opts.error_filter or opts.efilter
 	local stop = opts.stop
 	local collect = opts.collect
 	local ret_on_err = opts.return_on_error
 	local throw = opts.raise or opts.throw
 	local skip_errors = opts.skip_errors
 	local pass_index = opts.index or opts.pass_index
+	local error_map = opts.error_map or opts.emap
 
-	if map then
+	if each and (map or collect) then
+		error("Cannot pass both opts.each and opts.map | opts.collect")
+	end
+
+	if map or filter or error_map or error_filter then
 		collect = true
-	end
-
-	if each and collect then
-		error("Cannot pass both opts.each and opts.collect")
-	end
-
-	if not skip_errors then
-		throw = true
 	end
 
 	local res = collect and {}
 
-	for i = 1, #x do
-		local v = as.value(x[i])
-		local skip = false
+	local function call(f, key, value)
+		if pass_index then
+			return f(key, value)
+		else
+			return f(value)
+		end
+	end
 
-		if is.error(v) then
-			---@cast v Error
-			if ret_on_err then
-				---@cast res table?
-				return res
-			elseif throw then
-				v:throw()
-			elseif skip_errors then
-				skip = true
+	local function filter_value(i, value)
+		if is.error(value) then
+			if error_filter then
+				return call(error_filter, i, value)
+			else
+				return value
 			end
+		elseif filter then
+			return call(filter, i, value)
+		else
+			return true
+		end
+	end
+
+	local function map_value(i, value)
+		if is.error(value) then
+			if error_map then
+				return call(error_map, i, value)
+			else
+				return value
+			end
+		elseif map then
+			return call(map, i, value)
+		elseif each then
+			call(each, i, value)
+		else
+			return value
+		end
+	end
+
+	local function process(i, value)
+		local ret = false
+		local ok = false
+		local result = value
+
+		if (stop and call(stop, i, value)) or ret_on_err then
+			ret = true
+		elseif filter_value(i, value) then
+			ok = true
 		end
 
-		if not skip then
-			if pass_index then
-				if stop and stop(i, v) then
-					---@cast res table?
-					return res
-				elseif filter then
-          if filter(i, v) then
-            if collect then
-              res[#res+1] = map and map(i, v) or v
-            elseif each then
-              each(i, v)
-            end
-          end
-        elseif collect then
-          v = map and map(i, v) or v
-					res[#res + 1] = v
-				elseif each then
-					each(i, v)
-				end
-			elseif stop and stop(v) then
-				---@cast res table?
-				return res
-			elseif filter then
-        if filter(v) then
-          if collect then
-            res[#res+1] = map and map(v) or v
-          elseif each then
-            each(v)
-          end
-        end
-			elseif collect then
-				res[#res + 1] = map and map(v) or v
-			elseif each then
-				each(v)
+		result = map_value(i, value)
+		return { ok = ok, ret = ret, result = result }
+	end
+
+	for i = 1, #x do
+		local v = as.value(x[i])
+		local status = process(i, v)
+
+		if status.ret then
+			return res
+		elseif status.ok then
+			if res then
+				res[#res + 1] = status.result
 			end
 		end
 	end
 
-	---@cast res table
+	---@cast res table?
 	return res
 end
 
@@ -657,7 +669,6 @@ function list.each(x, f, opts)
 	opts.each = f
 	opts.collect = false
 	opts.map = nil
-
 	return list.foreach(x, opts)
 end
 
@@ -670,7 +681,6 @@ function list.map(x, f, opts)
 	opts.each = nil
 	opts.collect = false
 	opts.map = f
-
 	return list.foreach(x, opts)
 end
 
@@ -683,10 +693,8 @@ function list.filter(x, f, opts)
 	opts.each = nil
 	opts.collect = true
 	opts.filter = f
-
 	return list.foreach(x, opts)
 end
-
 
 ---@param x table
 ---@param f Each
@@ -698,7 +706,6 @@ function list.ieach(x, f, opts)
 	opts.collect = false
 	opts.map = nil
 	opts.index = true
-
 	return list.foreach(x, opts)
 end
 
@@ -714,7 +721,6 @@ function list.imap(x, f, opts)
 	opts.collect = false
 	opts.map = f
 	opts.index = true
-
 	return list.foreach(x, opts)
 end
 
@@ -730,7 +736,6 @@ function list.ifilter(x, f, opts)
 	opts.collect = true
 	opts.filter = f
 	opts.index = true
-
 	return list.foreach(x, opts)
 end
 
@@ -1492,3 +1497,4 @@ list.append = list.push
 list.size = list.length
 
 package.user.lib.list = list
+return lib

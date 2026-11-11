@@ -240,6 +240,7 @@ focus_on_window_activation focus
 focus_follows_mouse yes
 mouse_warping output
 gaps inner 8
+adaptive_sync off
 
 # Setup monitors
 output eDP-1 pos 0 0 res 1920x1080

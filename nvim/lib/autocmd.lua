@@ -1,14 +1,8 @@
 require("lib.definitions")
-require("lib.options")
 
 local lib = package.user.lib
 local list = lib.list
-local is = lib.is
-local as = lib.as
-local union = lib.union
-local copy = vim.deepcopy
 local enable = vim.api.nvim_create_autocmd
-local options = lib.options
 
 package.user.state.autocmd = package.user.state.autocmd or {}
 local state = package.user.state.autocmd
@@ -62,11 +56,11 @@ local state = package.user.state.autocmd
 ---@class autocmd.utils
 ---@overload fun(event: autocmd.event, callback: autocmd.callback, opts?: autocmd.opts|string|integer): autocmd
 local autocmd = {
-	validator = {
-		union(is.string, is.list),
-		union(is.callable, is.string),
-		union(is.table, is.string),
-	},
+  validator = Spec.from_table('Autocmd', {
+    [1] = union('string|list', {is.string, is.list}),
+    [2] = union('Callable|string', {is.Callable, is.string}),
+    [3] = union('table|string', {is.table, is.string}),
+  }),
 }
 
 ---Valid options
@@ -87,9 +81,9 @@ autocmd.valid_opts = {
 ---@param opts? autocmd.opts
 ---@return integer
 function autocmd.new(event, callback, opts)
-	local args = copy({ event, callback, opts })
+	local args = {event, callback, opts}
 	opts = type(opts) == "string" and { desc = opts } or opts
-	opts = options.new(opts)
+	opts = copy(opts)
 	local should_pcall = opts.pcall
 
 	if is.string(callback) then
@@ -190,4 +184,12 @@ end
 
 autocmd.map = autocmd.new
 autocmd.ft_map = autocmd.ft_new
+
+function autocmd.validate(args)
+  local event = args.event or args[1]
+  local callback = args.callback or args[2]
+  local opts = args.opts or args[3]
+  autocmd.validator:assert({event, callback, opts})
+end
+
 package.user.lib.autocmd = autocmd

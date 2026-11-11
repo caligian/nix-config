@@ -1,12 +1,10 @@
-require("lib.definitions")
-require("lib.autocmd")
+require('lib.autocmd')
 require("lib.command")
 
 local getbufnr = vim.fn.bufnr
 local lib = package.user.lib
 local str = lib.str
 local fs = lib.fs
-local is = lib.is
 local autocmd = lib.autocmd
 local command = lib.command
 local getbufname = vim.api.nvim_buf_get_name
@@ -103,7 +101,10 @@ function project.find_deprecated(path, opts)
 end
 
 function project.find(path, opts)
+  path = path or 0
+  path = is.number(path) and buffer.get_name(path) or path
 	opts = opts or {}
+
 	if not fs.is_file(path) then
 		return
 	end
