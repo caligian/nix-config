@@ -11,5 +11,5 @@
   vertical-workspaces
   just-perfection
   blur-my-shell
-  p7-window-borders
+  focus-on-active-window
 ])
