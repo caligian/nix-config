@@ -204,7 +204,27 @@ function pdf-chunk() {
 }
 
 function sys-rebuild() {
-  sudo bash -c "cp -vr $ADMIN_DIR/nixos/* /etc/nixos/ && nixos-rebuild switch"
+  pushd .
+  cd $ADMIN_DIR/nixos
+
+  local -a my_nixos_files
+  local -a prev_nixos_files
+
+  mapfile -d $'\n' -t my_nixos_files <<<"$(git ls-files)"
+  mapfile -d $'\n' -t prev_nixos_files <<<"$(find /etc/nixos/ -type f -name '*.nix')"
+
+  for file in "${prev_nixos_files[@]}"; do
+    if [[ ! $file =~ hardware-configuration ]]; then
+      sudo rm -rv "$file" 
+    fi
+  done
+
+  for file in "${my_nixos_files[@]}"; do
+    sudo cp -vr "$file" /etc/nixos/"${file}"
+  done
+
+  sudo nixos-rebuild switch
+  popd -1
 }
 
 function sys-reload() {

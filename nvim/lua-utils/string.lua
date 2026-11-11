@@ -1,4 +1,4 @@
-require 'lua-utils.definitions'
+require("lua-utils.definitions")
 local lib = package.user.lib
 
 ---Get string length
@@ -8,25 +8,25 @@ string.length = string.len
 ---@param x string
 ---@return string
 function string.trim(x)
-  x = x:gsub('^%s+', '')
-  x = x:gsub('%s+$', '')
-  return x
+	x = x:gsub("^%s+", "")
+	x = x:gsub("%s+$", "")
+	return x
 end
 
 ---Trim string at the start
 ---@param x string
 ---@return string
 function string.ltrim(x)
-  x = x:gsub('^%s+', '')
-  return x
+	x = x:gsub("^%s+", "")
+	return x
 end
 
 ---Trim string at the end
 ---@param x string
 ---@return string
 function string.rtrim(x)
-  x = x:gsub('%s+$', '')
-  return x
+	x = x:gsub("%s+$", "")
+	return x
 end
 
 ---String starts with?
@@ -34,7 +34,7 @@ end
 ---@param pat string
 ---@return boolean
 function string.startswith(x, pat)
-  return string.match(x, '^' .. pat) ~= nil
+	return string.match(x, "^" .. pat) ~= nil
 end
 
 ---String ends with?
@@ -42,7 +42,7 @@ end
 ---@param pat string
 ---@return boolean
 function string.endswith(x, pat)
-  return string.match(x, pat .. '$') ~= nil
+	return string.match(x, pat .. "$") ~= nil
 end
 
 ---@class string.findall.opts
@@ -65,54 +65,53 @@ end
 ---@param opts? string.findall.opts
 ---@return string.findall.result[]
 function string.findall(x, sep, opts)
-  opts = opts or {}
-  local max = opts.max or opts.limit
-  local plain = opts.plain
-  local escaped = opts.escaped or opts.ignore_escaped
-  local capture = opts.capture
-  local results = {}
-  local init = opts.init or 1
-  local results_len = 0
+	opts = opts or {}
+	local max = opts.max or opts.limit
+	local plain = opts.plain
+	local escaped = opts.escaped or opts.ignore_escaped
+	local capture = opts.capture
+	local results = {}
+	local init = opts.init or 1
+	local results_len = 0
 
-  local function get_next_sep(start_from)
-    local next_sep =
-    { string.find(x, sep, start_from, plain) }
+	local function get_next_sep(start_from)
+		local next_sep = { string.find(x, sep, start_from, plain) }
 
-    if #next_sep == 0 then
-      return
-    elseif escaped then
-      local last_pos = next_sep[2] - 1
-      local last_char = x:sub(last_pos, last_pos)
+		if #next_sep == 0 then
+			return
+		elseif escaped then
+			local last_pos = next_sep[2] - 1
+			local last_char = x:sub(last_pos, last_pos)
 
-      if last_char == "\\" then
-        return get_next_sep(next_sep[2] + 1)
-      end
-    end
+			if last_char == "\\" then
+				return get_next_sep(next_sep[2] + 1)
+			end
+		end
 
-    if capture then
-      next_sep[3] = x:sub(unpack(next_sep))
-    end
+		if capture then
+			next_sep[3] = x:sub(unpack(next_sep))
+		end
 
-    return next_sep
-  end
+		return next_sep
+	end
 
-  local function findall(start_from)
-    if max and max == results_len then
-      return results
-    end
+	local function findall(start_from)
+		if max and max == results_len then
+			return results
+		end
 
-    local next_sep = get_next_sep(start_from)
-    if not next_sep then
-      return results
-    else
-      results_len = results_len + 1
-      results[results_len] = next_sep
-    end
+		local next_sep = get_next_sep(start_from)
+		if not next_sep then
+			return results
+		else
+			results_len = results_len + 1
+			results[results_len] = next_sep
+		end
 
-    return findall(next_sep[2] + 1)
-  end
+		return findall(next_sep[2] + 1)
+	end
 
-  return findall(init)
+	return findall(init)
 end
 
 ---Split string
@@ -121,47 +120,47 @@ end
 ---@param opts? string.findall.opts
 ---@return string[]
 function string.split(x, sep, opts)
-  if sep == "" then
-    local out = {}
-    for i = 1, #x do
-      out[i] = x:sub(i, i)
-    end
-    return out
-  end
+	if sep == "" then
+		local out = {}
+		for i = 1, #x do
+			out[i] = x:sub(i, i)
+		end
+		return out
+	end
 
-  opts = opts or {}
-  local results = {}
-  local pos = string.findall(x, sep, opts)
+	opts = opts or {}
+	local results = {}
+	local pos = string.findall(x, sep, opts)
 
-  if #pos == 0 then
-    return { x }
-  end
+	if #pos == 0 then
+		return { x }
+	end
 
-  local init = opts.init or 1
-  for i = 1, #pos do
-    local word = x:sub(init, pos[i][1] - 1)
-    init = pos[i][2] + 1
-    results[#results + 1] = word
-  end
+	local init = opts.init or 1
+	for i = 1, #pos do
+		local word = x:sub(init, pos[i][1] - 1)
+		init = pos[i][2] + 1
+		results[#results + 1] = word
+	end
 
-  local len = #x
-  if init <= len then
-    results[#results + 1] = x:sub(init, len)
-  end
+	local len = #x
+	if init <= len then
+		results[#results + 1] = x:sub(init, len)
+	end
 
-  return results
+	return results
 end
 
 ---Capitalize every word
 ---@param x string input string
 ---@return string
 function string.title(x)
-  local words = string.split(x, "%s")
-  for i = 1, #words do
-    local letter = words[i]:sub(1, 1):upper()
-    words[i] = letter .. words[i]:sub(2, #words[i])
-  end
-  return table.concat(words, " ")
+	local words = string.split(x, "%s")
+	for i = 1, #words do
+		local letter = words[i]:sub(1, 1):upper()
+		words[i] = letter .. words[i]:sub(2, #words[i])
+	end
+	return table.concat(words, " ")
 end
 
 ---@param s string
@@ -170,8 +169,36 @@ end
 ---@param plain? boolean
 ---@return number?, number?
 function string.contains(s, pattern, init, plain)
-  plain = (plain == nil and true) or plain
-  return string.find(s, pattern, init, true)
+	plain = (plain == nil and true) or plain
+	return string.find(s, pattern, init, true)
+end
+
+---@param lst string[]
+---@param patterns string|string[]
+---@param start_index? int (default: 1)
+---@param plain? boolean
+---@return string[]
+function lib.grep(lst, patterns, start_index)
+  plain = (is.na(plain) and false) or true
+	patterns = as.list(patterns)
+	local res = {}
+	local matches = function(s)
+		for _, pattern in ipairs(patterns) do
+			if string.match(s, pattern, 1) then
+				return true
+			end
+		end
+		return false
+	end
+
+	for i = start_index or 1, #lst do
+		local s = lst[i]
+		if matches(s) then
+			res[#res + 1] = s
+		end
+	end
+
+	return res
 end
 
 lib.titlecase = string.title
@@ -188,16 +215,4 @@ lib.split = string.split
 lib.str = string
 lib.string = lib.str
 
-globals {
-  titlecase = string.title,
-  trim = string.trim,
-  ltrim = string.ltrim,
-  rtrim = string.rtrim,
-  strip = string.trim,
-  lstrip = string.ltrim,
-  rstrip = string.rtrim,
-  startswith = string.startswith,
-  endswith = string.endswith,
-  findall = string.findall,
-  split = string.split,
-}
+return lib

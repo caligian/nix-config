@@ -13,7 +13,7 @@ local lib = package.user.lib
 local config = package.user.config
 local Gmt = getmetatable(_G) or {}
 local Gnewindex = Gmt and Gmt.__newindex
-local dont_set = {
+local globals = {
 	Spec = true,
 	Specification = true,
 	Predicate = true,
@@ -75,7 +75,6 @@ end
 
 function global(name, value)
 	rawset(_G, name, value)
-	dont_set[name] = true
 end
 
 function globals(variables)
@@ -508,20 +507,6 @@ errorf = lib.errorf
 pack = lib.pack
 is = lib.is
 as = lib.as
-
-globals({
-	inspect = lib.inspect,
-	pp = lib.pp,
-	printf = lib.printf,
-	sprintf = lib.sprintf,
-	open_and_then = lib.open_and_then,
-	spit = lib.spit,
-	slurp = lib.slurp,
-	copy = lib.copy,
-	errorf = lib.errorf,
-	pack = lib.pack,
-	is = lib.is,
-	as = lib.as,
-})
+copy = lib.copy
 
 return lib

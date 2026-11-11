@@ -1,6 +1,7 @@
 require("lib.definitions")
 
 local lib = package.user.lib
+local copy = lib.copy
 local list = lib.list
 local enable = vim.api.nvim_create_autocmd
 

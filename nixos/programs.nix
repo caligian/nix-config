@@ -6,7 +6,6 @@
   ...
 }:
 let
-  isFile = builtins.pathExists;
   admin = import "/etc/nixos/admin.nix" {
     inherit
       user
@@ -17,61 +16,20 @@ let
   };
   path = admin.path;
   swayDir = path.dir.sway;
-  setGnomeKeymaps =
-    specs:
-    let
-      isScriptPath =
-        p:
-        let
-          s = toString p;
-        in
-        lib.hasPrefix "/" s && builtins.pathExists s;
-      mkPath = i: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom${toString i}/";
-
-      mkEntry =
-        i: spec:
-        let
-          cmd =
-            if isScriptPath spec.run then
-              toString (pkgs.writeShellScript "gnome-kb-${toString i}" (builtins.readFile spec.run))
-            else
-              spec.run;
-        in
-        {
-          name = "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom${toString i}";
-          value = {
-            inherit (spec) name;
-            binding = spec.keys;
-            command = cmd;
-          };
-        };
-    in
-    builtins.listToAttrs (lib.imap0 mkEntry specs)
-    // {
-      "org/gnome/settings-daemon/plugins/media-keys".custom-keybindings = builtins.genList mkPath (
-        builtins.length specs
-      );
+  importProgram =
+    name:
+    import "/etc/nixos/programs/${name}.nix" {
+      inherit
+        user
+        lib
+        pkgs
+        config
+        ;
     };
-  myGnomeKeymaps = setGnomeKeymaps [
-    {
-      name = "Terminal (foot)";
-      run = "foot";
-      keys = "<Super>Return";
-    }
-    {
-      name = "Neovim GUI";
-      run = "neovide";
-      keys = "<Super><Shift>Return";
-    }
-    {
-      name = "Libreoffice";
-      run = "libreoffice";
-      keys = "<Super><Alt>l";
-    }
-  ];
+  myDconf = importProgram "dconf";
 in
 {
-  programs = {
+  programs = myDconf // {
     sway = {
       enable = true;
       wrapperFeatures.gtk = true;
@@ -80,29 +38,6 @@ in
         "${swayDir}/config"
       ];
     };
-    dconf.profiles.user.databases = [
-      {
-        settings = {
-          "org/gnome/settings-daemon/plugins/power" = {
-            sleep-inactive-ac-type = "nothing";
-            sleep-inactive-battery-type = "nothing";
-            sleep-inactive-ac-timeout = lib.gvariant.mkInt32 0;
-            sleep-inactive-battery-timeout = lib.gvariant.mkInt32 0;
-          };
-          "org/gnome/shell" = {
-            overview-on-all-monitors = true;
-            dynamic-workspaces = false;
-          };
-          "org/gnome/mutter" = {
-            workspaces-only-on-primary = false;
-          };
-          "org/gnome/desktop/wm/preferences" = {
-            num-workspaces = lib.gvariant.mkInt32 10;
-          };
-        }
-        // myGnomeKeymaps;
-      }
-    ];
     ssh = {
       startAgent = false;
       # askPassword = "${pkgs.kdePackages.ksshaskpass}/bin/ksshaskpass";

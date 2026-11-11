@@ -1712,25 +1712,4 @@ paste0 = lib.paste0
 concat = lib.concat
 joinlines = lib.joinlines
 
-globals({
-	copy = copy,
-	class = class,
-	Spec = Specification,
-	Specification = Specification,
-	Predicate = Predicate,
-	union = lib.union,
-	maybe = lib.maybe,
-	format = lib.format,
-	substr = lib.substr,
-	replace = lib.replace,
-	Ok = lib.Ok,
-	Err = lib.Err,
-	rthread = lib.rthread,
-	rpcall = lib.rpcall,
-	rwrap = lib.rwrap,
-	partial = lib.partial,
-	predicate = lib.predicate,
-	paste0 = lib.paste0,
-	concat = lib.concat,
-	joinlines = lib.joinlines,
-})
+return lib
