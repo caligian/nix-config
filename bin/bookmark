@@ -1,0 +1,90 @@
+#!/usr/bin/env perl
+
+package bookmark;
+
+use strict;
+use warnings;
+use utils;
+use File::Slurp;
+
+my $SRC            = "$ENV{HOME}/bookmarks.json";
+my %BOOKMARKS      = ();
+our $LOADED = 0;
+
+sub read_bookmarks {
+  return if $LOADED;
+  mkdir "$SRC" unless -d $SRC;
+
+  if (-f $SRC) {
+    %BOOKMARKS = %{ read_json($SRC) };
+    $LOADED = 1;
+  }
+}
+
+sub write_bookmarks {
+  write_json(\%BOOKMARKS, $SRC);
+}
+
+sub add_bookmark {
+  read_bookmarks();
+
+  my ($path, $desc) = @_;
+  my $type = "";
+
+  if (-d $path) {
+    $type = "directory";
+  }
+  elsif (-f $path) {
+    $type = "file";
+  }
+  else {
+    die "Expected file/directory, got $path";
+  }
+
+  $path = abspath($path);
+  $BOOKMARKS{$path} = { path => $path, type => $type, desc => $desc };
+  write_bookmarks();
+}
+
+sub assert_bookmarks {
+  if (scalar(%BOOKMARKS) == 0) {
+    die("No bookmarks have been added yet. Use bookmarks --add {PATH}");
+  }
+}
+
+sub list_bookmarks {
+  read_bookmarks();
+  assert_bookmarks();
+
+  foreach my $path (keys %BOOKMARKS) {
+    $path =~ s/$ENV{HOME}/~/;
+    printf "%s\n", $path;
+  }
+}
+
+sub main {
+  my ($opts, $help) = ArgumentParser(
+    EXIT_ON_HELP => 1,
+    PROG         => "bookmark",
+    DESC         => "Simple bookmarks manager",
+    "add|a=s"    => "Add bookmark",
+    "remove|r=s" => "Remove bookmark",
+    "list|l"     => "List all bookmarks"
+  );
+
+  my %opts = %{$opts};
+  if ($opts{add}) {
+    my $path = $opts{add};
+    $path =~ s/^~/$ENV{HOME}/;
+    add_bookmark($path);
+    println "OK: $path";
+  }
+  elsif ($opts{remove}) {
+    die "Not implemented yet";
+  }
+  elsif ($opts{list}) {
+    list_bookmarks();
+  }
+}
+
+main();
