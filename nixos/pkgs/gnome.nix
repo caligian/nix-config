@@ -11,5 +11,4 @@
   vertical-workspaces
   just-perfection
   blur-my-shell
-  focus-on-active-window
 ])

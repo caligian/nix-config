@@ -3,6 +3,7 @@
   ...
 }:
 (with pkgs.python313Packages; [
+  pyperclip
   pip
   jedi-language-server
   python-docx

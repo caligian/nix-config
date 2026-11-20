@@ -1,6 +1,7 @@
 { pkgs, ... }:
 (with pkgs; [
- xprop
+  which
+  xprop
   git
   qpdf
   tmux

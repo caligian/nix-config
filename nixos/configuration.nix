@@ -25,7 +25,7 @@ let
   qt = importModule "qt";
   nixpkgs = importModule "nixpkgs";
   services = importModule "services";
-  security = importModule "security"; 
+  security = importModule "security";
   fonts = importModule "fonts";
   boot = importModule "boot";
   xdg = importModule "xdg";
@@ -78,7 +78,7 @@ in
     gc = {
       automatic = true;
       dates = "weekly";
-      options = "--delete-older-than 4d";
+      options = "--delete-older-than 7d";
     };
     settings = {
       experimental-features = [
@@ -86,6 +86,13 @@ in
         "flakes"
       ];
     };
+  };
+
+  powerManagement = {
+    enable = true;
+    cpuFreqGovernor = "schedutil";
+    cpufreq.min = 800000;
+    cpufreq.max = 3500000;
   };
 
   # DO NOT TOUCH

@@ -13,10 +13,26 @@ local map = lib.kbd.map
 
 vim.g.mapleader = " "
 vim.g.maplocalleader = "<C-x>"
+vim.g.netrw_liststyle = 1
+vim.g.netrw_banner = 0
+vim.g.netrw_hide = 0
+vim.g.netrw_sizestyle = "H"
+vim.g.netrw_sort_by = "time"
+vim.g.netrw_sort_direction = "reverse"
 
 local function insert_tab()
 	local tab = replace_termcodes("<Tab>", true, false, true)
 	feedkeys(tab, "n", false)
+end
+
+local function split_and_ex(cmd)
+	vim.cmd(string.format(":split | wincmd j | %s | resize -9", cmd))
+end
+
+local function split_map(mode, lhs, rhs, opts)
+	map(mode, lhs, function()
+		split_and_ex(rhs)
+	end, opts)
 end
 
 local function touch(dir)
@@ -28,24 +44,39 @@ local function touch(dir)
 			return
 		else
 			local new_file = fs.join(dir, str)
-			local new_buf = vim.fn.bufadd(new_file)
-			buffer.set_opt(new_buf, "buflisted", true)
-			vim.cmd(":e " .. new_file)
+			local is_dir = new_file:sub(#new_file, #new_file) == "/"
+			if not is_dir then
+				local new_buf = vim.fn.bufadd(new_file)
+				buffer.set_opt(new_buf, "buflisted", true)
+			else
+				vim.cmd(":! mkdir " .. new_file)
+			end
+			vim.cmd(":Neotree " .. new_file)
 		end
 	end)
 end
 
+--- Popup windows (netrw)
+map("n", "q", buffer.hide, { event = "Filetype", pattern = "netrw", desc = "Hide window" })
+map("n", "Q", buffer.wipeout, { event = "Filetype", pattern = "netrw", desc = "Wipeout window" })
+map("n", "<C-g>", buffer.wipeout, { event = "Filetype", pattern = "netrw", desc = "Wipeout window" })
+map("n", "q", buffer.hide, { event = "BufNew", pattern = "__temp_*__", desc = "Hide window" })
+map("n", "Q", buffer.wipeout, { event = "BufNew", pattern = "__temp_*__", desc = "Wipeout window" })
+map("n", "<C-g>", buffer.wipeout, { event = "BufNew", pattern = "__temp_*__", desc = "Wipeout window" })
+
 --- Emacs mappings
+map("n", "<C-g>", ":noh<CR>", { desc = "Disable highlight" })
 map("n", "<C-y>", '"+p', { desc = "Paste from clipboard" })
 map("n", "<M-q>", "gqq", { desc = "Wrap lines" })
-map("n", "<C-x>q", ":qall!<CR>", { desc = "Quit neovim without saving" })
-map("n", "<C-x>x", ":xa<CR>", { desc = "Quit neovim" })
-map("n", "<C-g>", ":noh<CR>", { desc = "Disable highlight" })
 map("n", "<A-x>", ":Telescope commands<CR>", { desc = "Telescope commands" })
 map("v", "<M-q>", "gq", { desc = "Wrap lines" })
 map("v", "<M-w>", '"+y', { desc = "Copy to clipboard" })
 map("v", "<A-x>", ":", { desc = "Telescope commands" })
 map("i", "<A-x>", "<C-o>:'<,'>", { desc = "Run command on range" })
+map("i", "<C-M-i>", insert_tab, { desc = "Insert indentation" })
+map("i", "<C-v>", "<C-o>v", { desc = "Start visual mode" })
+map("i", "<C-y>", '<C-o>"+p', { desc = "Paste from clipboard" })
+map("i", "<M-q>", "<C-o>gqq", { desc = "Wrap lines" })
 map("i", "<C-a>", "<Home>", { desc = "Start of line" })
 map("i", "<C-e>", "<End>", { desc = "End of line" })
 map("i", "<C-b>", "<Left>", { desc = "Goto character on left" })
@@ -58,10 +89,6 @@ map("i", "<C-d>", "<Del>", { desc = "Delete character backwards" })
 map("i", "<M-d>", "<C-o>dW", { desc = "Delete word forwards" })
 map("i", "<M-BS>", "<C-o>db", { desc = "Delete word backwards" })
 map("i", "<M-k>", "<C-o>d$", { desc = "Delete everything from cursor to EOL" })
-map("i", "<M-q>", "<C-o>gqq", { desc = "Wrap lines" })
-map("i", "<C-y>", '<C-o>"+p', { desc = "Paste from clipboard" })
-map("i", "<C-v>", "<C-o>v", { desc = "Start visual mode" })
-map("i", "<C-M-i>", insert_tab, { desc = "Insert indentation" })
 
 --- Window management
 map("n", "<leader>ws", "<C-w><C-s>", { desc = "Split window horizontally" })
@@ -118,6 +145,9 @@ map("n", "<leader>gl", ":botright Git log <bar> resize -5<CR>", { desc = "Show g
 map("n", "<leader>g?", ":botright Git status<CR>", { desc = "Git status" })
 map("n", "<leader>gs", ":Git stage %<CR>", { desc = "Stage current buffer" })
 map("n", "<leader>gf", ":Telescope git_files<CR>", { desc = "List tracked files" })
+map("n", "<leader>gp", ":Git push<CR>", { desc = "Push changes using ssh" })
+map("n", "<leader>gx", ":GDelete<CR>", { desc = "Remove buffer if tracked" })
+map("n", "<leader>gX", ":GDelete!<CR>", { desc = "Force remove buffer if tracked" })
 
 --- Misc
 map("n", '<leader>"', ":Telescope registers<CR>", { desc = "Telescope registers" })
@@ -137,6 +167,12 @@ map("n", "<leader>hp", ":Telescope pickers<CR>", { desc = "Telescope pickers" })
 map("n", "<leader>hr", ":Telescope registers<CR>", { desc = "Telescope registers" })
 map("n", "<leader>hj", ":Telescope jumplist<CR>", { desc = "Telescope jumplist" })
 map("n", "<leader>h:", ":Telescope command_history<CR>", { desc = "Telescope command history" })
+
+--- Session management
+map("n", "<leader>qa", ":qa<CR>")
+map("n", "<leader>qA", ":qa!<CR>")
+map("n", "<leader>qx", ":xa<CR>")
+map("n", "<leader>qX", ":xa!<CR>")
 
 --- Terminal keybindings
 map("t", "<esc>", "<C-\\><C-n>", { desc = "Normal mode" })
@@ -196,8 +232,8 @@ map("n", "<C-x>dd", buffer.find_files_d, { desc = "Find files in buffer director
 map("n", "<C-x>db", function()
 	local buf = buffer.current()
 	if buffer.is_file(buf) then
-    local dir = buffer.dirname(buf)
-    Tbuffers(make_opts {cwd = dir})
+		local dir = buffer.dirname(buf)
+		Tbuffers(make_opts({ cwd = dir }))
 	end
 end, { desc = "Select buffers in buffer directory" })
 map("n", "<C-x>da", function()
@@ -209,14 +245,13 @@ end, { desc = "Create a file at buffer directory" })
 
 map("n", "<leader>.", buffer.fdp, { desc = "Find files in buffer project" })
 map("n", "<C-x>p/", buffer.live_grep_p, { desc = "Live grep in buffer project directory" })
-map("n", "<C-x>pp", buffer.fdp, { desc = "Find files in buffer project" })
 map("n", "<C-x>pb", function()
 	local buf = buffer.current()
 	if buffer.is_file(buf) then
-    local dir = buffer.find_project_dir(buf)
-    if dir then
-      Tbuffers(make_opts {cwd = dir})
-    end
+		local dir = buffer.find_project_dir(buf)
+		if dir then
+			Tbuffers(make_opts({ cwd = dir }))
+		end
 	end
 end, { desc = "Select buffers in buffer directory" })
 map("n", "<C-x>pa", function()
@@ -231,4 +266,26 @@ map("n", "<C-x>pa", function()
 	else
 		touch(proj)
 	end
-end, { desc = "Create a file at buffer directory" })
+end, { desc = "Create a file at buffer project" })
+
+--- Search and replace
+map({ "n", "v" }, "<C-x>/", ":s/", { desc = "Replace regex" })
+map("n", "<C-x>%", ":%s/", { desc = "Replace regex in buffer" })
+
+--- Toggle light/dark background
+map("n", "<leader>hb", function()
+	if vim.o.background == "light" then
+		vim.cmd([[ set bg=dark ]])
+	else
+		vim.cmd([[ set bg=light ]])
+	end
+end, { desc = "Toggle light/dark background" })
+
+--- nixos specific keymaps
+split_map("n", "<C-x>no", ":e ~/.user/nixos", { desc = "Open ~/.user/nixos" })
+split_map("n", "<C-x>nu", ":e ~/.user", { desc = "Open ~/.user" })
+split_map("n", "<C-x>nn", ":e ~/.user/nvim", { desc = "Open ~/.user/nvim" })
+split_map("n", "<C-x>ns", ":e ~/.user/sway", { desc = "Open ~/.user/sway" })
+split_map("n", "<C-x>nf", ":e ~/.user/foot", { desc = "Open ~/.user/foot" })
+split_map("n", "<C-x>np", ":e ~/.user/nixos/pkgs", { desc = "Open ~/.user/nixos/pkgs" })
+split_map("n", "<C-x>nm", ":e ~/.user/nixos/systemd.nix", { desc = "Open ~/.user/nixos/systemd.nix" })

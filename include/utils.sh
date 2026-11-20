@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+function wl-cp() {
+  [[ ! -f $1 ]] && echo "No such file exists: $1" && exit 1
+  cat "$1" | wl-copy
+}
+
 function symlink() {
   [[ -z $1 ]] && echo "No path provided" && return 1
   [[ -z $2 ]] && echo "No link name provided" && return 1
@@ -203,12 +208,13 @@ function pdf-chunk() {
   done
 }
 
-function sys-rebuild() {
-  pushd .
-  cd $ADMIN_DIR/nixos
-
+function sys-switch-reload() {
+  local action="${1:-switch}"
   local -a my_nixos_files
   local -a prev_nixos_files
+
+  pushd .
+  cd $ADMIN_DIR/nixos
 
   mapfile -d $'\n' -t my_nixos_files <<<"$(git ls-files)"
   mapfile -d $'\n' -t prev_nixos_files <<<"$(find /etc/nixos/ -type f -name '*.nix')"
@@ -223,19 +229,46 @@ function sys-rebuild() {
     sudo cp -vr "$file" /etc/nixos/"${file}"
   done
 
-  sudo nixos-rebuild switch
   popd -1
+  sudo nixos-rebuild "$action"
 }
 
-function sys-reload() {
-  sudo bash -c "nixos-rebuild switch"
+function sys-switch-boot() {
+  sys-switch-reload "boot"
 }
 
 function sys-edit() {
   nvim $ADMIN_DIR/nixos
 }
 
-function wl-cp() {
-  [[ ! -f $1 ]] && echo "No such file exists: $1" && exit 1
-  cat "$1" | wl-copy
+function farcry2() {
+  pushd .
+  cd ~/Games/fc2/bin
+  gamescope -w 1366 -h 768 -W 1920 -H 1080 -S stretch -f --force-grab-cursor -- wine farcry2.exe
+  popd -1
+}
+
+function bookmark-open() {
+  choice="$(perl $ADMIN_DIR/bin/bookmark --list | fzf)"
+  if [[ -z $choice ]]; then
+    echo "Nothing selected"
+    return 1
+  else
+    choice="${choice/[~]/$HOME}"
+  fi
+
+  if [[ -d $choice  ]]; then
+    pushd .
+    cd "$choice"
+  elif [[ -f $choice ]]; then
+    if grep -q -E "[.](vim|sh|py|R|pm|pl|nix|txt|md|text|conf|ini|toml|json|config|list|yaml|bashrc|zshrc)$" <<< "$choice"; then
+      nvim "$choice"
+    elif grep -q -E "[.](xlsx|ods|docx|doc|odt|ppt|pptx|csv)$" <<< "$choice"; then
+      libreoffice "$choice"
+    else
+      xdg-open "$choice"
+    fi
+  else
+    echo "Not implemented" && return 1
+  fi
 }

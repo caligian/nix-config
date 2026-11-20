@@ -14,52 +14,38 @@ let
       serviceConfig = service;
       wantedBy = wants;
     };
-  mako = mkService {
-    unit = {
-      Description = "Mako notification daemon";
-      PartOf = [ "graphical-session.target" ];
-      After = [ "graphical-session.target" ];
-      ConditionEnvironment = "XDG_CURRENT_DESKTOP=sway";
+  myServices = {
+    mako = mkService {
+      unit = {
+        Description = "Mako notification daemon";
+        PartOf = [ "graphical-session.target" ];
+        After = [ "graphical-session.target" ];
+        ConditionEnvironment = "XDG_CURRENT_DESKTOP=sway";
+      };
+      service = {
+        ExecStart = "${pkgs.mako}/bin/mako";
+        Restart = "on-failure";
+      };
+      wants = [ "graphical-session.target" ];
     };
-    service = {
-      ExecStart = "${pkgs.mako}/bin/mako";
-      Restart = "on-failure";
+    swayosd-server = mkService {
+      unit = {
+        Description = "SwayOSD server";
+        PartOf = [ "graphical-session.target" ];
+        After = [ "graphical-session.target" ];
+        ConditionEnvironment = "XDG_CURRENT_DESKTOP=sway";
+      };
+      service = {
+        ExecStart = "${pkgs.swayosd}/bin/swayosd-server";
+        Restart = "on-failure";
+      };
+      wants = [ "graphical-session.target" ];
     };
-    wants = [ "graphical-session.target" ];
   };
-  swayosd-server = mkService {
-    unit = {
-      Description = "SwayOSD server";
-      PartOf = [ "graphical-session.target" ];
-      After = [ "graphical-session.target" ];
-      ConditionEnvironment = "XDG_CURRENT_DESKTOP=sway";
-    };
-    service = {
-      ExecStart = "${pkgs.swayosd}/bin/swayosd-server";
-      Restart = "on-failure";
-    };
-    wants = [ "graphical-session.target" ];
-  };
-  # waybar = mkService {
-  #   unit = {
-  #     Description = "Waybar status bar";
-  #     PartOf = [ "graphical-session.target" ];
-  #     After = [ "graphical-session.target" ];
-  #     ConditionEnvironment = "XDG_CURRENT_DESKTOP=sway";
-  #   };
-  #   service = {
-  #     ExecStart = "${pkgs.waybar}/bin/waybar";
-  #     Restart = "on-failure";
-  #   };
-  #   wants = [ "graphical-session.target" ];
-  # };
 in
 {
   systemd = {
-    user.services = {
-      inherit mako swayosd-server;
-      # inherit waybar;
-    };
+    user.services = myServices;
     sleep.settings.Sleep = {
       "AllowSuspend" = "no";
       "AllowHibernation" = "no";
@@ -72,14 +58,9 @@ in
       hibernate.enable = false;
       hybrid-sleep.enable = false;
     };
-
     tmpfiles.rules = [
-      "L+    /opt/rocm   -    -    -     -    ${pkgs.rocmPackages.clr}"
-      # "L+ /var/lib/gdm/seat0/config/monitors.xml - gdm gdm - ${pkgs.writeText "gdm-monitors.xml" ''
-      #   <monitors version="2">
-      #     
-      #   </monitors>
-      # ''}"
+      "L+ /opt/rocm - - - - ${pkgs.rocmPackages.clr}"
+      "w /sys/devices/system/cpu/cpufreq/boost - - - - 0"
     ];
   };
 }

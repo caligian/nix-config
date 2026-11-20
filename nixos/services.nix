@@ -29,6 +29,7 @@
         enable = false;
         wayland.enable = false;
       };
+      defaultSession = "sway";
     };
     desktopManager = {
       gnome.enable = true;
@@ -57,6 +58,7 @@
         };
       };
     };
+    # auto-cpufreq.enable = true;
     clamav = {
       daemon.enable = true;
       updater.enable = true;

@@ -1,12 +1,19 @@
 if vim.g.loaded_lua_utils_definitions then
 	return
+else
+	vim.g.loaded_lua_utils_definitions = true
 end
 
-vim.g.loaded_lua_utils_definitions = true
-
+--- Well, did not know what global to use - here it is
 package.user = {}
+
+--- Contains user state
 package.user.state = {}
+
+--- User libraries and modules
 package.user.lib = {}
+
+--- Configuration specifications
 package.user.config = {}
 
 local lib = package.user.lib
@@ -45,7 +52,7 @@ local globals = {
 	global = true,
 	globals = true,
 	unglobal = true,
-	open_and_then = true,
+	open = true,
 	spit = true,
 	slurp = true,
 	dirname = true,
@@ -61,7 +68,7 @@ local globals = {
 
 Gmt.__old_newindex = Gnewindex
 Gmt.__newindex = function(self, key, value)
-  rawset(self, key, value)
+	rawset(self, key, value)
 	-- if dont_set[key] and not _G[key] then
 	-- 	package.user.lib.printf("WARNING: Attempting to set global {%s}, ignoring", key)
 	-- 	return
@@ -245,11 +252,47 @@ function lib.on(x, name, value)
 	local mt = getmetatable(x) or x
 	local ops = package.user.operators
 
-	assert(ops[name], "Invalid operator string provided: " .. tostring(name))
+	assert(ops[name], "Invalid operator identifier provided: " .. tostring(name))
 	mt[ops[name]] = value
 
 	return setmetatable(x, mt)
 end
+
+---@param dst table
+---@param src table
+---@return table?
+function lib.mtset(dst, src)
+	local mt = getmetatable(dst)
+	if not mt then
+		return
+	end
+
+	for key, value in pairs(src) do
+		mt[key] = value
+	end
+
+	return dst
+end
+
+---@param dst table
+---@param attribs string|integer|number|(string|integer|number)[]
+---@return table?
+function lib.mtget(dst, attribs)
+	local mt = getmetatable(dst)
+	if not mt then
+		return
+	end
+
+	local res = {}
+	for _, key in ipairs(lib.as.list(attribs)) do
+		res[key] = dst[key]
+	end
+
+	return res
+end
+
+lib.setmt = setmetatable
+lib.getmt = getmetatable
 
 ---If metatable is not set or __index is undefined, reference to self
 ---@param x table
@@ -271,7 +314,7 @@ end
 ---@param mode? string
 ---@param fn fun(fh: file*): any
 ---@return boolean, any
-function lib.open_and_then(filename, mode, fn)
+function lib.open(filename, mode, fn)
 	local ok
 	local fh, msg = io.open(filename, mode or "r")
 	msg = lib.as.value(msg)
@@ -292,7 +335,7 @@ end
 function lib.bslurp(filename, mode)
 	mode = mode or "r"
 	mode = not string.match(mode, "b") and (mode .. "b") or mode
-	return lib.open_and_then(filename, mode, function(fh)
+	return lib.open(filename, mode, function(fh)
 		return fh:read("*a")
 	end)
 end
@@ -312,7 +355,7 @@ end
 ---@return boolean, string?
 function lib.slurp(filename, mode)
 	mode = mode or "r"
-	return lib.open_and_then(filename, mode, function(fh)
+	return lib.open(filename, mode, function(fh)
 		return fh:read("*a")
 	end)
 end
@@ -328,7 +371,7 @@ function lib.spit(filename, mode, contents)
 
 	assert(type(contents) == "string", "contents= is not of type string")
 
-	return lib.open_and_then(filename, mode, function(fh)
+	return lib.open(filename, mode, function(fh)
 		local ok, err = fh:write(contents)
 		if not ok then
 			error(err)
@@ -427,10 +470,10 @@ function lib.length(x)
 	return #x
 end
 
-local copy = {}
+lib.copy = {}
+copy = lib.copy
 copy.__index = rawget
 setmetatable(copy, copy)
-lib.copy = copy
 
 ---Shallow copy table
 ---@param x table src table
@@ -495,18 +538,17 @@ function copy:__call(x, deep)
 	end
 end
 
-inspect = lib.inspect
 pp = lib.pp
 printf = lib.printf
 sprintf = lib.sprintf
-open_and_then = lib.open_and_then
+open = lib.open
 spit = lib.spit
 slurp = lib.slurp
-copy = lib.copy
 errorf = lib.errorf
 pack = lib.pack
 is = lib.is
 as = lib.as
 copy = lib.copy
+inspect = lib.inspect
 
 return lib

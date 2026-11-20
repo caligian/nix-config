@@ -11,7 +11,7 @@ set $term foot -c ~/.user/foot/config.ini
 set $root_dir ~/.user/sway
 
 # Font
-font "Liberation Sans 13"
+font "Liberation Sans 12"
 
 # Output configuration
 output * bg ~/.user/sway/wallpaper.jpg fill
@@ -157,7 +157,7 @@ bindsym --locked XF86MonBrightnessUp exec brightnessctl set 5%+
 
 # Take screenshot
 bindsym Print exec grim
-bindsym $mod+backslash exec grim -g "$(slurp)" - | wl-copy
+bindsym $mod+Print exec grim -g "$(slurp)" - | wl-copy
 
 # Show clipboard
 bindsym $mod+c exec nwg-clipman -w
@@ -201,9 +201,6 @@ for_window [app_id=".*"] border pixel 3
 for_window [app_id="filebrowser"] floating enable, resize set 1600 1000, move position center
 for_window [app_id="yazi-file-browser"] floating enable, resize set 1300 800, move position center
 for_window [app_id="cmus-music-player"] floating enable, resize set 1300 800, move position center
-for_window [class="pcmanfm-qt"] floating enable, resize set 1600 1000, move position center
-for_window [instance="pcmanfm-qt"] floating enable, resize set 1600 1000, move position center
-for_window [class="guake"] floating enable, resize set 1200 800, move position center
 for_window [window_role="pop-up"] floating enable
 for_window [window_role="bubble"] floating enable
 for_window [window_role="dialog"] floating enable
@@ -214,8 +211,6 @@ for_window [app_id="pavucontrol"] floating enable
 for_window [app_id="nm-connection-editor"] floating enable
 for_window [app_id="blueman-manager"] floating enable
 for_window [app_id="galculator"] floating enable
-for_window [app_id="gnome-calculator"] floating enable
-for_window [app_id="gnome-disks"] floating enable
 for_window [app_id="wdisplays"] floating enable
 for_window [title="About Mozilla Firefox"] floating enable
 for_window [window_role="About"] floating enable
@@ -232,6 +227,11 @@ for_window [app_id="org.gnome.Calendar"] floating enable
 for_window [app_id="org.gnome.Calculator"] floating enable
 for_window [app_id="org.gnome.Nautilus"] floating enable
 for_window [app_id="com.network.manager"] floating enable
+for_window [app_id="gnome-calculator"] floating enable
+for_window [app_id="gnome-disks"] floating enable
+for_window [instance="pcmanfm-qt"] floating enable, resize set 1600 1000, move position center
+for_window [class="pcmanfm-qt"] floating enable, resize set 1600 1000, move position center
+for_window [class="guake"] floating enable, resize set 1200 800, move position center
 
 # Misc settings
 default_border pixel 7
@@ -240,7 +240,6 @@ focus_on_window_activation focus
 focus_follows_mouse yes
 mouse_warping output
 gaps inner 8
-adaptive_sync off
 
 # Setup monitors
 output eDP-1 pos 0 0 res 1920x1080

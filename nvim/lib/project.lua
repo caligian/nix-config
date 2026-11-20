@@ -1,5 +1,6 @@
-require('lib.autocmd')
+require("lib.autocmd")
 require("lib.command")
+require("lib.picker")
 
 local getbufnr = vim.fn.bufnr
 local lib = package.user.lib
@@ -10,13 +11,16 @@ local command = lib.command
 local getbufname = vim.api.nvim_buf_get_name
 local state = package.user.state.workspace
 local project = {}
+local list = lib.list
+local dict = lib.dict
+local buffer = lib.buffer
 
 local function get_check_depth()
 	return package.user.config.workspace.check_depth
 end
 
 local function neotree(dir)
-	vim.cmd("Neotree bottom " .. dir)
+	vim.cmd("Neotree " .. dir)
 end
 
 local function trim(s)
@@ -101,8 +105,8 @@ function project.find_deprecated(path, opts)
 end
 
 function project.find(path, opts)
-  path = path or 0
-  path = is.number(path) and buffer.get_name(path) or path
+	path = path or 0
+	path = is.number(path) and buffer.get_name(path) or path
 	opts = opts or {}
 
 	if not fs.is_file(path) then
@@ -179,6 +183,9 @@ end
 function project.list(...)
 	local res = {}
 	local patterns = { ... }
+	if #patterns == 0 then
+		patterns = { ".+" }
+	end
 
 	list.each(dict.keys(state), function(dir)
 		if matches(dir, patterns) then
@@ -344,6 +351,22 @@ function project.setup_commands()
 		desc = "Fix project directories",
 		nargs = 0,
 	})
+
+  command.new("ProjectOpen", function (_, args)
+    if #args.args > 0 then
+      neotree(args.args)
+    else
+      lib.select("Browse project directory", project.list(), function (entry)
+        neotree(entry[1].value)
+      end)
+    end
+  end, {
+    desc = "Browse project directories",
+    nargs = '?',
+    complete = function ()
+      return project.list()
+    end
+  })
 end
 
 function project.setup_autocmds()
@@ -393,10 +416,27 @@ function project.new(dirname, cd)
 	return true
 end
 
+function project.setup_keymaps()
+  local map = vim.keymap.set
+  map("n", "<C-x>pp", ":ProjectOpen<CR>", {desc = "Browse projects"})
+end
+
 function project.setup()
 	project.setup_autocmds()
 	project.setup_commands()
+	project.setup_keymaps()
+end
+
+function project.add(path)
+  if not fs.is_dir(path) or not fs.is_file(path .. '/.PROJECT') then
+    errorf("%s is not a project directory", path)
+  else
+    path = fs.abspath(path)
+    path = path:gsub("/%.$", "")
+  end
+  state[path] = state[path] or {}
 end
 
 project.bfind = project.buf_find
 package.user.lib.project = project
+return lib

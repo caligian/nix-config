@@ -42,6 +42,7 @@ in
       startAgent = false;
       # askPassword = "${pkgs.kdePackages.ksshaskpass}/bin/ksshaskpass";
     };
+    gamemode.enable = true;
     steam.enable = false;
     gpaste.enable = true;
     firefox.enable = true;

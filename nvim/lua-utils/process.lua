@@ -1,162 +1,165 @@
-require 'lua-utils.string'
-require 'lua-utils.type'
+require("lua-utils.string")
+require("lua-utils.type")
 
-local class = package.user.lib.class
-local copy = package.user.lib.copy
-local process = {}
+local lib = package.user.lib
+lib.process = {}
+local process = lib.process
 
-process.Popen = class 'Popen'
-
----@class Popen
+---@class Popen : Popen.class : instance
 ---@field cmd string
 ---@field mode? string
----@field handle? userdata
+---@field handle? file*
 ---@field output string[] | string
-local Popen
+---@field output_read boolean
+---@field started boolean
+---@field completed boolean
 
----@overload fun(cmd: string, mode?: string) -> Popen
-Popen = class 'Popen'
+---@class Popen.class : class
+---@field new fun(self: Popen.class, cmd: string, mode?: string): Popen
+local Popen = class 'Popen'
+lib.Popen = Popen
+process.Popen = Popen
 
 function Popen:initialize(cmd, mode)
-  self.cmd = cmd
-  self.mode = mode or 'r'
-  self.handle = nil
-  self.output = {}
-  self.output_read = false
-  self.started = false
-  self.completed = false
+	self.cmd = cmd
+	self.mode = mode or "r"
+	self.handle = nil
+	self.output = {}
+	self.output_read = false
+	self.started = false
+	self.completed = false
 end
 
 ---Start the process
 function Popen:start()
-  if self.started then
-    return true
-  end
+	if self.started then
+		return true
+	end
 
-  if self.completed then
-    error('Process has closed')
-  end
+	if self.completed then
+		error("Process has closed")
+	end
 
-  self.handle = io.popen(self.cmd) --[[@as userdata]]
-  if not self.handle then
-    error(sprintf("Could not run command: %s", self.cmd))
-  end
+	self.handle = io.popen(self.cmd) --[[@as userdata]]
+	if not self.handle then
+		error(sprintf("Could not run command: %s", self.cmd))
+	end
 
-  self.started = true
-  return true
+	self.started = true
+	return true
 end
 
 ---Read next line of output
 function Popen:readline()
-  if not self.started then
-    error('Process has not started yet')
-  end
+	if not self.started then
+		error("Process has not started yet")
+	end
 
-  if self.output_read then
-    return
-  end
+	if self.output_read then
+		return
+	end
 
-  --- @diagnostic disable-next-line
-  local line = self.handle:read('*line')
-  if line == nil then
-    self.output_read = true
-    return
-  else
-    self.output[#self.output + 1] = line
-    return line
-  end
+	--- @diagnostic disable-next-line
+	local line = self.handle:read("*line")
+	if line == nil then
+		self.output_read = true
+		return
+	else
+		self.output[#self.output + 1] = line
+		return line
+	end
 end
 
 ---Read all output
 function Popen:readlines()
-  if not self.started then
-    error('Process has not started yet')
-  end
+	if not self.started then
+		error("Process has not started yet")
+	end
 
-  if self.output_read then
-    return self.output
-  end
+	if self.output_read then
+		return self.output
+	end
 
-  while true do
-    if self:readline() == nil then
-      return self.output
-    end
-  end
+	while true do
+		if self:readline() == nil then
+			return self.output
+		end
+	end
 end
 
 ---Read all output and optionally split lines
 ---@param split? string
 ---@return string[] | string
 function Popen:read(split)
-  if not self.started then
-    error('Process has not started yet')
-  end
+	if not self.started then
+		error("Process has not started yet")
+	end
 
-  if self.output_read then
-    return self.output
-  end
+	if self.output_read then
+		return self.output
+	end
 
-  --- @diagnostic disable-next-line
-  self.output = self.handle:read('*all')
-  if split then
-    self.output = self.output:split(split)
-  end
+	--- @diagnostic disable-next-line
+	self.output = self.handle:read("*all")
+	if split then
+		self.output = self.output:split(split)
+	end
 
-  return self.output
+	return self.output
 end
 
 ---Write text to stdin of the file handle
 ---@param s string
 ---@return number
 function Popen:write(s)
-  if not self.started then
-    error('Process has not started yet')
-  end
+	if not self.started then
+		error("Process has not started yet")
+	end
 
-  if not self.mode:match 'w' then
-    error('Process is read-only')
-  end
+	if not self.mode:match("w") then
+		error("Process is read-only")
+	end
 
-  self:write(s)
-  return #s
+	self:write(s)
+	return #s
 end
 
 ---Stop the process
 function Popen:close()
-  if not self.started then
-    error('Process has not started yet')
-  end
+	if not self.started then
+		error("Process has not started yet")
+	end
 
-  if self.handle ~= nil then
-    --- @diagnostic disable-next-line
-    self.handle:close()
-    self.handle = nil
-    self.started = false
+	if self.handle ~= nil then
+		--- @diagnostic disable-next-line
+		self.handle:close()
+		self.handle = nil
+		self.started = false
 
-    return true
-  end
+		return true
+	end
 end
 
 process.run = os.execute
 
 ---@param cmd string
----@param f? fun(lines: string) -> any
+---@param f? fun(lines: string): any
 ---@return any
 function process.check_output(cmd, f)
-  f = f or function(lines)
-    return lines
-  end
-  fh = io.popen(cmd, 'r')
+	f = f or function(lines)
+		return lines
+	end
+	fh = io.popen(cmd, "r")
 
-  if fh == nil then
-    error(sprintf("Could not run command: %s", cmd))
-  end
+	if fh == nil then
+		error(sprintf("Could not run command: %s", cmd))
+	end
 
-  local lines = fh:read('*all')
-  local res = f(lines)
-  fh:close()
+	local lines = fh:read("*all")
+	local res = f(lines)
+	fh:close()
 
-  return res
+	return res
 end
 
 ---@class process.system.opts
@@ -169,41 +172,39 @@ end
 ---@param cmd string
 ---@param opts? process.system.opts
 function process.system(cmd, opts)
-  opts = opts or {}
-  local capture = opts.stdout or opts.capture
-  local split = opts.newlines
-  local apply = opts.apply
+	opts = opts or {}
+	local capture = opts.stdout or opts.capture
+	local split = opts.newlines
+	local apply = opts.apply
 
-  if not capture then
-    process.run(cmd)
-  end
+	if not capture then
+		process.run(cmd)
+	end
 
-  local output = process.check_output(cmd)
-  if split then
-    output = string.split(output, '\n')
-  end
+	local output = process.check_output(cmd)
+	if split then
+		output = string.split(output, "\n")
+	end
 
-  if apply then
-    return apply(output)
-  else
-    return output
-  end
+	if apply then
+		return apply(output)
+	else
+		return output
+	end
 end
 
 ---@param cmd string
 ---@param opts? process.system.opts
 function process.systemlist(cmd, opts)
-  opts = opts or {}
-  opts = copy.copy(opts)
-  opts.capture = true
-  opts.newlines = true
+	opts = opts or {}
+	opts = copy.copy(opts)
+	opts.capture = true
+	opts.newlines = true
 
-  return process.system(cmd, opts)
+	return process.system(cmd, opts)
 end
 
-package.user.lib.process = process
-package.user.lib.system = process.system
-package.user.lib.systemlist = process.systemlist
-package.user.lib.Popen = process.Popen
+system = lib.system
+systemlist = lib.systemlist
 
-return process
+return lib

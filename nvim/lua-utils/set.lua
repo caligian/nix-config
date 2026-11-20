@@ -312,3 +312,4 @@ function Set:__call(tbl)
 end
 
 package.user.lib.Set = Set
+return lib

@@ -1,7 +1,6 @@
 require("lib.definitions")
 
 local lib = package.user.lib
-local copy = lib.copy
 local list = lib.list
 local enable = vim.api.nvim_create_autocmd
 
@@ -92,8 +91,10 @@ function autocmd.new(event, callback, opts)
 	else
 		opts.callback = function(_args)
 			if should_pcall then
+        ---@diagnostic disable-next-line
 				pcall(callback, _args.buf, _args)
 			else
+        ---@diagnostic disable-next-line
 				callback(_args.buf, _args)
 			end
 		end
@@ -131,7 +132,7 @@ function autocmd.define(opts, specs)
 end
 
 ---@param pattern string|string[]
----@param callback likeFunction
+---@param callback Callable
 ---@param opts? autocmd.opts|string
 ---@return integer
 function autocmd.ft_new(pattern, callback, opts)
@@ -177,10 +178,12 @@ function autocmd.is_valid(id)
 end
 
 ---@param ids integer[]|integer
----@return boolean[]
+---@return int[]
 function autocmd.are_valid(ids)
 	ids = as.list(ids)
-	return list.map(ids, autocmd.is_valid)
+  local lines = list.filter(ids, autocmd.is_valid)
+  ---@cast lines int[]
+	return lines
 end
 
 autocmd.map = autocmd.new
@@ -194,3 +197,4 @@ function autocmd.validate(args)
 end
 
 package.user.lib.autocmd = autocmd
+return lib

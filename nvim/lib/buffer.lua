@@ -10,6 +10,8 @@ local telescope = require("telescope")
 local telescope_config = package.user.config.plugins.telescope.defaults
 local find_files = telescope.extensions.file_browser.file_browser
 local live_grep = require("telescope.builtin").live_grep
+local copy = lib.copy
+local list = lib.list
 
 local function make_telescope_opts(overrides)
 	return dict.merge(copy(overrides), telescope_config)
@@ -238,7 +240,7 @@ end
 ---@param fn string|string[]|(fun(buf: string): any)
 ---@param start_row? number (default: 0)
 ---@param end_row? number (default: -1)
----@return string|string[]
+---@return string[]
 function buffer.filter(bufnr, fn, start_row, end_row)
 	buffer.assert_exists(bufnr)
 
@@ -258,9 +260,11 @@ function buffer.filter(bufnr, fn, start_row, end_row)
 			return true
 		end
 	end
-	local lines = vim.api.nvim_buf_get_lines(bufnr, start_row or 0, end_row or -1, false)
 
-	return list.filter(lines, check)
+	local lines = vim.api.nvim_buf_get_lines(bufnr, start_row or 0, end_row or -1, false)
+  lines = list.filter(lines, check)
+  ---@cast lines string[]
+	return lines
 end
 
 ---@param bufnr? number
@@ -282,7 +286,7 @@ end
 ---@return table<string,any>
 function buffer.get_opts(bufnr, names)
 	buffer.assert_exists(bufnr)
-	res = {}
+	local res = {}
 
 	for _, name in ipairs(names) do
 		res[name] = vim.api.nvim_get_option_value(name, { buf = bufnr })
@@ -338,7 +342,7 @@ end
 ---@return table<string,any>
 function buffer.get_vars(bufnr, names)
 	buffer.assert_exists(bufnr)
-	res = {}
+	local res = {}
 
 	for _, name in ipairs(names) do
 		res[name] = buffer.get_var(bufnr, name)
@@ -750,7 +754,7 @@ function buffer.on(bufnr, event, command, opts)
 
 	if is.string(command) then
 		opts.command = command
-	elseif callable(command) then
+	elseif is.callable(command) then
 		opts.callback = command
 	end
 
@@ -771,7 +775,7 @@ end
 function buffer.map(bufnr, mode, keys, command, opts)
 	bufnr = bufnr or curbuf()
 	local cmd = command
-	command = callable(cmd) and function()
+	command = is.callable(cmd) and function()
 		return cmd(bufnr)
 	end or cmd
 	mode = mode or "n"
@@ -1055,3 +1059,4 @@ buffer.get_workspace = buffer.get_root_dir
 buffer.get_line_count = vim.api.nvim_buf_line_count
 
 package.user.lib.buffer = buffer
+return lib

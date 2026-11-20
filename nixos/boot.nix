@@ -7,7 +7,7 @@
     loader = {
       systemd-boot = {
         enable = true;
-        configurationLimit = 3;
+        configurationLimit = 5;
       };
       efi.canTouchEfiVariables = true;
     };
@@ -26,6 +26,7 @@
       "usbcore.quirks=36ae:feac:k"
       "acpi=force"
       "drm.force_dvi_monitor=1"
+      "usbhid.mousepoll=2"
     ];
     extraModprobeConfig = "";
     initrd.kernelModules = [ ];

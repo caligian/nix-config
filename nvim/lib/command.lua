@@ -1,7 +1,7 @@
 require 'lib.definitions'
 
 local lib = package.user.lib
-local copy = vim.deepcopy
+local dict = lib.dict
 local make_command = vim.api.nvim_create_user_command
 local make_buffer_command = vim.api.nvim_buf_create_user_command
 local make_autocmd = vim.api.nvim_create_autocmd
@@ -112,6 +112,7 @@ function command.new(name, callback, opts)
   local should_pcall = opts.pcall
   local _args = { name, callback, opts }
   local cmd_opts = { bang = bang, desc = desc, force = force, nargs = nargs }
+  cmd_opts.complete = opts.complete
 
   local run = function(args)
     local process_arg = function(arg)
@@ -200,4 +201,4 @@ function command:__call(name, callback, opts)
 end
 
 package.user.lib.command = command
-return command
+return lib

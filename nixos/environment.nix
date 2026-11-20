@@ -21,6 +21,8 @@ let
     PERLCRITICRC = path.file.perlcriticrc;
     PERLTIDY = path.file.perltidyrc;
     PYTHONIOENCODING = "utf-8";
+    R_LINTR_LINTER_FILE = "${path.dir.root}/lintr";
+    DXVK_CONFIG = "dxgi.maxFramerate=59; d3d9.maxFrameRate=59";
   };
   importPkgs =
     names:
@@ -42,6 +44,7 @@ let
     lib.flatten allPkgs;
   defaultPkgs = (
     importPkgs [
+      "games"
       "cli"
       "tesseract"
       "vim"

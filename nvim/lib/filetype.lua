@@ -209,7 +209,7 @@ end
 function filetype.list_configs()
 	local files = fs.list_files(config_dir, true)
 	return list.filter(files, function(x)
-		return x:match("%.lua$")
+		return string.match(x, "%.lua$")
 	end)
 end
 
@@ -268,3 +268,4 @@ filetype.R = filetype.set_repl_config
 filetype.L = filetype.set_lsp_config
 
 package.user.lib.filetype = filetype
+return lib

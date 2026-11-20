@@ -1,5 +1,6 @@
 require("lib.definitions")
 
+local lib = package.user.lib
 local uv = vim.uv
 
 ---@type {[string]: timer}
@@ -56,3 +57,4 @@ function timer:stop()
 end
 
 package.user.lib.timer = timer
+return lib

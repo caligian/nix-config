@@ -2,7 +2,6 @@ require("lua-utils.tuple")
 require("lua-utils.type")
 
 local lib = package.user.lib
-local copy = lib.copy
 local tuple = lib.tuple
 local as_list = function(x, force)
 	if force or type(x) ~= "table" then

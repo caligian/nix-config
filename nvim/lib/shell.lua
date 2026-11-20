@@ -14,7 +14,7 @@ local kbd = lib.kbd
 local timer = lib.timer
 local nvim = lib.nvim
 local fs = lib.fs
-local shell = {}
+local shell = lib.bless {}
 
 local function normalize_buf(buf)
   if buf == nil then
@@ -432,7 +432,12 @@ function shell.setup()
   shell.setup_keymaps()
 end
 
+function shell:__call(bufnr, opts)
+  return shell.new(bufnr, opts)
+end
+
 shell.getbufnr = normalize_buf
 shell.normalize_buf = normalize_buf
 
 package.user.lib.shell = shell
+return lib

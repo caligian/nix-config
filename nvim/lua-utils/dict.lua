@@ -1,19 +1,21 @@
 if vim.g.loaded_lua_utils_dict then
-  return
+	return
 end
 
 vim.g.loaded_lua_utils_dict = true
 require("lua-utils.list")
 
+---@alias DictMap fun(key: str|int, value: any): any
+---@alias DictFilter fun(key: str|int, value: any): boolean
+---@alias Dict table<str|int, any>
+
 local lib = package.user.lib
-local list = lib.list
 local copy = lib.copy
-local NIL = lib.NIL
 
 ---@class KeyError.class : Error.class : class
----@field new fun(self: KeyError.class, key: str, metadata: table): KeyError
-local KeyError = class("KeyError", Error)
-package.user.lib.KeyError = KeyError
+---@field new fun(self: KeyError.class, key: str|int, tbl: Dict): KeyError
+KeyError = class("KeyError", Error)
+lib.KeyError = KeyError
 
 ---@class KeyError : KeyError.class : instance
 ---@field key any
@@ -21,12 +23,13 @@ package.user.lib.KeyError = KeyError
 ---@overload fun(key: any, metadata?: table)
 
 function KeyError:__call()
-	errorf("Nonexistent key: %s\nmetadata: %s", self.key, self.metadata)
+	errorf("KeyError(%s) in `%s`", self.key, self.dict)
 end
 
-function KeyError:initialize(key, metadata)
-	Error.initialize(self, "KeyError", key, metadata or {})
+function KeyError:initialize(key, tbl)
+	Error.initialize(self, "KeyError", key, tbl)
 	self.key = key
+	self.dict = tbl
 end
 
 ---@overload fun(x: any, opts?: is.opts): boolean, string?
@@ -96,11 +99,11 @@ end
 ---@param ks table
 ---@param value any
 ---@param opts? dict.set.opts|boolean
----@return table?|KeyError
+---@return Dict?|KeyError
 function dict.set(x, ks, value, opts)
 	opts = opts or {}
-  opts = is.boolean(opts) and {force = opts} or opts
-  local force = opts.force
+	opts = is.boolean(opts) and { force = opts } or opts
+	local force = opts.force
 	local level1 = x
 	value = as.value(value)
 
@@ -115,7 +118,7 @@ function dict.set(x, ks, value, opts)
 		if type(v) == "table" then
 			x = v
 		elseif not force then
-			local err = KeyError:new(k, { path = ks, level = x })
+			local err = KeyError:new(k, x)
 			if opts.raise or opts.throw then
 				err()
 			else
@@ -166,11 +169,15 @@ function dict.has(x, ks)
 	return x[ks[#ks]] ~= nil
 end
 
+---@class dict.get.opts
+---@field throw? boolean
+---@field raise? boolean
+
 ---Check if keys exist and return the value.
 ---@param x table
 ---@param ks table
 ---@param default? (fun(): any)
----@param opts? {throw?: boolean, raise?: boolean}
+---@param opts? dict.get.opts
 ---@return any, table?
 function dict.get(x, ks, default, opts)
 	opts = opts or {}
@@ -186,7 +193,7 @@ function dict.get(x, ks, default, opts)
 			if default then
 				return as.value(default()), x
 			else
-				local err = KeyError:new(k, { path = ks, level = x })
+				local err = KeyError:new(k, x)
 				if opts.raise or opts.throw then
 					err()
 				else
@@ -198,13 +205,15 @@ function dict.get(x, ks, default, opts)
 		end
 	end
 
-	local v = as.value(x[ks[#ks]])
+  local k = ks[#ks]
+	local v = as.value(x[k])
+
 	if v ~= nil then
 		return v, x
 	elseif default then
 		return as.value(default()), x
 	else
-		local err = KeyError:new(ks[#ks], { path = ks, level = x })
+		local err = KeyError:new(k, x)
 		if opts.raise or opts.throw then
 			err()
 		else
@@ -226,7 +235,7 @@ end
 
 ---@param x table
 ---@param f fun(key: any, value: any): boolean
----@param map fun(key: any, value: any): any
+---@param map? fun(key: any, value: any): any
 ---@return table
 function dict.filter(x, f, map)
 	local res = {}
@@ -306,15 +315,15 @@ end
 ---@alias dict.select.keys dict.select.key|dict.select.key[]
 ---@alias dict.select.filtermap table<dict.select.keys, fun(key: any, value: any): any>
 
----@param s any
+---@param key str|int
+---@param value any
 ---@param filtermap dict.select.filtermap
----@return boolean
+---@return any
 local function matches(key, value, filtermap)
 	local function match(pattern)
 		pattern = as.value(pattern)
 		if is.list(pattern) then
 			for i = 1, #pattern do
-				print(pattern[i])
 				if match(pattern[i]) then
 					return true
 				end
@@ -334,13 +343,11 @@ local function matches(key, value, filtermap)
 		end
 	end
 
-	for pattern, mapper in pairs(filtermap) do
+	for pattern, map in pairs(filtermap) do
 		if match(pattern) then
-			return true
+			return map(key, value)
 		end
 	end
-
-	return false
 end
 
 ---When filtermap consists of a string or string[], it will be matched against the key
@@ -351,7 +358,8 @@ function dict.select(x, filtermap)
 	local res = {}
 	for key, value in pairs(x) do
 		value = as.value(value)
-		if matches(key, value, filtermap) then
+		local new = as.value(matches(key, value, filtermap))
+		if not is.na(new) then
 			res[key] = value
 		end
 	end
@@ -547,11 +555,11 @@ function dict.update(x, ks, update, opts)
 
 	if is.KeyError(value) then
 		return value
-	else
-		level[ks[#ks]] = as.value(update(key, value, level))
 	end
 
-	return new, level
+	local new_value = as.value(update(ks[#ks], value, level))
+	level[ks[#ks]] = new_value
+	return new_value, level
 end
 
 ---@param x table
@@ -559,15 +567,15 @@ end
 ---@param opts? dict.get.opts
 ---@return any, table?
 function dict.pop1(x, ks, opts)
-  ks = as.list(ks)
+	ks = as.list(ks)
 	local value, level = dict.get(x, ks, nil, opts)
 
-  if is.KeyError(value) then
-    return value, nil
-  else
-    level[ks[#ks]] = nil
-    return value, level
-  end
+	if is.KeyError(value) then
+		return value, nil
+	else
+		level[ks[#ks]] = nil
+		return value, level
+	end
 end
 
 ---@param x table
@@ -580,8 +588,8 @@ function dict.pop(x, ks, opts)
 	local ind = 1
 
 	for i = 1, #args do
-		local ks = as.list(args[i])
-		local value = dict.pop1(x, ks, opts)
+		local k = as.list(args[i])
+		local value = dict.pop1(x, k, opts)
 		res[ind] = value
 		ind = ind + 1
 	end
@@ -589,5 +597,5 @@ function dict.pop(x, ks, opts)
 	return res, x
 end
 
-global('KeyError', KeyError)
 package.user.lib.dict = dict
+return dict

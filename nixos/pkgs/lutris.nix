@@ -16,6 +16,12 @@
         libvdpau
         speex
         libdrm
+        pipewire
+        libpulseaudio
+        alsa-lib
+        pkgsi686Linux.pipewire
+        pkgsi686Linux.libpulseaudio
+        pkgsi686Linux.alsa-lib
       ];
   })
 ]

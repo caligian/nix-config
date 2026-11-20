@@ -1,17 +1,16 @@
 if vim.g.loaded_lua_utils_type then
 	return
+else
+	require("lua-utils.definitions")
+	vim.g.loaded_lua_utils_type = true
 end
 
-require("lua-utils.definitions")
-
-vim.g.loaded_lua_utils_type = true
 local lib = package.user.lib
 
 ---@alias PredicateCallable fun(x: any): string?
 ---@alias GuardCallable fun(x: any, opts?: is.opts): boolean, string?
 ---@alias Predicate.Callable fun(...): (Ok<`T`> | Err<Error> | boolean)?, string?
 ---@alias UnionSignature class|instance|Union|Predicate|Callable|string|fun(x: any): string?
-local copy = lib.copy
 local base_class = setmetatable({
 	__type = "class",
 	__name = "base",
@@ -304,6 +303,7 @@ lib.predicate = lib.bless({
 	---@type table<string,PredicateCallable>
 	predicate = {},
 })
+predicate = lib.predicate
 
 ---@param fn PredicateCallable
 ---@param opts? predicate.opts
@@ -477,11 +477,20 @@ function lib.predicate.setup()
 		end
 	end, { expected = "integer" })
 
+	pred.undefined = lib.predicate(function(x)
+		return x == nil or x == package.user.lib.NIL
+	end, { expected = "nil" })
+
+	pred.defined = lib.predicate(function(x)
+		return not pred.undefined(x)
+	end, { expected = "non-nil" })
+
 	pred.num = pred.number
 	pred.int = pred.integer
 	pred.na = pred["nil"]
 	pred.NIL = pred.na
 	pred.fun = pred["function"]
+	pred.str = pred.string
 end
 
 lib.predicate.setup()
@@ -569,7 +578,7 @@ end
 function lib.guard.from_table(functions)
 	local res = {}
 	for name, spec in pairs(functions or {}) do
-		local pred = lib.predicate.add(unpack(spec))
+		local pred = lib.predicate.add(name, unpack(spec))
 		res[name] = lib.guard.from_predicate(name, pred)
 		res[name] = lib.guard.guard[name]
 	end
@@ -1691,25 +1700,25 @@ function lib.joinlines(...)
 	return lib.join("\n", ...)
 end
 
-copy = copy
-class = class
 Spec = Specification
-Specification = Specification
-Predicate = Predicate
 union = lib.union
 maybe = lib.maybe
 format = lib.format
 substr = lib.substr
 replace = lib.replace
-Ok = Ok
-Err = Err
 rthread = lib.rthread
 rpcall = lib.rpcall
 rwrap = lib.rwrap
 partial = lib.partial
-predicate = lib.predicate
 paste0 = lib.paste0
 concat = lib.concat
 joinlines = lib.joinlines
+instanceof = lib.instanceof
+issubclass = lib.issubclass
+paste = lib.paste
+substr = lib.substr
+replace = lib.replace
+undefined = is.undefined
+defined = is.defined
 
 return lib

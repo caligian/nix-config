@@ -166,3 +166,4 @@ kbd.new = kbd.map
 
 package.user.lib.kbd = kbd
 package.user.lib.keymap = kbd
+return lib

@@ -14,4 +14,5 @@
   texstudio
   zoom-us
   pavucontrol
+  blueman
 ])

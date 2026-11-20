@@ -221,7 +221,9 @@ sub ArgumentParser {
   delete $options{EXIT_ON_HELP};
 
   while (my ($key, $value) = each %options) {
-    push @specs, [ $key => $value ];
+    my $specification = is_arrayref($value) ? $value : [$value];
+    unshift(@{$specification}, $key);
+    push @specs, $specification;
   }
 
   my ($opt, $usage) = describe_options($prog, @specs);
@@ -241,7 +243,7 @@ sub ArgumentParser {
 }
 
 sub spit {
-  my ($filename, $str, $add_nl) = @_;
+  my ($str, $filename, $add_nl) = @_;
   open(my $fh, ">", $filename) or return 0;
   print $fh $str;
   print $fh "\n" if $add_nl;
@@ -263,22 +265,20 @@ sub rm_dirs {
 }
 
 sub read_json {
-  my $file    = shift;
-  my $default = $_[0] // sub { return };
-
+  my ($file, $default) = @_;
+  $default //= sub { return; };
   return $default->() unless -f $file;
   return decode_json slurp($file);
 }
 
 sub write_json {
-  my $file     = shift;
-  my $obj      = shift;
-  my %opts     = @_;
+  my ($obj, $file, $opts) = @_;
+  my %opts     = %{ $opts // {} };
   my $dir      = dirname $file;
   my $makedirs = $opts{mkdir};
 
   make_dirs $dir if $makedirs;
-  return spit $file, encode_json $obj;
+  return spit encode_json($obj), $file;
 }
 
 sub seq_along {
@@ -655,4 +655,3 @@ our @EXPORT = (
   ),
 );
 
-;

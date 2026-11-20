@@ -14,9 +14,9 @@ local myconfig = mydir .. "/config"
 ---@alias config.key string|number
 ---@alias config.keys config.keys[]
 
-local utils = package.user
+local setup = lib.bless({})
 
-function utils.clear_gutter_bg()
+function setup.clear_gutter_bg()
 	local groups = {
 		"LineNr",
 		"LineNrAbove",
@@ -39,7 +39,7 @@ end
 ---Basically loadfile("~/.user/config/{name}.lua")
 ---@param name string
 ---@return boolean, any
-function utils.load_config(name)
+function setup.load_config(name)
 	local filename = myconfig .. "/" .. name .. ".lua"
 	if not fs.is_file(filename) then
 		return false, string.format("Nonexistent filename %s", filename)
@@ -56,7 +56,7 @@ end
 ---Basically loadfile("~/.user/config/{name}.lua")
 ---@param name string
 ---@return boolean, any
-function utils.load_lib(name)
+function setup.load_lib(name)
 	local filename = mylib .. "/" .. name .. ".lua"
 	if not fs.is_file(filename) then
 		return false, string.format("Nonexistent filename %s", filename)
@@ -73,14 +73,14 @@ end
 ---Load everything in ~/.user/nvim/config/*.lua
 ---@param name string
 ---@return boolean, any
-function utils.require_config(name)
+function setup.require_config(name)
 	if not string.match(name, "^config%.") then
 		name = "config." .. name
 	end
 	return pcall(require, name)
 end
 
-function utils.file2require(filename, ...)
+function setup.file2require(filename, ...)
 	filename = fs.basename(filename)
 	filename = string.gsub(filename, "%.lua$", "")
 	return table.concat({ filename, ... }, ".")
@@ -96,11 +96,11 @@ end
 ---@field value? any
 
 ---@return user.require_all_configs.return[]
-function utils.require_all_configs()
-	return list.map(utils.list_configs(), function(filename)
-		local name = utils.file2require(filename)
+function setup.require_all_configs()
+	return list.map(setup.list_configs(), function(filename)
+		local name = setup.file2require(filename)
 		local req = "config." .. name
-		local ok, msg = utils.require_config(name)
+		local ok, msg = setup.require_config(name)
 		local res = { name = name, filename = filename, require = req, ok = ok, err = not ok }
 
 		if ok then
@@ -121,10 +121,10 @@ end
 ---@field value? any
 
 ---@return user.load_all_configs.return[]
-function utils.load_all_configs()
-	return list.map(utils.list_configs(), function(filename)
+function setup.load_all_configs()
+	return list.map(setup.list_configs(), function(filename)
 		local name = string.gsub(fs.basename(filename), "%s.lua", "")
-		local ok, msg = utils.load_config(name)
+		local ok, msg = setup.load_config(name)
 		local res = { filename = filename, ok = ok, err = not ok }
 
 		if ok then
@@ -140,29 +140,29 @@ end
 ---Load everything in ~/.user/nvim/config/*.lua
 ---@param name string
 ---@return boolean, any
-function utils.require_lib(name)
+function setup.require_lib(name)
 	return pcall(require, mylib .. "/" .. name .. ".lua")
 end
 
 ---@return string[]
-function utils.list_configs()
+function setup.list_configs()
 	return fs.glob(myconfig .. "/*.lua")
 end
 
 ---@return string[]
-function utils.list_libs()
+function setup.list_libs()
 	return fs.glob(mylib .. "/*.lua")
 end
 
 ---@param name string
 ---@return boolean, any
-function utils.require_plugin(name)
+function setup.require_plugin(name)
 	return pcall(require, "config.plugins." .. name)
 end
 
 ---@param name string
 ---@return boolean, any
-function utils.load_plugin(name)
+function setup.load_plugin(name)
 	local filename = myconfig .. "/plugins/" .. name .. ".lua"
 	if not fs.is_file(name) then
 		return false, string.format("Nonexistent file %s", filename)
@@ -186,7 +186,7 @@ end
 
 ---Setup all packages
 ---@return user.require_all_plugins.return[]
-function utils.require_all_plugins()
+function setup.require_all_plugins()
 	local dir = myconfig .. "/plugins"
 	local files = fs.glob(string.format("%s/*.lua", dir))
 
@@ -221,7 +221,7 @@ end
 
 ---Load all package configurations
 ---@return user.load_all_plugins.return[]
-function utils.load_all_plugins()
+function setup.load_all_plugins()
 	local dir = myconfig .. "/plugins"
 	local files = fs.glob(string.format("%s/*.lua", dir))
 
@@ -260,7 +260,7 @@ end
 ---@field require? boolean (default: true)
 
 ---@return user.setup.return
-function utils.setup(opts)
+function setup.setup(opts)
 	vim.g.netrw_banner = 0
 	vim.o.smartcase = true
 	vim.o.ignorecase = true
@@ -269,7 +269,7 @@ function utils.setup(opts)
 	local force = opts.force
 	local load = opts.load
 	local overrides = opts.overrides
-	local state = package.user or utils
+	local state = package.user.state
 
 	if state and state.setup_done and not force then
 		return state.last_setup_result
@@ -281,24 +281,22 @@ function utils.setup(opts)
 
 	local result = { config = {}, plugins = {} }
 	if load then
-		result.config = utils.load_all_configs()
-		result.plugins = utils.load_all_plugins()
+		result.config = setup.load_all_configs()
+		result.plugins = setup.load_all_plugins()
 	else
-		result.config = utils.require_all_configs()
-		result.plugins = utils.require_all_plugins()
+		result.config = setup.require_all_configs()
+		result.plugins = setup.require_all_plugins()
 	end
 
 	require("lib.project")
 	require("lib.shell")
 	require("lib.repl")
 	require("lib.filetype")
-	require("lib.neotree-filesystem")
 
 	lib.project.setup()
 	lib.shell.setup()
 	lib.repl.setup()
 	lib.filetype.setup()
-	lib.neotree.setup()
 
 	require("themery").setup({
 		themes = list.filter(vim.fn.getcompletion("", "color"), is.string),
@@ -306,7 +304,7 @@ function utils.setup(opts)
 
 	autocmd("ColorScheme", {
 		desc = "Clear gutter color",
-		callback = utils.clear_gutter_bg,
+		callback = setup.clear_gutter_bg,
 		pattern = "*",
 	})
 
@@ -314,11 +312,15 @@ function utils.setup(opts)
 		desc = "Check out themes",
 	})
 
-	utils.clear_gutter_bg()
+	setup.clear_gutter_bg()
 	state.last_setup_result = result
 
 	return state.last_setup_result
 end
 
-package.user.lib.setup = utils
-return utils
+function setup:__call()
+  setup.setup()
+end
+
+package.user.lib.setup = setup
+return lib

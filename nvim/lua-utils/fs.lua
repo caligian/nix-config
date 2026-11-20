@@ -682,6 +682,8 @@ function path.git_dirs(dirname, depth)
 	return res
 end
 
+path.find_git_dirs = path.git_dirs
+
 ---@param file string
 ---@param mode? string (default: 'r')
 ---@param as_list? boolean
@@ -814,6 +816,7 @@ lib.find_up = path.search_parents
 lib.path = path
 lib.fs = path
 
+--- Globals
 dirname = path.dirname
 find_files = path.find
 list_files = path.ls
@@ -822,6 +825,10 @@ rmdir = path.rmdir
 touch = path.touch
 mkdir = path.mkdir
 abspath = path.abspath
+basename = path.basename
 getcwd = path.getcwd
+slurp = path.slurp
+spit = path.spit
+symlink = path.symlink
 
-return path
+return lib

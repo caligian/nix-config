@@ -73,3 +73,5 @@ unpack = unpack or table.unpack
 
 package.user.lib.tuple = tuple
 package.user.lib.unpack = unpack
+
+return lib
