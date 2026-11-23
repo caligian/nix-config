@@ -7,6 +7,7 @@
   vkd3d-proton
   gamescope
   linuxPackages_zen.cpupower
+  mono
 
   (with wineWow64Packages; [
     fonts

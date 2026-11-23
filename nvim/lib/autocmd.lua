@@ -55,13 +55,14 @@ local state = package.user.state.autocmd
 
 ---@class autocmd.utils
 ---@overload fun(event: autocmd.event, callback: autocmd.callback, opts?: autocmd.opts|string|integer): autocmd
-local autocmd = {
-  validator = Spec.from_table('Autocmd', {
-    [1] = union('string|list', {is.string, is.list}),
-    [2] = union('Callable|string', {is.Callable, is.string}),
-    [3] = union('table|string', {is.table, is.string}),
-  }),
-}
+local autocmd = lib.bless({
+	---@type Specification
+	validator = Spec.from_table("Autocmd", {
+		[1] = union("string|list", { is.string, is.list }),
+		[2] = union("Callable|string", { is.Callable, is.string }),
+		[3] = union("table|string", { is.table, is.string }),
+	}),
+})
 
 ---Valid options
 ---@type {[string]: boolean}
@@ -81,7 +82,7 @@ autocmd.valid_opts = {
 ---@param opts? autocmd.opts
 ---@return integer
 function autocmd.new(event, callback, opts)
-	local args = {event, callback, opts}
+	local args = { event, callback, opts }
 	opts = type(opts) == "string" and { desc = opts } or opts
 	opts = copy(opts)
 	local should_pcall = opts.pcall
@@ -91,10 +92,10 @@ function autocmd.new(event, callback, opts)
 	else
 		opts.callback = function(_args)
 			if should_pcall then
-        ---@diagnostic disable-next-line
+				---@diagnostic disable-next-line
 				pcall(callback, _args.buf, _args)
 			else
-        ---@diagnostic disable-next-line
+				---@diagnostic disable-next-line
 				callback(_args.buf, _args)
 			end
 		end
@@ -181,8 +182,8 @@ end
 ---@return int[]
 function autocmd.are_valid(ids)
 	ids = as.list(ids)
-  local lines = list.filter(ids, autocmd.is_valid)
-  ---@cast lines int[]
+	local lines = list.filter(ids, autocmd.is_valid)
+	---@cast lines int[]
 	return lines
 end
 
@@ -190,10 +191,15 @@ autocmd.map = autocmd.new
 autocmd.ft_map = autocmd.ft_new
 
 function autocmd.validate(args)
-  local event = args.event or args[1]
-  local callback = args.callback or args[2]
-  local opts = args.opts or args[3]
-  autocmd.validator:assert({event, callback, opts})
+	local event = args.event or args[1]
+	local callback = args.callback or args[2]
+	local opts = args.opts or args[3]
+	---@diagnostic disable-next-line
+	autocmd.validator:assert({ event, callback, opts })
+end
+
+function autocmd:__call(event, callback, opts)
+  return autocmd.new(event, callback, opts)
 end
 
 package.user.lib.autocmd = autocmd

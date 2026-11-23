@@ -1,5 +1,4 @@
 require("lib.definitions")
-require 'lib.options'
 require 'lib.project'
 
 local lib = package.user.lib
@@ -49,7 +48,6 @@ function kbd.map(mode, lhs, rhs, opts)
 	opts = opts or {}
 	opts = is.string(opts) and { desc = opts } or opts
 	mode = mode or "n"
-	opts = options.new(opts)
 	mode = as.list(mode)
 	local kbd_opts = {
 		desc = opts.desc,

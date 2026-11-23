@@ -80,7 +80,6 @@ nnoremap <leader>fV :w <bar> source %<CR>
 nnoremap <leader>f. :e .<CR>
 
 nnoremap <C-g> :noh <CR>
-nnoremap <C-x>d :!ls -lctrshA <CR>
 
 nnoremap <M-.> :
 vnoremap <M-.> :

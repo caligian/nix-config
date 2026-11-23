@@ -32,7 +32,8 @@
 
     "clock": {
         "interval": 5,
-        "format": "<span font_family='Hack Nerd Font Propo'>󰃭</span> {0:%B %d}  <span font_family='Hack Nerd Font Propo'> 󰅐 </span>{0:%I:%M %p}",
+        // "format": "<span font_family='Hack Nerd Font Propo'>󰃭 </span> {0:%A,  %B %d}  <span font_family='Hack Nerd Font Propo'> 󰅐 </span>{0:%I:%M %p}",
+        "format": "<span font_family='Hack Nerd Font Propo'> 󰅐 </span>{0:%I:%M %p}<span font_family='Hack Nerd Font Propo'>  󰃭 </span>{0:%A, %B %d}",
         "tooltip-format": "<tt>{calendar}</tt>",
         "on-click": "gnome-calendar"
     },

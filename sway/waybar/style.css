@@ -8,8 +8,8 @@
 }
 
 window#waybar {
-    background-color: rgba(0, 0, 0, 0.85); /* Semi-transparent native look */
-    color: #c0caf5;
+    background-color: rgba(0, 0, 0, 0.00); /* Semi-transparent native look */
+    color: #ffffff;
     transition-property: background-color;
     transition-duration: .5s;
 }

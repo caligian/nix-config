@@ -1,6 +1,6 @@
 local lib = package.user.lib
 local tconfig = package.user.config.plugins.telescope.defaults
-local dict = lib.dict
+-- local dict = lib.dict
 
 ---@class picker : picker.class : instance
 ---@field telescope table
@@ -146,11 +146,5 @@ end
 
 lib.telescope = picker
 lib.picker = picker
-
--- local src = paste0(vim.env.HOME, "/bookmarks.json")
--- local bookmarks = vim.json.decode(lib.fs.slurp(src))
--- lib.select("Open bookmark", dict.keys(bookmarks), function(entry)
---   vim.cmd(":e! " .. entry[1].value)
--- end, {})
 
 return lib

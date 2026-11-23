@@ -68,6 +68,16 @@ let
 in
 {
   environment = {
+    etc = {
+      "xdg/autostart/vicinae.desktop".text = ''
+      [Desktop Entry]
+      Type=Application
+      Name=Vicinae server
+      Exec=vicinae server
+      OnlyShowIn=GNOME;
+      X-GNOME-Autostart-enabled=true
+      '';
+    };
     variables = {
       WLR_DRM_NO_DIRECT_SCANOUT = "1";
       GIT_SSL_CAINFO = "/etc/ssl/certs/ca-bundle.crt";

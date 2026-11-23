@@ -14,7 +14,11 @@ set $root_dir ~/.user/sway
 font "Liberation Sans 12"
 
 # Output configuration
-output * bg ~/.user/sway/wallpaper.jpg fill
+## Light style
+# output * bg ~/.user/sway/wallpaper.jpg fill 
+
+## Dark style
+output * bg ~/.user/sway/wallpaper-night-1.jpg fill
 
 # Input configuration
 input type:touchpad {
@@ -39,11 +43,13 @@ bindsym $mod+Control+Return exec $term -a yazi-file-browser -e yazi
 # Kill focused window
 bindsym $mod+Shift+q kill
 
-# Start your launcher
-bindsym $mod+p exec rofi -show run -font 'Liberation Mono 14' -theme Arc
+# Launchers
+bindsym $mod+p exec rofi -show run -font 'Liberation Mono 14' -theme Arc-Dark
+bindsym $mod+semicolon exec rofi -show window -font 'Liberation Mono 14' -theme Arc-Dark
 bindsym $mod+q exec perl ~/.user/sway/fav-apps.pl
+
+# GUI apps 
 bindsym $mod+n exec nmgui
-bindsym $mod+semicolon exec rofi -show window -font 'Liberation Mono 14' -theme Arc
 bindsym $mod+slash exec guake
 
 # Focus monitor to right and left
@@ -171,7 +177,7 @@ bar {
     binding_mode_indicator yes
     colors {
         statusline #ffffff
-        background #000000db
+        # background #000000db
         focused_workspace  #dc322f #dc322f #ffffff
         active_workspace   #420f0e #420f0e #839496
         inactive_workspace #002b36 #002b36 #839496
@@ -242,7 +248,26 @@ mouse_warping output
 gaps inner 8
 
 # Setup monitors
-output eDP-1 pos 0 0 res 1920x1080
-output DP-1 pos 1920 0  res 1920x1080
-output HDMI-1 pos 1920 0  res 1920x1080
-output HDMI-A-1 pos 1920 0  res 1920x1080
+set $primary_monitor eDP-1
+set $external_monitor HDMI-A-1
+
+## Primary -> External 
+output $primary_monitor pos 0 0 res 1920x1080
+output $external_monitor pos 1920 0  res 1920x1080
+
+workspace 1 output $primary_monitor 
+workspace 2 output $primary_monitor
+workspace 3 output $primary_monitor
+workspace 4 output $external_monitor
+workspace 5 output $external_monitor
+workspace 6 output $external_monitor
+
+# ## External -> Primary 
+# output $external_monitor pos 0 0 res 1920x1080
+# output $primary_monitor pos 1920 0  res 1920x1080
+# workspace 1 output $external_monitor
+# workspace 2 output $external_monitor
+# workspace 3 output $external_monitor
+# workspace 4 output $primary_monitor
+# workspace 5 output $primary_monitor
+# workspace 6 output $primary_monitor

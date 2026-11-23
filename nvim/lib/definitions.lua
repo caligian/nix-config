@@ -4,6 +4,10 @@ if vim.g.loaded_nvim_utils_definitions then
 	return
 end
 
+local lib = package.user.lib
+local bookmarks_src = paste0(vim.env.HOME, "/bookmarks.json")
+package.user.state.bookmarks = vim.json.decode(lib.fs.slurp(bookmarks_src))
+package.user.state.dir_history = {}
 package.user.state.workspace = package.user.state.workspace or {}
 package.user.state.autocmd = package.user.state.autocmd or {}
 package.user.state.buffer = package.user.state.buffer or {}
@@ -78,7 +82,7 @@ for key, value in pairs(package.user.config.buf_opts or {}) do
 end
 
 if vim.g.neovide then
-	vim.o.guifont = "Hack Nerd Font Mono:h11"
+	vim.o.guifont = "Hack Nerd Font Mono:h13"
 	vim.o.linespace = 2
 	vim.g.neovide_scale_factor = 1.0
 	vim.g.neovide_padding_top = 0

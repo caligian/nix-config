@@ -46,6 +46,15 @@ in
 {
   systemd = {
     user.services = myServices;
+    slices = {
+      oldGames = {
+        description = "For old games that fuck up with multiple cores and turbo boost";
+        sliceConfig = {
+          CPUQuota = "150%";
+          AllowedCPUs = "2-5";
+        };
+      };
+    };
     sleep.settings.Sleep = {
       "AllowSuspend" = "no";
       "AllowHibernation" = "no";

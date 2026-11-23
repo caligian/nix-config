@@ -2,6 +2,7 @@
 (with pkgs; [
   gnome-tweaks
   gnome-monitor-config
+  vicinae
 ])
 ++ (with pkgs.gnomeExtensions; [
   appindicator

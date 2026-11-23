@@ -10,6 +10,8 @@ local project = lib.project
 local feedkeys = vim.api.nvim_feedkeys
 local replace_termcodes = vim.api.nvim_replace_termcodes
 local map = lib.kbd.map
+local dict = lib.dict
+local list = lib.list
 
 vim.g.mapleader = " "
 vim.g.maplocalleader = "<C-x>"
@@ -26,7 +28,7 @@ local function insert_tab()
 end
 
 local function split_and_ex(cmd)
-	vim.cmd(string.format(":split | wincmd j | %s | resize -9", cmd))
+	vim.cmd(string.format(":split | wincmd j | %s", cmd))
 end
 
 local function split_map(mode, lhs, rhs, opts)
@@ -227,6 +229,13 @@ local make_opts = function(overrides)
 end
 
 map("n", "<leader>>", buffer.fd, { desc = "Find files in buffer directory" })
+map("n", "<C-x>dp", function()
+	lib.select("cd directory", dict.keys(package.user.state.dir_history), function(entry)
+		if entry[1] and entry[1].value then
+			vim.cmd.cd(entry[1].value)
+		end
+	end, {})
+end, { desc = "cd previously visited directory" })
 map("n", "<C-x>d/", buffer.live_grep_d, { desc = "Live grep in buffer directory" })
 map("n", "<C-x>dd", buffer.find_files_d, { desc = "Find files in buffer directory" })
 map("n", "<C-x>db", function()
@@ -289,3 +298,15 @@ split_map("n", "<C-x>ns", ":e ~/.user/sway", { desc = "Open ~/.user/sway" })
 split_map("n", "<C-x>nf", ":e ~/.user/foot", { desc = "Open ~/.user/foot" })
 split_map("n", "<C-x>np", ":e ~/.user/nixos/pkgs", { desc = "Open ~/.user/nixos/pkgs" })
 split_map("n", "<C-x>nm", ":e ~/.user/nixos/systemd.nix", { desc = "Open ~/.user/nixos/systemd.nix" })
+
+--- Visit bookmarks
+map("n", "<C-x>b", function()
+	local bookmarks = package.user.state.bookmarks
+  bookmarks = dict.keys(bookmarks)
+  bookmarks = list.filter(bookmarks, function (src)
+    return is.str(src) and is.path(src)
+  end)
+	lib.select("Open bookmark", bookmarks, function(entry)
+		vim.cmd(":e! " .. entry[1].value)
+	end, {})
+end, { desc = "Explore bookmarks" })

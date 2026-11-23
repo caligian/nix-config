@@ -110,10 +110,19 @@ function project.find(path, opts)
 	opts = opts or {}
 
 	if not fs.is_file(path) then
-		return
+		if opts.default then
+			return opts.default()
+		else
+			return
+		end
 	end
 
-	return vim.fs.root(path, { { ".PROJECT" }, ".git" })
+  local proj = vim.fs.root(path, { { ".PROJECT" } })
+  if not proj then
+    return opts.default and opts.default(path)
+  else
+    return proj
+  end
 end
 
 ---@param buf? integer
@@ -122,7 +131,7 @@ end
 function project.buf_find(buf, opts)
 	buf = buf or getbufnr()
 	if getbufnr(buf) == -1 then
-		return
+		return opts and opts.default and opts.default(buf)
 	else
 		return project.find(getbufname(buf), opts)
 	end
@@ -352,32 +361,40 @@ function project.setup_commands()
 		nargs = 0,
 	})
 
-  command.new("ProjectOpen", function (_, args)
-    if #args.args > 0 then
-      neotree(args.args)
-    else
-      lib.select("Browse project directory", project.list(), function (entry)
-        neotree(entry[1].value)
-      end)
-    end
-  end, {
-    desc = "Browse project directories",
-    nargs = '?',
-    complete = function ()
-      return project.list()
-    end
-  })
+	command.new("ProjectOpen", function(_, args)
+		if #args.args > 0 then
+			neotree(args.args)
+		else
+			lib.select("Browse project directory", project.list(), function(entry)
+				neotree(entry[1].value)
+			end)
+		end
+	end, {
+		desc = "Browse project directories",
+		nargs = "?",
+		complete = function()
+			return project.list()
+		end,
+	})
 end
 
 function project.setup_autocmds()
 	autocmd.new("BufEnter", function(buf, _)
-		local proj = project.buf_find(buf)
-		if not proj then
-			return
-		end
+		local proj = project.buf_find(buf, {
+			default = function(_)
+				local bufname = lib.buffer.get_name(buf)
+				if fs.is_file(bufname) then
+					return fs.dirname(bufname)
+				else
+					return vim.env.HOME
+				end
+			end,
+		})
 
-		project.track(proj, _.buf)
-		project.cd(proj)
+		if proj then
+			project.track(proj, _.buf)
+			project.cd(proj)
+		end
 	end, {
 		desc = "cd into project directory",
 		pattern = "*.*",
@@ -390,6 +407,8 @@ function project.setup_autocmds()
 		pattern = "*.*",
 	})
 end
+
+project.setup_autocmds()
 
 ---@param dirname string
 ---@param cd? boolean
@@ -417,8 +436,8 @@ function project.new(dirname, cd)
 end
 
 function project.setup_keymaps()
-  local map = vim.keymap.set
-  map("n", "<C-x>pp", ":ProjectOpen<CR>", {desc = "Browse projects"})
+	local map = vim.keymap.set
+	map("n", "<C-x>pp", ":ProjectOpen<CR>", { desc = "Browse projects" })
 end
 
 function project.setup()
@@ -428,15 +447,17 @@ function project.setup()
 end
 
 function project.add(path)
-  if not fs.is_dir(path) or not fs.is_file(path .. '/.PROJECT') then
-    errorf("%s is not a project directory", path)
-  else
-    path = fs.abspath(path)
-    path = path:gsub("/%.$", "")
-  end
-  state[path] = state[path] or {}
+	if not fs.is_dir(path) or not fs.is_file(path .. "/.PROJECT") then
+		errorf("%s is not a project directory", path)
+	else
+		path = fs.abspath(path)
+		path = path:gsub("/%.$", "")
+	end
+
+	state[path] = state[path] or {}
 end
 
 project.bfind = project.buf_find
 package.user.lib.project = project
+
 return lib

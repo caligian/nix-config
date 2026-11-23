@@ -76,6 +76,11 @@ let
       name = "neovide";
     }
     {
+      keys = "<Super>space";
+      run = "vicinae toggle";
+      name = "launcher";
+    }
+    {
       keys = "Pause";
       run = "/home/Kerambit/.user/bin/scroll-lock-led";
       name = "turn on keyboard LED by scroll-lock";
@@ -86,6 +91,10 @@ in
   dconf.profiles.user.databases = [
     {
       settings = {
+        "org/gnome/desktop/wm/keybindings" = {
+          switch-input-source = [ ];
+          switch-input-source-backward = [ ];
+        };
         "org/gnome/settings-daemon/plugins/power" = {
           sleep-inactive-ac-type = "nothing";
           sleep-inactive-battery-type = "nothing";
