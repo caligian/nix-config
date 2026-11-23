@@ -8,14 +8,14 @@ from subprocess import check_output
 
 
 def count_lines(file: str) -> int:
-    with open(file, 'r', errors='ignore', encoding='utf-8') as fh:
+    with open(file, "r", errors="ignore", encoding="utf-8") as fh:
         return sum(1 for _ in fh.readlines())
 
 
 def is_valid_file(file: str) -> bool:
     return (
-        len(file) > 0 
-        and os.path.isfile(file) 
+        len(file) > 0
+        and os.path.isfile(file)
         and not re.search("[.](png|jpg|jpeg)$", file)
     )
 
@@ -24,7 +24,7 @@ def git_ls_files() -> list[str]:
     files = check_output(["git", "ls-files"]).decode().split("\n")
     files = list(filter(is_valid_file, files))
     return files
-   
+
 
 if not os.path.isdir("./.git"):
     print("Not in a git directory")
@@ -36,6 +36,6 @@ lcs = list(zip(fs, lcs))
 lcs = sorted(lcs, key=lambda x: x[1])
 
 for file, lc in lcs:
-    print(f'{lc:<5} {file}')
+    print(f"{lc:<5} {file}")
 
-print(f'Total: {sum([x[1] for x in lcs])}')
+print(f"Total: {sum([x[1] for x in lcs])}")

@@ -302,10 +302,10 @@ split_map("n", "<C-x>nm", ":e ~/.user/nixos/systemd.nix", { desc = "Open ~/.user
 --- Visit bookmarks
 map("n", "<C-x>b", function()
 	local bookmarks = package.user.state.bookmarks
-  bookmarks = dict.keys(bookmarks)
-  bookmarks = list.filter(bookmarks, function (src)
-    return is.str(src) and is.path(src)
-  end)
+	bookmarks = dict.keys(bookmarks)
+	bookmarks = list.filter(bookmarks, function(src)
+		return is.str(src) and is.path(src)
+	end)
 	lib.select("Open bookmark", bookmarks, function(entry)
 		vim.cmd(":e! " .. entry[1].value)
 	end, {})

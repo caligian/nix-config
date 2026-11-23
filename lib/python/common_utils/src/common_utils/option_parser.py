@@ -1,32 +1,23 @@
 #!/usr/bin/env python
 
-import re
-import os
-import shlex
-import sys
 import io
+import os
+import re
+import shlex
 import shutil
-
-from typing import Callable, Self, Any
-from functools import partial
+import sys
 from argparse import ArgumentParser
-from termcolor import cprint
 from collections import defaultdict
+from functools import partial
+from typing import Any, Callable, Self
 
-from .table import keys, values
-from .result import (
-    rsafe,
-    Ok,
-    Err,
-    rpcall,
-    utils as result,
-    is_err,
-    is_ok,
-    is_result,
-    rthread,
-)
-from .is_a import is_a, module, Namespace, modules, struct
+from termcolor import cprint
+
 from .error import utils as errors
+from .is_a import Namespace, is_a, module, modules, struct
+from .result import Err, Ok, is_err, is_ok, is_result, rpcall, rsafe, rthread
+from .result import utils as result
+from .table import keys, values
 
 Value = str | bytes | int | float | bool
 ValueList = list[Value]
@@ -152,18 +143,14 @@ class PROCESSOR:
     @staticmethod
     def cp(src: str, dst: str | None = None, makedirs: bool = False) -> bool:
         if not dst:
-            raise ValueError(
-                f"No destination file/directory provided for {src}"
-            )
+            raise ValueError(f"No destination file/directory provided for {src}")
 
         dst_dir = os.path.dirname(dst)
         if not os.path.isdir(dst_dir):
             if makedirs:
                 os.makedirs(dst_dir, exist_ok=True)
             else:
-                raise ValueError(
-                    f"Destionation directory {dst_dir} does not exist"
-                )
+                raise ValueError(f"Destionation directory {dst_dir} does not exist")
 
         shutil.copy(src, dst)
         return True
@@ -182,9 +169,7 @@ class PROCESSOR:
             if makedirs:
                 os.makedirs(dst_dir, exist_ok=True)
             else:
-                raise ValueError(
-                    f"Destionation directory {dst_dir} does not exist"
-                )
+                raise ValueError(f"Destionation directory {dst_dir} does not exist")
 
         os.rename(src, dst)
         return True
@@ -381,11 +366,7 @@ class OptionParser:
                 processors = [processors]
 
             kvalues = keyword[option]
-            if (
-                kvalues is not None
-                or type(kvalues) is list
-                and len(kvalues) > 0
-            ):
+            if kvalues is not None or type(kvalues) is list and len(kvalues) > 0:
                 kvalues = rthread(kvalues, *processors)
                 if is_err(kvalues):
                     return kvalues
