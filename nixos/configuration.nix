@@ -1,12 +1,13 @@
 # Setting up user password after the system is functional after first install
 # openssl passwd -6
-# sudo nano /etc/secrets/Kerambit
-# sudo chown root:root /etc/secrets/Kerambit
-# sudo chmod 600 /etc/secrets/Kerambit
+# sudo nano /etc/secrets/{user}
+# sudo chown root:root /etc/secrets/{user}
+# sudo chmod 600 /etc/secrets/{user}
 {
   config,
   lib,
   pkgs,
+  options,
   ...
 }:
 let
@@ -22,6 +23,7 @@ let
         user
         ;
     };
+  admin = importModule "admin";
   qt = importModule "qt";
   nixpkgs = importModule "nixpkgs";
   services = importModule "services";
@@ -75,6 +77,12 @@ in
 
   # Nix settings
   nix = {
+    nixPath = options.nix.nixPath.default ++ [
+      "admin-nixos=/etc/nixos"
+      "admin-nixos-pkgs=/etc/nixos/pkgs"
+      "admin-nixos-programs=/etc/nixos/programs"
+      "admin-nixos-utils=/etc/nixos/utils"
+    ];
     gc = {
       automatic = true;
       dates = "weekly";
@@ -92,7 +100,7 @@ in
     enable = true;
     cpuFreqGovernor = "schedutil";
     cpufreq.min = 800000;
-    cpufreq.max = 3500000;
+    cpufreq.max = 3800000;
   };
 
   # DO NOT TOUCH

@@ -4,6 +4,12 @@
   ...
 }:
 let
+  gvariant = lib.gvariant;
+  gTypes = {
+    mkEmptyArray = gvariant.mkEmptyArray;
+    mkInt32 = gvariant.mkInt32;
+    string = gvariant.type.string;
+  };
   setGnomeKeymaps =
     specs:
     let
@@ -14,7 +20,6 @@ let
         in
         lib.hasPrefix "/" s && builtins.pathExists s;
       mkPath = i: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom${toString i}/";
-
       mkEntry =
         i: spec:
         let
@@ -92,14 +97,14 @@ in
     {
       settings = {
         "org/gnome/desktop/wm/keybindings" = {
-          switch-input-source = [ ];
-          switch-input-source-backward = [ ];
+          switch-input-source = gTypes.mkEmptyArray gTypes.string;
+          switch-input-source-backward = gTypes.mkEmptyArray gTypes.string;
         };
         "org/gnome/settings-daemon/plugins/power" = {
           sleep-inactive-ac-type = "nothing";
           sleep-inactive-battery-type = "nothing";
-          sleep-inactive-ac-timeout = lib.gvariant.mkInt32 0;
-          sleep-inactive-battery-timeout = lib.gvariant.mkInt32 0;
+          sleep-inactive-ac-timeout = gTypes.mkInt32 0;
+          sleep-inactive-battery-timeout = gTypes.mkInt32 0;
         };
         "org/gnome/shell" = {
           overview-on-all-monitors = true;

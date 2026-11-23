@@ -20,7 +20,7 @@ let
     ADMIN_FOOT_DIR = "${root}/foot";
     ADMIN_PKGS_DIR = "${root}/nixos/pkgs";
     ADMIN_NIXOS_DIR = "${root}/nixos";
-    ADMIN_NIX_DIR = "${root}/nix";
+    ADMIN_NIXOS_UTILS_DIR = "${root}/nixos";
   };
 in
 rec {
@@ -29,15 +29,15 @@ rec {
   env = myEnv;
   path = {
     dir = rec {
-      nix = myEnv.ADMIN_NIX_DIR;
       pkgs = myEnv.ADMIN_PKGS_DIR;
       root = myEnv.ADMIN_DIR;
       home = myEnv.ADMIN_HOME;
       lib = "${root}/lib";
       bin = "${root}/bin";
       nixos = "${root}/nixos";
-      nvim = "${root}/nvim";
       nixosPkgs = "${root}/nixos/pkgs";
+      nixosUtils = "${root}/nixos-utils";
+      nvim = "${root}/nvim";
       include = "${root}/include";
       sway = env.ADMIN_SWAY_DIR;
       foot = env.ADMIN_FOOT_DIR;
