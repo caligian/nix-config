@@ -11,6 +11,10 @@ lib.nvim = nvim
 nvim.fnamemodify = vim.fn.fnamemodify
 nvim.fname = {}
 
+local NvimExecError = class("NvimExecError", Error)
+lib.NvimExecError = NvimExecError
+nvim.NvimExecError = NvimExecError
+
 ---@param s string
 ---@param no_suffix? boolean
 ---@param as_list? boolean
@@ -214,11 +218,13 @@ end
 function nvim.cmd(...)
 	local cmd = table.concat({ ... }, "\n")
 	local ok, value_or_msg = pcall(vim.api.nvim_exec2, cmd, { output = false })
+  local metadata = {cmd = cmd}
 
 	if not ok then
-		return Err:new(Error:new(value_or_msg), { cmd = cmd })
+    local err = nvim.NvimExecError:new(value_or_msg)
+		return Err:new(err, metadata)
 	else
-		return Ok:new(value_or_msg, { cmd = cmd })
+		return Ok:new(value_or_msg, metadata)
 	end
 end
 
@@ -347,9 +353,9 @@ package.user.lib.eval_visual = nvim.eval_visual
 package.user.lib.eval_string = nvim.eval_string
 package.user.lib.eval_str = nvim.eval_str
 package.user.lib.eval_file = nvim.eval_file
-package.user.lib.get_mode = nvim.get_mode
 package.user.lib.in_visual_mode = nvim.in_visual_mode
 package.user.lib.in_normal_mode = nvim.in_normal_mode
 package.user.lib.rmtermcodes = nvim.replace_termcodes
+package.user.lib.get_mode = nvim.get_mode
 
 return lib

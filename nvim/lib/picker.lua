@@ -2,7 +2,7 @@ local lib = package.user.lib
 local tconfig = package.user.config.plugins.telescope.defaults
 -- local dict = lib.dict
 
----@class picker : picker.class, instance
+---@class picker : instance, picker.class
 ---@field telescope table
 ---@field opts table
 ---@field actions table
