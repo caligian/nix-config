@@ -1,4 +1,4 @@
-require 'lib.definitions'
+require("lib.definitions")
 
 local lib = package.user.lib
 local dict = lib.dict
@@ -7,57 +7,57 @@ local make_buffer_command = vim.api.nvim_buf_create_user_command
 local make_autocmd = vim.api.nvim_create_autocmd
 local state = package.user.state.command
 
----@class command.utils
-local command = { __index = rawget, }
+---@overload fun(name: str, callback: CommandCallback, )
+local command = { __index = rawget }
 setmetatable(command, command)
 
----@class command.valid_completion
+---@class CommandCompletions
 command.valid_completion = {
-  arglist = true,
-  augroup = true,
-  breakpoint = true,
-  buffer = true,
-  color = true,
-  command = true,
-  compiler = true,
-  diff_buffer = true,
-  dir = true,
-  dir_in_path = true,
-  environment = true,
-  event = true,
-  expression = true,
-  file = true,
-  file_in_path = true,
-  filetype = true,
-  ['function'] = true,
-  help = true,
-  highlight = true,
-  history = true,
-  keymap = true,
-  locale = true,
-  lua = true,
-  mapclear = true,
-  mapping = true,
-  menu = true,
-  messages = true,
-  option = true,
-  packadd = true,
-  runtime = true,
-  scriptnames = true,
-  shellcmd = true,
-  shellcmdline = true,
-  sign = true,
-  syntax = true,
-  syntime = true,
-  tag = true,
-  tag_listfiles = true,
-  user = true,
-  var = true,
+	arglist = true,
+	augroup = true,
+	breakpoint = true,
+	buffer = true,
+	color = true,
+	command = true,
+	compiler = true,
+	diff_buffer = true,
+	dir = true,
+	dir_in_path = true,
+	environment = true,
+	event = true,
+	expression = true,
+	file = true,
+	file_in_path = true,
+	filetype = true,
+	["function"] = true,
+	help = true,
+	highlight = true,
+	history = true,
+	keymap = true,
+	locale = true,
+	lua = true,
+	mapclear = true,
+	mapping = true,
+	menu = true,
+	messages = true,
+	option = true,
+	packadd = true,
+	runtime = true,
+	scriptnames = true,
+	shellcmd = true,
+	shellcmdline = true,
+	sign = true,
+	syntax = true,
+	syntime = true,
+	tag = true,
+	tag_listfiles = true,
+	user = true,
+	var = true,
 }
 
----@alias command.callback fun(args: string|string[], rest: command.args)
+---@alias CommandCallback fun(args: string|string[], rest: CommandCallbackArgs)
 
----@class command.args
+---@class CommandCallbackArgs
 ---@field name string
 ---@field args string
 ---@field fargs string[]
@@ -66,7 +66,7 @@ command.valid_completion = {
 ---@field end_line integer
 ---@field count integer
 
----@class command.opts
+---@class CommandOpts
 ---@field bang boolean
 ---@field complete (fun(): string[])|string
 ---@field desc string
@@ -80,124 +80,134 @@ command.valid_completion = {
 ---@field process fun(x: string): any
 ---@field filter fun(x: string): boolean
 
----@class command.spec
+---@class CommandSpec
 ---@field [1]? string
----@field [2]? command.callback
----@field [3]? command.opts
+---@field [2]? CommandCallback
+---@field [3]? CommandOpts
 ---@field name? string
----@field callback command.callback
----@field opts? command.opts
+---@field callback CommandCallback
+---@field opts? CommandOpts
 
----@class command
+---@class Command
 ---@field name string
----@field callback command.callback
----@field opts? command.opts
+---@field callback CommandCallback
+---@field opts? CommandOpts
 
 ---@param name string
----@param callback command.callback
+---@param callback CommandCallback
 ---@param opts? table
----@return command
+---@return Command
 function command.new(name, callback, opts)
-  opts = opts or {}
-  local nargs = opts.nargs
-  local bang = opts.bang
-  local desc = opts.desc
-  local force = opts.force
-  local trim = opts.trim
-  local process = opts.process
-  local filter = opts.filter
-  local event = opts.event
-  local pattern = opts.pattern
-  local buf = opts.buffer
-  local should_pcall = opts.pcall
-  local _args = { name, callback, opts }
-  local cmd_opts = { bang = bang, desc = desc, force = force, nargs = nargs }
-  cmd_opts.complete = opts.complete
+	opts = opts or {}
+	local nargs = opts.nargs
+	local bang = opts.bang
+	local desc = opts.desc
+	local force = opts.force
+	local trim = opts.trim
+	local process = opts.process
+	local filter = opts.filter
+	local event = opts.event
+	local pattern = opts.pattern
+	local buf = opts.buffer
+	local should_pcall = opts.pcall
+	local _args = { name, callback, opts }
+	local cmd_opts = { bang = bang, desc = desc, force = force, nargs = nargs }
+	cmd_opts.complete = opts.complete
 
-  local run = function(args)
-    local process_arg = function(arg)
-      if arg == '' then
-        return
-      end
+	local run = function(args)
+		local process_arg = function(arg)
+			if arg == "" then
+				return
+			end
 
-      if trim then
-        arg = trim(arg)
-      end
+			if trim then
+				arg = trim(arg)
+			end
 
-      if filter and not filter(arg) then
-        return
-      elseif process then
-        return process(arg)
-      else
-        return arg
-      end
-    end
+			if filter and not filter(arg) then
+				return
+			elseif process then
+				return process(arg)
+			else
+				return arg
+			end
+		end
 
-    local collect_args = function(fargs)
-      local res = {}
-      for i = 1, #fargs do
-        local value = process_arg(fargs[i])
-        if value ~= nil then res[#res + 1] = value end
-      end
-      return res
-    end
+		local collect_args = function(fargs)
+			local res = {}
+			for i = 1, #fargs do
+				local value = process_arg(fargs[i])
+				if value ~= nil then
+					res[#res + 1] = value
+				end
+			end
+			return res
+		end
 
-    local call = function(use_args, rest_args)
-      if should_pcall then
-        return pcall(callback, use_args, rest_args)
-      else
-        return callback(use_args, rest_args)
-      end
-    end
+		local call = function(use_args, rest_args)
+			if should_pcall then
+				return pcall(callback, use_args, rest_args)
+			else
+				return callback(use_args, rest_args)
+			end
+		end
 
-    if nargs == 0 then
-      return call(nil, args)
-    end
+		if nargs == 0 then
+			return call(nil, args)
+		end
 
-    local use = collect_args(args.fargs)
-    if nargs == 1 or nargs == '?' then
-      return call(use[1], args)
-    else
-      return call(use, args)
-    end
-  end
+		local use = collect_args(args.fargs)
+		if nargs == 1 or nargs == "?" then
+			return call(use[1], args)
+		else
+			return call(use, args)
+		end
+	end
 
-  if event or pattern then
-    event = event or 'BufReadPost'
-    pattern = pattern or '*.*'
-    make_autocmd(event, {
-      pattern = pattern,
-      callback = function(args)
-        make_buffer_command(args.buf, name, run, cmd_opts)
-      end,
-      once = true,
-    })
-  elseif buf then
-    make_buffer_command(buf, name, run, cmd_opts)
-  else
-    make_command(name, run, cmd_opts)
-  end
+	if event or pattern then
+		event = event or "BufReadPost"
+		pattern = pattern or "*.*"
+		make_autocmd(event, {
+			pattern = pattern,
+			callback = function(args)
+				make_buffer_command(args.buf, name, run, cmd_opts)
+			end,
+			once = true,
+		})
+	elseif buf then
+		make_buffer_command(buf, name, run, cmd_opts)
+	else
+		make_command(name, run, cmd_opts)
+	end
 
-  state[name] = _args
-  return _args
+	state[name] = _args
+	return _args
 end
 
 function command.define(opts, specs)
-  opts = opts or {}
-  for i = 1, #specs do
-    local spec = specs[i]
-    local name, callback, given_opts = unpack(spec)
-    local cmd_opts = dict.merge(copy(given_opts or {}), opts)
-    command.new(name, callback, cmd_opts)
-  end
+	opts = opts or {}
+	for i = 1, #specs do
+		local spec = specs[i]
+		local name, callback, given_opts = unpack(spec)
+		local cmd_opts = dict.merge(copy(given_opts or {}), opts)
+		command.new(name, callback, cmd_opts)
+	end
 end
 
 ---@param name string
----@param callback command.callback
----@param opts? command.opts
----@return command
+---@param callback CommandCallback
+---@param opts? CommandOpts
+---@return Command
 function command:__call(name, callback, opts)
-  return command.new(name, callback, opts)
+	return command.new(name, callback, opts)
+end
+
+---@param cmd str
+---@return fun(_, _)
+function command.as_fun(cmd)
+	return function()
+		vim.cmd(cmd)
+	end
 end
 
 package.user.lib.command = command

@@ -124,7 +124,7 @@ end
 
 
 ---Simple string interpolation with python-like curly braces
----@class template : template.class : instance
+---@class template : instance, template.class
 ---@field string string
 ---@field placeholders? table<string,any>
 

@@ -28,14 +28,14 @@ lib.substr = string.sub
 ---@field raise? boolean
 ---@field unwrap? boolean
 
----@class Predicate<T> : Predicate.class : instance
+---@class Predicate<T> : instance, Predicate.class
 ---@field call fun(...): string?
 ---@field safe? boolean
 ---@field message? string
 ---@field prefix? string
 ---@overload fun(...): Ok<T> | Err<CallError>
 
----@class Union : Union.class : instance
+---@class Union : instance, Union.class
 ---@field signature UnionSignature|UnionSignature[]
 ---@field display string
 ---@field opts Predicate.opts | is.opts
@@ -45,7 +45,7 @@ lib.substr = string.sub
 ---@field predicate fun(x: any): string?
 ---@overload fun(x: any, opts?: is.opts): boolean, string?
 
----@class Result<T> : Result.class<T> : instance
+---@class Result<T> : instance, Result.class<T>
 ---@field value? Error|T
 ---@field metadata? table
 ---@field err boolean
@@ -56,7 +56,7 @@ lib.substr = string.sub
 ---@field issubclass nil
 ---@field thread nil
 
----@class Err<E> : Err.class<E> : Result
+---@class Err<E> : Result<nil,E>, Err.class<E>
 ---@field value Error
 ---@field err true
 ---@field ok false
@@ -65,7 +65,7 @@ lib.substr = string.sub
 ---@field initialize nil
 ---@field issubclass nil
 
----@class Ok<T> : Ok.class<T> : Result<T>
+---@class Ok<T> : Result<T>, Ok.class<T>
 ---@field value T
 ---@field err false
 ---@field ok true
@@ -74,14 +74,14 @@ lib.substr = string.sub
 ---@field initialize nil
 ---@field issubclass nil
 
----@class CallError : CallError.class : Error
+---@class CallError : Error, CallError.class
 ---@field fun Callable
 ---@field args any[]
 
----@class TypeError : TypeError.class : Error
+---@class TypeError : Error, TypeError.class
 ---@field value any
 
----@class Error : Error.class : instance
+---@class Error : instance, Error.class
 ---@field message string
 ---@field args any[]
 ---@field new nil
@@ -880,9 +880,9 @@ end
 ---@param ignore? table<string,boolean>
 ---@return instance
 function class.new_instance(cls, ignore)
-	local new = setmetatable({}, cls)
-	local inst_id = tostring(new):gsub("^table: ", "")
-	new.__id = inst_id
+	local new = {}
+	new.__id = string.gsub(tostring(new), "^table: ", "")
+	new = setmetatable(new, cls)
 
 	for key, value in pairs(cls) do
 		if key ~= "__id" and not (ignore and ignore[key]) then
@@ -918,7 +918,6 @@ function class:__call(name, parent, opts)
 	end
 
 	local new = class.new(name, parent, ignore)
-
 	if opts.include then
 		for key, value in pairs(opts.include) do
 			new[key] = value
@@ -929,9 +928,9 @@ function class:__call(name, parent, opts)
 end
 
 ---@class Error.class : class
----@field new fun(self: Error.class, msg: string, ...: any): Error
+---@field new fun(self: Error.class, name: str, msg: string, ...: any): Error
 Error = class("Error")
-lib.Error = lib.Error
+lib.Error = Error
 is.error = is.Error
 
 function Error:initialize(name, msg, ...)
@@ -945,7 +944,7 @@ end
 
 ---Raise error
 function Error:throw()
-	error(self:__tostring(self))
+	error(self:__tostring(self), 2)
 end
 
 function Error:__tostring()
@@ -962,7 +961,7 @@ TypeError = class("TypeError", Error)
 lib.TypeError = TypeError
 
 function TypeError:initialize(message, value)
-	lib.Error.initialize(self, message, value)
+	Error.initialize(self, "TypeError", message, value)
 	self.value = value
 end
 
@@ -972,7 +971,7 @@ CallError = class("CallError", Error)
 lib.CallError = CallError
 
 function CallError:initialize(message, fun, args)
-	lib.Error.initialize(self, message, fun, args)
+	Error.initialize(self, "CallError", message, fun, args)
 	self.fun = fun
 	self.args = args
 end
@@ -1027,13 +1026,13 @@ function Ok:initialize(value, metadata)
 end
 
 ---@class Err.class<E> : Result.class<nil,E>
----@field new fun(self: Err.class<E>, msg: string, metadata?: table): Err<E>
+---@field new fun(self: Err.class<E>, msg: Error, metadata?: table): Err<E>
 Err = class("Err", Result)
 lib.Err = Err
 is.err = is.Err
 
 function Err:initialize(msg, metadata)
-	return Result.initialize(self, lib.Error:new(msg), metadata)
+	return Result.initialize(self, msg, metadata)
 end
 
 ---@generic T
@@ -1043,7 +1042,7 @@ end
 function lib.rpcall(fn, ...)
 	local ok, msg = pcall(fn, ...)
 	if not ok then
-		return Err:new(lib.CallError:new(msg, fn, { ... }))
+		return Err:new(CallError:new(msg, fn, { ... }))
 	else
 		return Ok:new(msg)
 	end
@@ -1057,7 +1056,7 @@ lib.rpredicatewrap = function(fn)
 	return function(...)
 		local msg = fn(...)
 		if is.str(msg) then
-			return lib.Err:new(lib.CallError:new(msg, fn, { ... }))
+			return lib.Err:new(CallError:new(msg, fn, { ... }))
 		else
 			return lib.Ok:new(true)
 		end
@@ -1073,7 +1072,7 @@ lib.rsafewrap = function(fn)
 		local ok, msg = pcall(fn, ...)
 		if not ok then
 			msg = as.NIL(msg)
-			return lib.Err:new(lib.CallError:new(msg, fn, { ... }))
+			return lib.Err:new(CallError:new(msg, fn, { ... }))
 		else
 			return lib.Ok:new(msg)
 		end
@@ -1089,7 +1088,7 @@ lib.rguardwrap = function(fn)
 		local ok, msg = fn(...)
 		if not ok then
 			msg = as.NIL(msg)
-			return lib.Err:new(lib.CallError:new(msg, fn, { ... }))
+			return lib.Err:new(CallError:new(msg, fn, { ... }))
 		else
 			return lib.Ok:new(msg)
 		end
@@ -1106,7 +1105,7 @@ lib.rwrap = function(fn)
 		if is.Result(res) then
 			return res --[[@as Result]]
 		elseif is.str(res) then
-			return lib.Err:new(lib.CallError:new(res, fn, { ... }))
+			return lib.Err:new(CallError:new(res, fn, { ... }))
 		else
 			return lib.Ok:new(true)
 		end
@@ -1558,7 +1557,7 @@ is.Specification = is.Specification
 is.spec = is.Specification
 is.Spec = is.spec
 
----@class Specification : Specification.class : instance
+---@class Specification : instance, Specification.class
 ---@field name string
 ---@field spec table
 ---@field from_table nil

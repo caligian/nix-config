@@ -7,7 +7,7 @@ local dict = lib.dict
 local list = lib.list
 local autocmd = vim.api.nvim_create_autocmd
 local kbd = vim.keymap.set
-local mydir = vim.env.ADMIN_DIR .. '/nvim'
+local mydir = vim.env.ADMIN_DIR .. "/nvim"
 local mylib = mydir .. "/lib"
 local myconfig = mydir .. "/config"
 
@@ -97,7 +97,7 @@ end
 
 ---@return user.require_all_configs.return[]
 function setup.require_all_configs()
-	return list.map(setup.list_configs(), function(filename)
+	local results = list.map(setup.list_configs(), function(filename)
 		local name = setup.file2require(filename)
 		local req = "config." .. name
 		local ok, msg = setup.require_config(name)
@@ -111,30 +111,9 @@ function setup.require_all_configs()
 
 		return res
 	end)
-end
 
----@class user.load_all_configs.return
----@field filename string
----@field ok boolean
----@field err boolean
----@field msg? string
----@field value? any
-
----@return user.load_all_configs.return[]
-function setup.load_all_configs()
-	return list.map(setup.list_configs(), function(filename)
-		local name = string.gsub(fs.basename(filename), "%s.lua", "")
-		local ok, msg = setup.load_config(name)
-		local res = { filename = filename, ok = ok, err = not ok }
-
-		if ok then
-			res.value = msg
-		else
-			res.msg = msg
-		end
-
-		return res
-	end)
+	---@cast results user.require_all_configs.return[]
+	return results
 end
 
 ---Load everything in ~/.user/nvim/config/*.lua
@@ -189,8 +168,7 @@ end
 function setup.require_all_plugins()
 	local dir = myconfig .. "/plugins"
 	local files = fs.glob(string.format("%s/*.lua", dir))
-
-	return list.map(files, function(filename)
+	local results = list.map(files, function(filename)
 		local file = fs.basename(filename)
 		file = string.gsub(file, "%.lua$", "")
 		local req = string.format("config.plugins.%s", file)
@@ -210,53 +188,20 @@ function setup.require_all_plugins()
 
 		return result
 	end)
-end
 
----@class user.load_all_plugins.return
----@field filename string
----@field ok boolean
----@field err boolean
----@field value any
----@field msg? string
-
----Load all package configurations
----@return user.load_all_plugins.return[]
-function setup.load_all_plugins()
-	local dir = myconfig .. "/plugins"
-	local files = fs.glob(string.format("%s/*.lua", dir))
-
-	return list.map(files, function(filename)
-		local file = fs.basename(filename)
-		file = string.gsub(file, "%.lua$", "")
-		local req = string.format("config.plugins.%s", file)
-		local ok, msg = pcall(require, req)
-		local result = {
-			ok = ok,
-			err = not ok,
-			filename = filename,
-			require = req,
-		}
-
-		if not ok then
-			result.msg = msg
-		else
-			result.value = msg
-		end
-
-		return result
-	end)
+	---@cast results user.require_all_plugins.return[]
+	return results
 end
 
 ---@class user.setup.return
----@field plugins (user.load_all_plugins.return | user.require_all_plugins.return)[]
----@field user (user.require_all_configs.return | user.load_all_configs.return)[]
+---@field plugins user.require_all_plugins.return[]
+---@field user user.require_all_configs.return[]
 
 ---@class user.setup.overrides
 ---@field user user.setup.return
 
 ---@class user.setup.opts
 ---@field overrides? user.setup.overrides
----@field load? boolean load files instead of require-ing theme. Use carefully only for debugging purposes
 ---@field require? boolean (default: true)
 
 ---@return user.setup.return
@@ -267,7 +212,6 @@ function setup.setup(opts)
 
 	opts = opts or {}
 	local force = opts.force
-	local load = opts.load
 	local overrides = opts.overrides
 	local state = package.user.state
 
@@ -280,23 +224,28 @@ function setup.setup(opts)
 	end
 
 	local result = { config = {}, plugins = {} }
-	if load then
-		result.config = setup.load_all_configs()
-		result.plugins = setup.load_all_plugins()
-	else
-		result.config = setup.require_all_configs()
-		result.plugins = setup.require_all_plugins()
-	end
 
+	require("lib.keymap")
+	require("lib.picker")
+	require("lib.autocmd")
 	require("lib.project")
 	require("lib.shell")
 	require("lib.repl")
 	require("lib.filetype")
+	require("lib.bookmarks")
+	require("lib.nvim")
+	require("lib.guifont")
+
+	result.config = setup.require_all_configs()
+	result.plugins = setup.require_all_plugins()
 
 	lib.project.setup()
 	lib.shell.setup()
 	lib.repl.setup()
 	lib.filetype.setup()
+	lib.bookmark.setup()
+	lib.nvim.setup()
+	lib.guifont.setup()
 
 	require("themery").setup({
 		themes = list.filter(vim.fn.getcompletion("", "color"), is.string),
@@ -319,7 +268,7 @@ function setup.setup(opts)
 end
 
 function setup:__call()
-  setup.setup()
+	setup.setup()
 end
 
 package.user.lib.setup = setup

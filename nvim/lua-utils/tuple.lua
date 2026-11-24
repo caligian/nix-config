@@ -1,4 +1,5 @@
 require 'lua-utils.type'
+local lib = package.user.lib
 
 ---These functions are potentially performance intensive. Use with care
 ---@overload fun(...): any[]
@@ -70,8 +71,7 @@ function tuple:import()
 end
 
 unpack = unpack or table.unpack
-
-package.user.lib.tuple = tuple
-package.user.lib.unpack = unpack
+lib.tuple = tuple
+lib.unpack = unpack
 
 return lib

@@ -5,7 +5,7 @@ local lib = package.user.lib
 lib.process = {}
 local process = lib.process
 
----@class Popen : Popen.class : instance
+---@class Popen : instance, Popen.class
 ---@field cmd string
 ---@field mode? string
 ---@field handle? file*

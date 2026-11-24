@@ -11,6 +11,9 @@ local as_list = function(x, force)
 	end
 end
 
+---@alias ErrorMap (fun(i: int, value: Error): any)|(fun(value: Error): any)
+---@alias ErrorFilter (fun(i: int, value: Error): boolean)|(fun(value: Error): boolean)
+---@alias ErrorEach (fun(i: int, value: Error))|(fun(value: Error))
 ---@alias Filter (fun(i: int, value: any): boolean)|(fun(value: any): boolean)
 ---@alias Map (fun(i: int, value: any): any)|(fun(value: any): any)
 ---@alias Each (fun(i: int, value: any))|(fun(value: any))
@@ -19,31 +22,18 @@ end
 ---@field raise? boolean
 ---@field throw? boolean
 
----@class list.foreach.opts
----@field each? Each
----@field raise? boolean
----@field throw? boolean
----@field return_on_error? boolean
----@field skip_errors? boolean
----@field stop? Filter
----@field collect? boolean
----@field index? boolean
----@field pass_index? boolean
----@field map? Map
----@field filter? Filter
-
----@class IndexError.class : Error.class : class
+---@class IndexError.class : Error.class
 ---@field new fun(self: IndexError.class, key: str, metadata: table): IndexError
 IndexError = class("IndexError", Error)
 package.user.lib.IndexError = IndexError
 
----@class IndexError : IndexError.class : instance
+---@class IndexError : Error, IndexError.class
 ---@field index any
 ---@field metadata table
 ---@overload fun(index: any, metadata?: table)
 
 function IndexError:__call()
-	errorf("Nonexistent index: %s\nmetadata: %s", self.index, self.metadata)
+	errorf("Nonexistent index: %s\nmetadata: %s", self.index, self.args)
 end
 
 function IndexError:initialize(index, metadata)
@@ -554,11 +544,30 @@ function list.flatten(x, res)
 	return res
 end
 
+---@class list.foreach.opts
+---@field raise? boolean
+---@field throw? boolean
+---@field return_on_error? boolean
+---@field skip_errors? boolean
+---@field stop? Filter
+---@field collect? boolean
+---@field index? boolean
+---@field pass_index? boolean
+---@field each? Each
+---@field map? Map
+---@field filter? Filter
+---@field error_each? ErrorEach
+---@field error_map? ErrorMap
+---@field error_filter? ErrorFilter
+---@field eeach? ErrorEach
+---@field efilter? ErrorFilter
+---@field emap? ErrorMap
+
 ---opts.on_error will always take precedence and error values WILL be propagated to other functions unless opts.skip_errors is true
 ---Apply function to each element
 ---@param x table
 ---@param opts? list.foreach.opts|fun(v: any)
----@return table?
+---@return table|false
 function list.foreach(x, opts)
 	opts = opts or {}
 	if is.Callable(opts) then
@@ -574,10 +583,10 @@ function list.foreach(x, opts)
 	local stop = opts.stop
 	local collect = opts.collect
 	local ret_on_err = opts.return_on_error
-	local throw = opts.raise or opts.throw
-	local skip_errors = opts.skip_errors
 	local pass_index = opts.index or opts.pass_index
 	local error_map = opts.error_map or opts.emap
+	local error_each = opts.error_each or opts.eeach
+	local throw_on_error = opts.throw
 
 	if each and (map or collect) then
 		error("Cannot pass both opts.each and opts.map | opts.collect")
@@ -587,10 +596,13 @@ function list.foreach(x, opts)
 		collect = true
 	end
 
-	local res = collect and {}
+	local res = (collect and {}) or false
 
 	local function call(f, key, value)
-		if pass_index then
+		if is.Error(value) and throw_on_error then
+			value.args.key = key
+			value:throw()
+		elseif pass_index then
 			return f(key, value)
 		else
 			return f(value)
@@ -602,7 +614,7 @@ function list.foreach(x, opts)
 			if error_filter then
 				return call(error_filter, i, value)
 			else
-				return value
+				return true
 			end
 		elseif filter then
 			return call(filter, i, value)
@@ -615,6 +627,8 @@ function list.foreach(x, opts)
 		if is.error(value) then
 			if error_map then
 				return call(error_map, i, value)
+			elseif error_each then
+				call(error_each, i, value)
 			else
 				return value
 			end
@@ -632,13 +646,17 @@ function list.foreach(x, opts)
 		local ok = false
 		local result = value
 
-		if (stop and call(stop, i, value)) or ret_on_err then
-			ret = true
-		elseif filter_value(i, value) then
-			ok = true
+		if is.Error(value) and ret_on_err then
+			return { ok = false, ret = true, result = value }
+		elseif stop and call(stop, i, value) then
+			return { ok = false, ret = true, result = value }
+    end
+
+    ok = filter_value(i, value)
+		if ok then
+      result = map_value(i, value)
 		end
 
-		result = map_value(i, value)
 		return { ok = ok, ret = ret, result = result }
 	end
 
@@ -647,6 +665,7 @@ function list.foreach(x, opts)
 		local status = process(i, v)
 
 		if status.ret then
+			---@cast res false
 			return res
 		elseif status.ok then
 			if res then
@@ -655,14 +674,14 @@ function list.foreach(x, opts)
 		end
 	end
 
-	---@cast res table?
+	---@cast res table
 	return res
 end
 
 ---@param x table
 ---@param f Each
 ---@param opts? list.foreach.opts
----@return table?
+---@return table|false
 function list.each(x, f, opts)
 	opts = copy(opts or {})
 	opts.each = f
@@ -674,7 +693,7 @@ end
 ---@param x table
 ---@param f Map
 ---@param opts? list.foreach.opts
----@return table?
+---@return table|false
 function list.map(x, f, opts)
 	opts = copy(opts or {})
 	opts.each = nil
@@ -686,7 +705,7 @@ end
 ---@param x table
 ---@param f Filter
 ---@param opts? list.foreach.opts
----@return table?
+---@return table|false
 function list.filter(x, f, opts)
 	opts = copy(opts or {})
 	opts.each = nil
@@ -698,7 +717,7 @@ end
 ---@param x table
 ---@param f Each
 ---@param opts? list.foreach.opts
----@return table?
+---@return table|false
 function list.ieach(x, f, opts)
 	opts = copy(opts or {})
 	opts.each = f
@@ -713,7 +732,7 @@ list.each_with_index = list.ieach
 ---@param x table
 ---@param f Map
 ---@param opts? list.foreach.opts
----@return table?
+---@return table|false
 function list.imap(x, f, opts)
 	opts = copy(opts or {})
 	opts.each = nil
@@ -728,7 +747,7 @@ list.map_with_index = list.imap
 ---@param x table
 ---@param f Filter
 ---@param opts? list.foreach.opts
----@return table?
+---@return table|false
 function list.ifilter(x, f, opts)
 	opts = copy(opts or {})
 	opts.each = nil

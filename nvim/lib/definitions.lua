@@ -4,9 +4,7 @@ if vim.g.loaded_nvim_utils_definitions then
 	return
 end
 
-local lib = package.user.lib
-local bookmarks_src = paste0(vim.env.HOME, "/bookmarks.json")
-package.user.state.bookmarks = vim.json.decode(lib.fs.slurp(bookmarks_src))
+package.user.state.bookmarks = {}
 package.user.state.dir_history = {}
 package.user.state.workspace = package.user.state.workspace or {}
 package.user.state.autocmd = package.user.state.autocmd or {}
@@ -101,3 +99,5 @@ if vim.g.neovide then
 end
 
 vim.g.loaded_nvim_utils_definitions = true
+
+return package.user

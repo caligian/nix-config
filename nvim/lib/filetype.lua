@@ -34,7 +34,7 @@ local filetypes = package.user.config.filetype
 ---@class filetype.class
 ---@field new fun(self: filetype.class, name: string): filetype
 
----@class filetype : filetype.class : instance
+---@class filetype : instance, filetype.class
 ---@field name string
 ---@field augroup integer
 ---@field augroup_name string

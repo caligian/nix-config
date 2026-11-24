@@ -29,9 +29,19 @@ else
 	}
 end
 
-
 vim.g.loaded_clipboard_provider = nil
 vim.cmd("runtime autoload/provider/clipboard.vim")
 vim.opt.clipboard = "unnamed,unnamedplus"
+
+--- Set PATH
+local PATH = vim.env.PATH
+local ADMIN_BIN_DIR = vim.env.ADMIN_BIN_DIR
+local NVIM_BIN_DIR = vim.env.ADMIN_NVIM_DIR .. '/bin'
+
+for _, bin in ipairs {ADMIN_BIN_DIR, NVIM_BIN_DIR} do
+  if not string.find(PATH, bin, 1, true) then
+    vim.env.PATH = vim.env.PATH .. ':' .. bin
+  end
+end
 
 require("lib")

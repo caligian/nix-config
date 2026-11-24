@@ -11,7 +11,7 @@ local state = package.user.state.timer
 ---@field new fun(self: timer.class, name: string, timeout?: integer, repeat?: integer, callback?: function): timer
 local timer = class("timer")
 
----@class timer : timer.class : instance
+---@class timer : instance, timer.class
 ---@field name string
 ---@field timer userdata
 ---@field callback function

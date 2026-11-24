@@ -13,7 +13,7 @@ local copy = lib.copy
 ---@alias Options.Patterns Options.Pattern|Options.Pattern[]
 ---@alias Options.Table table<Options.Key, any>
 
----@class Options : Options.class : instance
+---@class Options : instance, Options.class
 ---@field data Options.Table
 ---@field data_by_group table<Options.Key, Options.Table>
 ---@field groups table<Options.Key, Options.Patterns>

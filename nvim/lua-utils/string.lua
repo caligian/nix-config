@@ -176,7 +176,6 @@ end
 ---@param lst string[]
 ---@param patterns string|string[]
 ---@param start_index? int (default: 1)
----@param plain? boolean
 ---@return string[]
 function lib.grep(lst, patterns, start_index)
   plain = (is.na(plain) and false) or true

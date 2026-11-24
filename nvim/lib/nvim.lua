@@ -1,6 +1,8 @@
 require("lib.definitions")
+require("lib.buffer")
 
 local lib = package.user.lib
+local buffer = lib.buffer
 local fs = lib.fs
 local list = lib.list
 local nvim = {}
@@ -16,6 +18,12 @@ nvim.fname = {}
 function nvim.fname.expand(s, no_suffix, as_list)
 	return vim.fn.expand(s, no_suffix, as_list)
 end
+
+function nvim.fname.dirname(file)
+	return nvim.fnamemodify(file, "%:p:h")
+end
+
+nvim.fname.dir = nvim.fname.dirname
 
 ---@param file string
 ---@param rest string Rest of the mods
@@ -214,6 +222,12 @@ function nvim.cmd(...)
 	end
 end
 
+---@param fmt str
+---@param ... str|num
+function nvim.cmdf(fmt, ...)
+	vim.cmd(string.format(fmt, ...))
+end
+
 ---@param linenum number
 ---@return boolean, string?
 function nvim.goto_linenum(linenum)
@@ -232,6 +246,72 @@ function nvim.system(cmd, ...)
 	vim.cmd(sprintf(":! %s", cmd))
 end
 
+function nvim.setup()
+	local mkcommand = vim.api.nvim_create_user_command
+	local kbd = vim.keymap.set
+
+	mkcommand("EvalRegion", function()
+		nvim.eval.region()
+	end, { nargs = 0 })
+
+	mkcommand("EvalFile", function(args)
+		nvim.eval.file(args.args)
+	end, { nargs = 1, complete = "file" })
+
+	mkcommand("EvalBuffer", function(args)
+		local buf = args.fargs[1]
+		buf = buf or 0
+		buf = is.int(buf) and tonumber(buf) or buf
+		local file = vim.api.nvim_buf_get_name(buf)
+		fs.assert.is_file(file)
+		nvim.eval.file(file)
+	end, { nargs = "?", complete = "buffer" })
+
+	kbd("v", "<C-x>ee", "<Cmd>EvalRegion<CR>", { desc = "Eval region in current buffer" })
+	kbd("n", "<C-x>eb", ":EvalBuffer 0<CR>", { desc = "Eval current buffer" })
+	kbd("n", "<C-x>ef", ":EvalFile ", { desc = "Eval file" })
+end
+
+---@param dir? str
+function nvim.touch(dir)
+	if not dir then
+		local bufname = vim.fn.bufname()
+		if not fs.is_file(bufname) then
+			return
+		else
+			dir = nvim.fnamemodify(bufname, ":p:h")
+		end
+	end
+
+	local cmd = vim.cmd
+	local prompt = paste0(dir:gsub(os.getenv("HOME"), "~"), "/{PATH} > ")
+	local input = vim.ui.input
+	local opts = { prompt = prompt, scope = "buffer" }
+
+	input(opts, function(str)
+		if not str or #str == 0 then
+			print("No directory provided")
+			return
+		end
+
+		local new_file = fs.join(dir, str)
+		local is_dir = new_file:sub(#new_file, #new_file) == "/"
+
+		if not is_dir then
+			local new_buf = vim.fn.bufadd(new_file)
+			buffer.set_opt(new_buf, "buflisted", true)
+		else
+			cmd(string.format(':! mkdir -p "%s"', new_file))
+		end
+
+		cmd(string.format(':tabedit "%s"', new_file))
+	end)
+end
+
+function nvim.cabbrev(cmd, abbrev)
+	vim.cmd(paste0(":cnoreabbr ", abbrev, " ", cmd))
+end
+
 nvim.strftime = vim.fn.strftime
 nvim.strptime = vim.fn.strptime
 nvim.get_region = nvim.region
@@ -241,30 +321,7 @@ nvim.abspath = nvim.fname.abspath
 nvim.extension = nvim.fname.extension
 nvim.relpath = nvim.fname.relpath
 nvim.relhomepath = nvim.fname.relhomepath
-
-local mkcommand = vim.api.nvim_create_user_command
-local kbd = vim.keymap.set
-
-mkcommand("EvalRegion", function()
-	nvim.eval.region()
-end, { nargs = 0 })
-
-mkcommand("EvalFile", function(args)
-	nvim.eval.file(args.args)
-end, { nargs = 1, complete = "file" })
-
-mkcommand("EvalBuffer", function(args)
-	local buf = args.fargs[1]
-	buf = buf or 0
-	buf = is.int(buf) and tonumber(buf) or buf
-	local file = vim.api.nvim_buf_get_name(buf)
-	fs.assert.is_file(file)
-	nvim.eval.file(file)
-end, { nargs = "?", complete = "buffer" })
-
-kbd("v", "<C-x>ee", "<Cmd>EvalRegion<CR>", { desc = "Eval region in current buffer" })
-kbd("n", "<C-x>eb", ":EvalBuffer 0<CR>", { desc = "Eval current buffer" })
-kbd("n", "<C-x>ef", ":EvalFile ", { desc = "Eval file" })
+nvim.rmtermcodes = nvim.replace_termcodes
 
 package.user.lib.nvim = nvim
 package.user.lib.strftime = vim.fn.strftime
@@ -293,5 +350,6 @@ package.user.lib.eval_file = nvim.eval_file
 package.user.lib.get_mode = nvim.get_mode
 package.user.lib.in_visual_mode = nvim.in_visual_mode
 package.user.lib.in_normal_mode = nvim.in_normal_mode
+package.user.lib.rmtermcodes = nvim.replace_termcodes
 
 return lib

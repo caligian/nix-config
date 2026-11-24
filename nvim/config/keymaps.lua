@@ -1,7 +1,4 @@
 -- require("lib.neotree-filesystem")
-require("lib.keymap")
-require("lib.project")
-require("lib.buffer")
 
 local lib = package.user.lib
 local buffer = lib.buffer
@@ -11,7 +8,7 @@ local feedkeys = vim.api.nvim_feedkeys
 local replace_termcodes = vim.api.nvim_replace_termcodes
 local map = lib.kbd.map
 local dict = lib.dict
-local list = lib.list
+local touch = lib.nvim.touch
 
 vim.g.mapleader = " "
 vim.g.maplocalleader = "<C-x>"
@@ -37,30 +34,8 @@ local function split_map(mode, lhs, rhs, opts)
 	end, opts)
 end
 
-local function touch(dir)
-	vim.ui.input({
-		prompt = "Enter new filename % ",
-		scope = "buffer",
-	}, function(str)
-		if #str == 0 then
-			return
-		else
-			local new_file = fs.join(dir, str)
-			local is_dir = new_file:sub(#new_file, #new_file) == "/"
-			if not is_dir then
-				local new_buf = vim.fn.bufadd(new_file)
-				buffer.set_opt(new_buf, "buflisted", true)
-			else
-				vim.cmd(":! mkdir " .. new_file)
-			end
-			vim.cmd(":Neotree " .. new_file)
-		end
-	end)
-end
-
 --- Popup windows (netrw)
-map("n", "q", buffer.hide, { event = "Filetype", pattern = "netrw", desc = "Hide window" })
-map("n", "Q", buffer.wipeout, { event = "Filetype", pattern = "netrw", desc = "Wipeout window" })
+map("n", "q", buffer.wipeout, { event = "Filetype", pattern = "netrw", desc = "Wipeout window" })
 map("n", "<C-g>", buffer.wipeout, { event = "Filetype", pattern = "netrw", desc = "Wipeout window" })
 map("n", "q", buffer.hide, { event = "BufNew", pattern = "__temp_*__", desc = "Hide window" })
 map("n", "Q", buffer.wipeout, { event = "BufNew", pattern = "__temp_*__", desc = "Wipeout window" })
@@ -219,6 +194,7 @@ map("n", "<leader>dd", diagnostics.toggle("d"), { desc = "Show diagnostics for b
 map("n", "<leader>dp", diagnostics.toggle("p"), { desc = "Show diagnostics for buffer project" })
 map("n", "<leader>dk", diagnostics.disable, { desc = "Disable diagnostics for buffer" })
 map("n", "<leader>de", diagnostics.enable, { desc = "Enable diagnostics for buffer" })
+map("n", "<A-k>", vim.diagnostic.open_float, {desc = 'Float diagnostics at cursor'})
 
 --- Directory discovery
 local T = require("telescope.builtin")
@@ -228,6 +204,7 @@ local make_opts = function(overrides)
 	return lib.dict.merge(overrides, Topts)
 end
 
+--- Buffer directory specific mappings
 map("n", "<leader>>", buffer.fd, { desc = "Find files in buffer directory" })
 map("n", "<C-x>dp", function()
 	lib.select("cd directory", dict.keys(package.user.state.dir_history), function(entry)
@@ -252,6 +229,7 @@ map("n", "<C-x>da", function()
 	end
 end, { desc = "Create a file at buffer directory" })
 
+--- Project-specific mappings
 map("n", "<leader>.", buffer.fdp, { desc = "Find files in buffer project" })
 map("n", "<C-x>p/", buffer.live_grep_p, { desc = "Live grep in buffer project directory" })
 map("n", "<C-x>pb", function()
@@ -298,15 +276,3 @@ split_map("n", "<C-x>ns", ":e ~/.user/sway", { desc = "Open ~/.user/sway" })
 split_map("n", "<C-x>nf", ":e ~/.user/foot", { desc = "Open ~/.user/foot" })
 split_map("n", "<C-x>np", ":e ~/.user/nixos/pkgs", { desc = "Open ~/.user/nixos/pkgs" })
 split_map("n", "<C-x>nm", ":e ~/.user/nixos/systemd.nix", { desc = "Open ~/.user/nixos/systemd.nix" })
-
---- Visit bookmarks
-map("n", "<C-x>b", function()
-	local bookmarks = package.user.state.bookmarks
-	bookmarks = dict.keys(bookmarks)
-	bookmarks = list.filter(bookmarks, function(src)
-		return is.str(src) and is.path(src)
-	end)
-	lib.select("Open bookmark", bookmarks, function(entry)
-		vim.cmd(":e! " .. entry[1].value)
-	end, {})
-end, { desc = "Explore bookmarks" })

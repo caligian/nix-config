@@ -12,12 +12,12 @@ require("lua-utils.list")
 local lib = package.user.lib
 local copy = lib.copy
 
----@class KeyError.class : Error.class : class
+---@class KeyError.class : Error.class
 ---@field new fun(self: KeyError.class, key: str|int, tbl: Dict): KeyError
 KeyError = class("KeyError", Error)
 lib.KeyError = KeyError
 
----@class KeyError : KeyError.class : instance
+---@class KeyError : instance, KeyError.class
 ---@field key any
 ---@field metadata table
 ---@overload fun(key: any, metadata?: table)
@@ -37,6 +37,7 @@ is.KeyError = is.KeyError
 
 --- Dictionary utilities
 local dict = {}
+lib.dict = dict
 
 function dict.copy(x, deep)
 	return copy(x, deep)
@@ -205,7 +206,7 @@ function dict.get(x, ks, default, opts)
 		end
 	end
 
-  local k = ks[#ks]
+	local k = ks[#ks]
 	local v = as.value(x[k])
 
 	if v ~= nil then
@@ -597,5 +598,145 @@ function dict.pop(x, ks, opts)
 	return res, x
 end
 
-package.user.lib.dict = dict
+---@alias DictErrorMap (fun(i: any, value: Error): any)|(fun(value: Error): any)
+---@alias DictErrorFilter (fun(i: any, value: Error): boolean)|(fun(value: Error): boolean)
+---@alias DictErrorEach (fun(i: any, value: Error))|(fun(value: Error))
+---@alias DictFilter (fun(i: any, value: any): boolean)|(fun(value: any): boolean)
+---@alias DictMap (fun(i: any, value: any): any)|(fun(value: any): any)
+---@alias DictEach (fun(i: any, value: any))|(fun(value: any))
+
+---@class dict.foreach.opts
+---@field raise? boolean
+---@field throw? boolean
+---@field return_on_error? boolean
+---@field skip_errors? boolean
+---@field stop? DictFilter
+---@field collect? boolean
+---@field index? boolean
+---@field pass_index? boolean
+---@field each? DictEach
+---@field map? DictMap
+---@field filter? DictFilter
+---@field error_each? DictErrorEach
+---@field error_map? DictErrorMap
+---@field error_filter? DictErrorFilter
+---@field eeach? DictErrorEach
+---@field efilter? DictErrorFilter
+---@field emap? DictErrorMap
+
+---opts.on_error will always take precedence and error values WILL be propagated to other functions unless opts.skip_errors is true
+---Apply function to each element
+---@param x table
+---@param opts? dict.foreach.opts|fun(v: any)
+---@return table|false
+function dict.foreach(x, opts)
+	opts = opts or {}
+	if is.Callable(opts) then
+		---@cast opts fun(v: any)
+		return dict.foreach(x, { each = opts })
+	end
+
+	opts = copy(opts)
+	local each = opts.each
+	local map = opts.map
+	local filter = opts.filter
+	local error_filter = opts.error_filter or opts.efilter
+	local stop = opts.stop
+	local collect = opts.collect
+	local ret_on_err = opts.return_on_error
+	local pass_index = opts.index or opts.pass_index
+	local error_map = opts.error_map or opts.emap
+	local error_each = opts.error_each or opts.eeach
+	local throw_on_error = opts.throw
+
+	if each and (map or collect) then
+		error("Cannot pass both opts.each and opts.map | opts.collect")
+	end
+
+	if map or filter or error_map or error_filter then
+		collect = true
+	end
+
+	local res = (collect and {}) or false
+
+	local function call(f, key, value)
+		if is.Error(value) and throw_on_error then
+			value.args.key = key
+			value:throw()
+		elseif pass_index then
+			return f(key, value)
+		else
+			return f(value)
+		end
+	end
+
+	local function filter_value(i, value)
+		if is.error(value) then
+			if error_filter then
+				return call(error_filter, i, value)
+			else
+				return true
+			end
+		elseif filter then
+			return call(filter, i, value)
+		else
+			return true
+		end
+	end
+
+	local function map_value(i, value)
+		if is.error(value) then
+			if error_map then
+				return call(error_map, i, value)
+			elseif error_each then
+				call(error_each, i, value)
+			else
+				return value
+			end
+		elseif map then
+			return call(map, i, value)
+		elseif each then
+			call(each, i, value)
+		else
+			return value
+		end
+	end
+
+	local function process(i, value)
+		local ret = false
+		local ok = false
+		local result = value
+
+		if is.Error(value) and ret_on_err then
+			return { ok = false, ret = true, result = value }
+		elseif stop and call(stop, i, value) then
+			return { ok = false, ret = true, result = value }
+		end
+
+		ok = filter_value(i, value)
+		if ok then
+			result = map_value(i, value)
+		end
+
+		return { ok = ok, ret = ret, result = result }
+	end
+
+	for i, v in pairs(x) do
+		v = as.value(v)
+		local status = process(i, v)
+
+		if status.ret then
+			---@cast res false
+			return res
+		elseif status.ok then
+			if res then
+				res[i] = status.result
+			end
+		end
+	end
+
+	---@cast res table
+	return res
+end
+
 return dict
