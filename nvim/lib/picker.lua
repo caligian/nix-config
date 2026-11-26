@@ -2,6 +2,11 @@ local lib = package.user.lib
 local tconfig = package.user.config.plugins.telescope.defaults
 -- local dict = lib.dict
 
+---@class PickerEntry 
+---@field display str
+---@field ordinal int|str
+---@field value any
+
 ---@class picker : instance, picker.class
 ---@field telescope table
 ---@field opts table
@@ -50,6 +55,8 @@ end
 
 picker.get_selected_entry = picker.entry
 
+---@param bufnr int
+---@return PickerEntry[]?
 function picker:entries(bufnr)
 	local x = self.state.get_current_picker(bufnr)
 	if not x then
@@ -63,10 +70,12 @@ function picker:entries(bufnr)
 		self:close(bufnr)
 	end
 
-	return gotten
+  if #gotten == 0 then
+    return
+  else
+    return gotten
+  end
 end
-
-picker.get_selected_entries = picker.entries
 
 function picker:table(xs, entry_maker)
 	return self.telescope.finders.new_table({
@@ -135,16 +144,12 @@ function picker:make_and_find(xs, on_enter, opts)
 	end
 end
 
-function lib.picker(title, xs, on_enter, opts)
-	local p = picker:new(title)
-	return p:make(xs, on_enter, opts)
-end
-
+---@param title str
+---@param xs any[]
+---@param on_enter fun(entries: PickerEntry[])
+---@param opts? table
 function lib.select(title, xs, on_enter, opts)
 	lib.picker:new(title):make_and_find(xs, on_enter, opts)
 end
-
-lib.telescope = picker
-lib.picker = picker
 
 return lib

@@ -43,7 +43,7 @@ let
         builtins.length specs
       );
     };
-  myGnomeKeymaps = setGnomeKeymaps [
+  myGnomeKeymaps = [
     {
       keys = "<Super>slash";
       run = "guake";
@@ -93,7 +93,7 @@ let
   mapper =
     dconfSettings: maps:
     let
-      withDefaults = myGnomeKeymaps ++ maps;
+      withDefaults = setGnomeKeymaps (myGnomeKeymaps ++ maps);
       withMaps = dconfSettings // withDefaults;
     in
     withMaps;

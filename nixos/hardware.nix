@@ -20,6 +20,11 @@
     bluetooth = {
       enable = true;
       powerOnBoot = false;
+      settings = {
+        General = {
+          Experimental = true;
+        };
+      };
     };
     display = {
       edid.linuxhw."VX2457" = ["VX2457" "2020" "Digital" ];

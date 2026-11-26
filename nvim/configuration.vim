@@ -50,7 +50,6 @@ set number
 set relativenumber
 
 let mapleader = " "
-let maplocalleader = "<C-x>"
 
 aunmenu PopUp
 

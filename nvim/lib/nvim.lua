@@ -310,7 +310,9 @@ function nvim.touch(dir)
 			cmd(string.format(':! mkdir -p "%s"', new_file))
 		end
 
-		cmd(string.format(':tabedit "%s"', new_file))
+		cmd(":tabnew")
+    cmd(paste0(":e ", new_file))
+    cmd(paste0("chdir ", dir))
 	end)
 end
 

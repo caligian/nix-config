@@ -29,6 +29,7 @@ let
     tinytex
     reticulate
     targets
+    readxl
   ];
   r = (
     pkgs.rWrapper.override {

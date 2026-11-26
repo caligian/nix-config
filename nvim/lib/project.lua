@@ -379,15 +379,22 @@ function project.setup_commands()
 end
 
 function project.setup_autocmds()
-	autocmd.new("BufEnter", function(buf, _)
+	autocmd("BufEnter", function(buf, _)
 		local proj = project.buf_find(buf, {
 			default = function(_)
 				local bufname = lib.buffer.get_name(buf)
 				if fs.is_file(bufname) then
 					return fs.dirname(bufname)
-				else
-					return vim.env.HOME
 				end
+
+        local dir_history = package.user.state.dir_history
+        local len = #dir_history
+
+        if len > 0 then
+          return dir_history[len]
+        else
+          return vim.env.HOME
+        end
 			end,
 		})
 
@@ -400,15 +407,13 @@ function project.setup_autocmds()
 		pattern = "*.*",
 	})
 
-	autocmd.new("BufReadPost", function(_, _)
+	autocmd("BufReadPost", function(_, _)
 		project.refresh()
 	end, {
 		desc = "Refresh projects",
 		pattern = "*.*",
 	})
 end
-
-project.setup_autocmds()
 
 ---@param dirname string
 ---@param cd? boolean

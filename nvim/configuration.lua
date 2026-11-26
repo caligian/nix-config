@@ -36,12 +36,28 @@ vim.opt.clipboard = "unnamed,unnamedplus"
 --- Set PATH
 local PATH = vim.env.PATH
 local ADMIN_BIN_DIR = vim.env.ADMIN_BIN_DIR
-local NVIM_BIN_DIR = vim.env.ADMIN_NVIM_DIR .. '/bin'
+local NVIM_BIN_DIR = vim.env.ADMIN_NVIM_DIR .. "/bin"
 
-for _, bin in ipairs {ADMIN_BIN_DIR, NVIM_BIN_DIR} do
-  if not string.find(PATH, bin, 1, true) then
-    vim.env.PATH = vim.env.PATH .. ':' .. bin
-  end
+for _, bin in ipairs({ ADMIN_BIN_DIR, NVIM_BIN_DIR }) do
+	if not string.find(PATH, bin, 1, true) then
+		vim.env.PATH = vim.env.PATH .. ":" .. bin
+	end
 end
 
 require("lib")
+
+vim.schedule(function()
+	local lib = package.user.lib
+	local bufs = vim.api.nvim_list_bufs()
+
+	if #bufs == 1 then
+		local buf = lib.buffer.current()
+		if vim.bo[buf].filetype == "" then
+			vim.cmd.edit(vim.fn.getcwd())
+			local bufname = lib.buffer.get_name(buf)
+			if bufname == "" then
+				lib.buffer.set_name(buf, vim.fn.getcwd())
+			end
+		end
+	end
+end)

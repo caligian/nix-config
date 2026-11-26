@@ -161,6 +161,14 @@ enable("r_language_server", {
 	cmd = { "R", "--no-echo", "-e", "languageserver::run()" },
 	filetypes = { "r", "rmd", "quarto" },
 	root_markers = { ".PROJECT" },
+	settings = {
+		r = {
+			lsp = {
+				member_completion = true,
+				s3_dispatch = true,
+			},
+		},
+	},
 	cmd_env = {
 		R_LINTR_CONFIG_FILE = vim.env.ADMIN_DIR .. "/lintr",
 	},
@@ -190,7 +198,19 @@ enable("perlnavigator", {
 			perlPath = "perl",
 			perlcriticEnabled = true,
 			perlcriticProfile = "",
-			perltidyProfile = vim.env.ADMIN_DIR .. '/perltidyrc',
+			perltidyProfile = vim.env.ADMIN_DIR .. "/perltidyrc",
 		},
 	},
+})
+
+---@diagnostic disable-next-line
+require("r").setup({auto_start = true})
+
+vim.api.nvim_create_autocmd("LspAttach", {
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if client and client.name == "r_language_server" then
+      client.server_capabilities.completionProvider = nil
+    end
+  end,
 })

@@ -1,5 +1,7 @@
 { pkgs, ... }:
 (with pkgs; [
+  gcc
+  gnumake
   which
   xprop
   git

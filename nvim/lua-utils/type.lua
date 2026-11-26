@@ -482,7 +482,7 @@ function lib.predicate.setup()
 	end, { expected = "nil" })
 
 	pred.defined = lib.predicate(function(x)
-		return not pred.undefined(x)
+		return x ~= nil and x ~= package.user.lib.NIL
 	end, { expected = "non-nil" })
 
 	pred.num = pred.number

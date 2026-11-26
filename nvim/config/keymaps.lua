@@ -11,7 +11,6 @@ local dict = lib.dict
 local touch = lib.nvim.touch
 
 vim.g.mapleader = " "
-vim.g.maplocalleader = "<C-x>"
 vim.g.netrw_liststyle = 1
 vim.g.netrw_banner = 0
 vim.g.netrw_hide = 0
@@ -194,7 +193,7 @@ map("n", "<leader>dd", diagnostics.toggle("d"), { desc = "Show diagnostics for b
 map("n", "<leader>dp", diagnostics.toggle("p"), { desc = "Show diagnostics for buffer project" })
 map("n", "<leader>dk", diagnostics.disable, { desc = "Disable diagnostics for buffer" })
 map("n", "<leader>de", diagnostics.enable, { desc = "Enable diagnostics for buffer" })
-map("n", "<A-k>", vim.diagnostic.open_float, {desc = 'Float diagnostics at cursor'})
+map("n", "<A-k>", vim.diagnostic.open_float, { desc = "Float diagnostics at cursor" })
 
 --- Directory discovery
 local T = require("telescope.builtin")
@@ -276,3 +275,32 @@ split_map("n", "<C-x>ns", ":e ~/.user/sway", { desc = "Open ~/.user/sway" })
 split_map("n", "<C-x>nf", ":e ~/.user/foot", { desc = "Open ~/.user/foot" })
 split_map("n", "<C-x>np", ":e ~/.user/nixos/pkgs", { desc = "Open ~/.user/nixos/pkgs" })
 split_map("n", "<C-x>nm", ":e ~/.user/nixos/systemd.nix", { desc = "Open ~/.user/nixos/systemd.nix" })
+
+--- Navigate directory history
+map("n", "<BS>", function()
+	local dir_history = package.user.state.dir_history
+	local len = #dir_history
+	local list = lib.list
+
+	if len == 0 then
+		return
+	end
+
+	local dirs = list.select(dir_history, list.seq_along(dir_history))
+	lib.select("Directory history", dirs, function(entries)
+		if not entries then
+			return
+		end
+
+		local entry = entries[1]
+		local dir = entry.value
+
+		if not fs.is_dir(dir) then
+			return
+		end
+
+		vim.cmd.edit(dir)
+	end)
+end, {
+	desc = "Navigate directory history",
+})

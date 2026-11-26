@@ -23,6 +23,7 @@ let
     PYTHONIOENCODING = "utf-8";
     R_LINTR_LINTER_FILE = "${path.dir.root}/lintr";
     DXVK_CONFIG = "dxgi.maxFramerate=59; d3d9.maxFrameRate=59";
+    R_LIBS_USER = "${path.dir.home}/R/library";
   };
   importPkgs =
     names:
@@ -44,6 +45,7 @@ let
     lib.flatten allPkgs;
   defaultPkgs = (
     importPkgs [
+      "tex"
       "games"
       "cli"
       "tesseract"
@@ -64,18 +66,44 @@ let
       "qt"
       "gnome"
     ]
+    ++ (with pkgs; [
+      (writeScriptBin "init-R-project" ''
+        #!/usr/bin/env Rscript
+
+        args <- commandArgs(trailingOnly = TRUE)
+        if (length(args) < 1) {
+          stop("Usage: init-R-project <PROJECT>", call. = FALSE)
+        }
+
+        proj <- args[1]
+        dirs <- c("R", "scripts", "bin", "data")
+
+        for (.dir in dirs) {
+          dir.create(
+            file.path(proj, .dir), 
+            recursive = TRUE,
+            showWarnings = FALSE
+          )
+        }
+
+        message(
+          "Initialized R project at: ",
+          normalizePath(proj, mustWork = FALSE)
+        )
+      '')
+    ])
   );
 in
 {
   environment = {
     etc = {
       "xdg/autostart/vicinae.desktop".text = ''
-      [Desktop Entry]
-      Type=Application
-      Name=Vicinae server
-      Exec=vicinae server
-      OnlyShowIn=GNOME;
-      X-GNOME-Autostart-enabled=true
+        [Desktop Entry]
+        Type=Application
+        Name=Vicinae server
+        Exec=vicinae server
+        OnlyShowIn=GNOME;
+        X-GNOME-Autostart-enabled=true
       '';
     };
     variables = {

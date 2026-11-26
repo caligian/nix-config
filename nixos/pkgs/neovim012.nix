@@ -1,6 +1,7 @@
 {
   path,
   pkgs,
+  lib,
   ...
 }:
 let
@@ -11,6 +12,73 @@ let
       export RT_DIR=${pkgs.glibc.out}
     '';
   });
+  rPkgs = builtins.elemAt (import "/etc/nixos/pkgs/r.nix" { inherit pkgs; }) 0;
+  r-nvim = pkgs.stdenv.mkDerivation {
+    pname = "R-nvim";
+    version = "v1.0.0-test-2";
+    src = pkgs.fetchFromGitHub {
+      owner = "R-nvim";
+      repo = "R.nvim";
+      rev = "c56ebe0f8445e251673981c40ac2d74659ecd6ed";
+      hash = "sha256-RWEDjiHOGYULfTvfz8cSdFQREW23xtan9nKfGXD4bJk=";
+      fetchSubmodules = true;
+    };
+    nativeBuildInputs = with pkgs; [
+      rPkgs
+      gnumake
+      gcc
+      tree-sitter
+      python313
+    ];
+    buildInputs = [ rPkgs ];
+    dontBuild = true;
+    patchPhase = ''
+      runHook prePatch
+      python3 - <<'EOF'
+      from pathlib import Path
+
+      path = Path("lua/r/server.lua")
+      lines = path.read_text().splitlines(keepends=True)
+
+      # Verify lines 374..392 (1-indexed) match the make block before deleting
+      target = "".join(lines[373:392])
+      assert 'vim.system(\n        { "make" }' in target, f"Unexpected target lines:\n{target}"
+
+      del lines[373:392]
+      path.write_text("".join(lines))
+      print("SUCCESS: Removed lines 374-392 (rnvimserver make block) from lua/r/server.lua")
+      EOF
+    '';
+    installPhase = ''
+      set -euo pipefail
+
+      runHook preInstall
+      pluginDir="$out/share/nvim/site/pack/r-nvim/start/R.nvim"
+      mkdir -p "$pluginDir" "$out/r-library" "$out/parser" "$out/rnvimserver" "$NIX_BUILD_TOP/rtmp"
+
+      cp -r . "$pluginDir/"
+
+      TMPDIR="$NIX_BUILD_TOP/rtmp" \
+      R_LIBS_SITE="$out/r-library" \
+      R CMD INSTALL --library="$out/r-library" "$(pwd)/nvimcom"
+
+      if [ -x "$out/r-library/nvimcom/bin/rnvimserver" ]; then
+        ln -sf "$out/r-library/nvimcom/bin/rnvimserver" "$out/rnvimserver/rnvimserver"
+      fi
+
+      if [ -d tree-sitter-rout ]; then
+        tree-sitter build -o "$out/parser/rout.so" tree-sitter-rout
+      fi
+
+      runHook postInstall
+    '';
+    meta = {
+      description = "R plugin for Neovim with pre-built nvimcom and rout parser";
+      homepage = "https://github.com/R-nvim/R.nvim";
+      license = lib.licenses.gpl3Plus;
+      platforms = lib.platforms.unix;
+    };
+  };
   myRocks = {
     lpath = buildLuarock rec {
       pname = "lpath";
@@ -65,8 +133,7 @@ let
       myRocks.lpath
     ];
   nvimPlugins = (
-    with pkgs.vimPlugins;
-    [
+    (with pkgs.vimPlugins; [
       conform-nvim
       lazy-nvim
       vim-fugitive
@@ -126,7 +193,8 @@ let
       undotree
       base16-vim
       lsp-format-nvim
-    ]
+    ])
+    ++ [ r-nvim ]
   );
   nvimDir = path.dir.nvim;
   initVimFile = "${nvimDir}/configuration.vim";
@@ -211,6 +279,10 @@ let
       else
         vim.notify("Bootstrapping failed. Please clone https://www.github.com/caligian/nix-config to ~/.user manually")
       end
+
+      --- nvimcom workaround
+      vim.opt.runtimepath:append("${r-nvim}/share/nvim/site/pack/r-nvim/start/R.nvim")
+      vim.env.R_LIBS_SITE = "${r-nvim}/r-library"
     '';
   };
 in

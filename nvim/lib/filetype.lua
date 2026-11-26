@@ -31,9 +31,6 @@ local filetypes = package.user.config.filetype
 ---@field workspace table
 ---@field lsp table
 
----@class filetype.class
----@field new fun(self: filetype.class, name: string): filetype
-
 ---@class filetype : instance, filetype.class
 ---@field name string
 ---@field augroup integer
@@ -48,7 +45,8 @@ local filetypes = package.user.config.filetype
 ---@field require_configs nil
 ---@field setup nil
 
----@type filetype.class
+---@class filetype.class
+---@field new fun(self: filetype.class, name: string): filetype
 local filetype = class("filetype", nil, {
 	static = {
 		"from_file",

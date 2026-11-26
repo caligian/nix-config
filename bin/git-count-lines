@@ -26,10 +26,6 @@ def git_ls_files() -> list[str]:
     return files
 
 
-if not os.path.isdir("./.git"):
-    print("Not in a git directory")
-    sys.exit(1)
-
 fs = sorted(git_ls_files())
 lcs = list(map(count_lines, fs))
 lcs = list(zip(fs, lcs))

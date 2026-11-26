@@ -6,6 +6,7 @@
   ...
 }:
 let
+  adminUser = user;
   home = "/home/${user}";
   root = "${home}/.user";
   myEnv = {
@@ -18,37 +19,43 @@ let
     ADMIN_WAYBAR_DIR = "${root}/sway/waybar";
     ADMIN_NVIM_DIR = "${root}/nvim";
     ADMIN_FOOT_DIR = "${root}/foot";
-    ADMIN_PKGS_DIR = "${root}/nixos/pkgs";
     ADMIN_NIXOS_DIR = "${root}/nixos";
-    ADMIN_NIXOS_UTILS_DIR = "${root}/nixos";
+    ADMIN_NIXOS_UTILS_DIR = "${root}/nixos/utils";
+    ADMIN_NIXOS_PKGS_DIR = "${root}/nixos/pkgs";
+    ADMIN_INCLUDE_DIR = "${root}/include";
+    ADMIN_PERLTIDYRC = "${root}/perltidyrc";
+    ADMIN_PERLCRITICRC = "${root}/perlcriticrc";
+    ADMIN_BASHRC = "${root}/bashrc";
   };
 in
 rec {
-  user = user;
+  user = adminUser;
   rootDir = root;
   env = myEnv;
   path = {
-    dir = rec {
-      pkgs = myEnv.ADMIN_PKGS_DIR;
+    dir = {
       root = myEnv.ADMIN_DIR;
+      pkgs = myEnv.ADMIN_PKGS_DIR;
       home = myEnv.ADMIN_HOME;
-      lib = "${root}/lib";
-      bin = "${root}/bin";
-      nixos = "${root}/nixos";
-      nixosPkgs = "${root}/nixos/pkgs";
-      nixosUtils = "${root}/nixos-utils";
-      nvim = "${root}/nvim";
-      include = "${root}/include";
+      lib = myEnv.ADMIN_LIB_DIR;
+      bin = myEnv.ADMIN_BIN_DIR;
+      nvim = myEnv.ADMIN_NVIM_DIR;
+      include = myEnv.ADMIN_INCLUDE_DIR;
       sway = env.ADMIN_SWAY_DIR;
       foot = env.ADMIN_FOOT_DIR;
       waybar = env.ADMIN_WAYBAR_DIR;
+      nixos = myEnv.ADMIN_NIXOS_DIR;
+      nixosPkgs = myEnv.ADMIN_NIXOS_PKGS_DIR;
+      nixosUtils = myEnv.ADMIN_NIXOS_UTILS_DIR;
     };
     file = {
-      perltidyrc = "${path.dir.root}/perltidyrc";
-      perlcriticrc = "${path.dir.root}/perlcriticrc";
-      bashrc = "${path.dir.root}/bashrc";
+      bashrc = myEnv.ADMIN_BASHRC;
+      perltidyrc = myEnv.ADMIN_PERLTIDYRC;
+      perlcriticrc = myEnv.ADMIN_PERLCRITICRC;
     };
   };
+  dir = path.dir;
+  file = path.file;
   importPkg =
     name:
     import "${path.dir.nixosPkgs}" {

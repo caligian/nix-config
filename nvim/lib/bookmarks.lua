@@ -1,5 +1,6 @@
 require("lib.keymap")
 require("lib.picker")
+require("lib.command")
 
 local lib = package.user.lib
 local fs = lib.fs
@@ -20,7 +21,7 @@ end
 ---@param file? str|int
 ---@return boolean
 function bookmark.add(file)
-  file = file or buffer.current()
+	file = file or buffer.current()
 	if is.num(file) then
 		if vim.fn.bufexists(file) == 0 then
 			errorf("Invalid buffer: %d", file)
@@ -85,7 +86,48 @@ function bookmark.open()
 	end)
 end
 
-function bookmark.setup()
+function bookmark.setup_commands()
+	local map = lib.command
+
+	map("BookmarkAddBuffer", function(path)
+		path = is.int(path) and as.int(path) or vim.fn.bufnr(path)
+		if not buffer.exists(path) then
+			printf("Invalid buffer ID %s", path)
+		else
+			printf("Bookmarked buffer %d [%s]", path, buffer.get_name(path))
+			bookmark.add(path)
+		end
+	end, { desc = "Bookmark buffer", complete = "buffer", nargs = 1 })
+
+	map("BookmarkAddFile", function(path, _)
+		if not fs.is_file(path) then
+			printf("Nonexistent file %s", path)
+		else
+			printf("Bookmarked file %s", path)
+			bookmark.add(path)
+		end
+	end, {
+		desc = "Bookmark file",
+		complete = "file",
+		nargs = 1,
+	})
+
+	map("BookmarkAddDir", function(path, _)
+		path = is.file(path) and fs.dirname(path) or path
+		if not fs.is_dir(path) then
+			printf("Nonexistent directory %s", path)
+		else
+			bookmark.add(path)
+			printf("Bookmarked directory %s", path)
+		end
+	end, {
+		desc = "Bookmark directory",
+		complete = "dir",
+		nargs = 1,
+	})
+end
+
+function bookmark.setup_keymaps()
 	local map = lib.kbd.map
 	map("n", "<C-x>bb", bookmark.open, { desc = "Explore bookmarks" })
 	map("n", "<C-x>bl", bookmark.list, { desc = "List bookmarks" })
@@ -98,5 +140,12 @@ function bookmark.setup()
 		end
 	end, { desc = "Add buffer file to bookmarks" })
 end
+
+function bookmark.setup()
+	bookmark.setup_commands()
+	bookmark.setup_keymaps()
+end
+
+bookmark.setup()
 
 return lib

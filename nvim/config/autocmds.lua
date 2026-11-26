@@ -57,3 +57,32 @@ end, {
 	desc = "Track current buffer directory",
 	pattern = "*",
 })
+
+--- Fix disappearing cursor problem in insert mode
+map("InsertEnter", function()
+	require("blink.indent").enable(false)
+end, {})
+
+map("InsertLeave", function()
+	require("blink.indent").enable(true)
+end, {})
+
+map("BufEnter", function(buf, _)
+	if vim.bo.filetype ~= "netrw" then
+		return
+	end
+
+	local bufname = buffer.get_name(buf)
+	local curdir = vim.b[buf].netrw_curdir
+	local ok = not bufname or not fs.is_dir(bufname) and curdir ~= "" and curdir
+
+	if ok then
+		buffer.set_name(buf, curdir)
+	else
+		buffer.set_name(buf, vim.fn.getcwd())
+	end
+	vim.bo[buf].buflisted = true
+end, {
+	pattern = "*",
+	desc = "Rename blank buffer to current directory",
+})

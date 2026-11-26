@@ -262,8 +262,8 @@ function buffer.filter(bufnr, fn, start_row, end_row)
 	end
 
 	local lines = vim.api.nvim_buf_get_lines(bufnr, start_row or 0, end_row or -1, false)
-  lines = list.filter(lines, check)
-  ---@cast lines string[]
+	lines = list.filter(lines, check)
+	---@cast lines string[]
 	return lines
 end
 
@@ -519,6 +519,19 @@ function buffer.get_name(bufnr)
 		return
 	else
 		return fname
+	end
+end
+
+---@param bufnr int
+---@param name str
+---@return boolean
+function buffer.set_name(bufnr, name)
+	bufnr = bufnr or buffer.current()
+	if buffer.exists(bufnr) then
+		return false
+	else
+		vim.api.nvim_buf_set_name(bufnr, name)
+		return true
 	end
 end
 

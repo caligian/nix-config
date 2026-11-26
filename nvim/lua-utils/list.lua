@@ -1270,14 +1270,15 @@ end
 
 ---Return elements by indices
 ---@param x table
----@param pos (number | number[])[]
+---@param pos (integer | integer[])[]|integer
 ---@return table
 function list.select(x, pos)
 	local res = {}
+  pos = as.list(pos)
 
 	for key, p in pairs(pos) do
 		local v = list.get(x, as_list(p))
-		res[key] = undefined(v, false)
+		res[key] = undefined(v) and false or v
 	end
 
 	return res
